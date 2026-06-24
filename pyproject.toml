@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mathcad-co2-natural-circulation"
+version = "0.1.0"
+description = "Python port of a MathCAD steady-state CO2 natural-circulation model."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools]
+py-modules = [
+    "co2_geometry",
+    "co2_properties",
+    "co2_results",
+    "co2_steady_solver",
+    "co2_visualization",
+    "get_co2_model",
+    "two_phase_closures",
+    "two_phase_regimes",
+]
