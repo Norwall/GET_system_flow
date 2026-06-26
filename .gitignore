@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.pytest-tmp/
 pytest-cache-files-*/
 
 # Local virtual environments
@@ -24,5 +25,7 @@ Thumbs.db
 # Generated report artifacts
 artifacts/*.csv
 artifacts/*.json
+artifacts/*.log
 artifacts/*.md
+artifacts/*.pid
 artifacts/*.png
