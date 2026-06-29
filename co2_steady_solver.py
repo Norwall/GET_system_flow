@@ -7,8 +7,8 @@ import numpy as np
 from scipy.optimize import root_scalar
 
 from co2_geometry import LoopGeometry
-from co2_properties import CO2SaturationProperties
 from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, SteadyLoopResult, SteadyPassResult
+from refrigerant_properties import PropertyRangeError, RefrigerantSaturationProperties
 from two_phase_regimes import (
     classify_horizontal_evaporator_regime,
     classify_vertical_riser_regime,
@@ -52,16 +52,38 @@ class SteadyLoopSolver:
     def __init__(
         self,
         geometry: LoopGeometry,
-        properties: CO2SaturationProperties,
+        properties: RefrigerantSaturationProperties,
         closure_name: str = "darcy_friction_factor+martinelli+chisholm+worksheet_void_fraction",
     ) -> None:
         self.geometry = geometry
         self.properties = properties
         self.closure_name = closure_name
+        self._last_property_error: str | None = None
 
     @property
     def property_model_name(self) -> str:
         return type(self.properties).__name__
+
+    def property_result_fields(self, inputs: SteadyLoopInputs) -> dict[str, str]:
+        property_warning_at_temperature = getattr(self.properties, "property_warning_at_temperature", None)
+        near_critical_warning_at_temperature = getattr(self.properties, "near_critical_warning_at_temperature", None)
+        property_warning = (
+            property_warning_at_temperature(inputs.tcon)
+            if callable(property_warning_at_temperature)
+            else getattr(self.properties, "property_warning", "")
+        )
+        near_critical_warning = (
+            near_critical_warning_at_temperature(inputs.tcon)
+            if callable(near_critical_warning_at_temperature)
+            else getattr(self.properties, "near_critical_warning", "")
+        )
+        return {
+            "fluid": getattr(self.properties, "fluid", ""),
+            "property_backend": getattr(self.properties, "property_backend", ""),
+            "property_source": getattr(self.properties, "property_source", ""),
+            "property_warning": property_warning,
+            "near_critical_warning": near_critical_warning,
+        }
 
     def effective_closure_model(self, inputs: SteadyLoopInputs) -> str:
         return normalize_closure_model(inputs.closure_model)
@@ -1392,7 +1414,11 @@ class SteadyLoopSolver:
 
     def head_residual(self, inputs: SteadyLoopInputs, circulation_factor: float) -> float:
         residual_ngrid = 80 if inputs.mode == "distributed_steady" else 250
-        pass_result = self.one_pass(inputs=inputs, circulation_factor=circulation_factor, ngrid=residual_ngrid)
+        try:
+            pass_result = self.one_pass(inputs=inputs, circulation_factor=circulation_factor, ngrid=residual_ngrid)
+        except PropertyRangeError as exc:
+            self._last_property_error = str(exc)
+            return np.nan
         if pass_result is None or not np.isfinite(pass_result.required_head_m):
             return np.nan
         return pass_result.required_head_m - inputs.H
@@ -1404,6 +1430,7 @@ class SteadyLoopSolver:
         fmax: float = 200.0,
         nsamp: int = 220,
     ) -> RootSearchResult:
+        self._last_property_error = None
         if inputs.mode == "distributed_steady":
             nsamp = min(nsamp, 80)
         circulation_factor_grid = np.logspace(np.log10(fmin), np.log10(fmax), nsamp)
@@ -1417,6 +1444,14 @@ class SteadyLoopSolver:
         )[0]
         n_sign_changes = int(len(sign_change_indices))
         if n_sign_changes == 0:
+            if self._last_property_error is not None and not np.any(finite_mask):
+                return RootSearchResult(
+                    circulation_factor=None,
+                    root_bracket=None,
+                    n_sign_changes=0,
+                    solver_status="property_out_of_range",
+                    failure_reason=self._last_property_error,
+                )
             return RootSearchResult(
                 circulation_factor=None,
                 root_bracket=None,
@@ -1438,7 +1473,23 @@ class SteadyLoopSolver:
                 xtol=1e-10,
                 rtol=1e-10,
             )
+        except PropertyRangeError as exc:
+            return RootSearchResult(
+                circulation_factor=None,
+                root_bracket=root_bracket,
+                n_sign_changes=n_sign_changes,
+                solver_status="property_out_of_range",
+                failure_reason=str(exc),
+            )
         except ValueError as exc:
+            if self._last_property_error is not None:
+                return RootSearchResult(
+                    circulation_factor=None,
+                    root_bracket=root_bracket,
+                    n_sign_changes=n_sign_changes,
+                    solver_status="property_out_of_range",
+                    failure_reason=self._last_property_error,
+                )
             return RootSearchResult(
                 circulation_factor=None,
                 root_bracket=root_bracket,
@@ -1470,14 +1521,21 @@ class SteadyLoopSolver:
         circulation_factor: float,
     ) -> tuple[Optional[float], Optional[str]]:
         auxiliary_ngrid = 160 if inputs.mode == "distributed_steady" else 500
-        pass_result = self.one_pass(inputs=inputs, circulation_factor=circulation_factor, ngrid=auxiliary_ngrid)
+        try:
+            pass_result = self.one_pass(inputs=inputs, circulation_factor=circulation_factor, ngrid=auxiliary_ngrid)
+        except PropertyRangeError as exc:
+            return None, str(exc)
         if pass_result is None:
             return None, "Не удалось вычислить внутренний проход для уравнения tmm."
 
         inlet_liquid_pressure_drop_pa = pass_result.inlet_liquid_pressure_drop_pa
 
         def temperature_residual(candidate_temperature_c: float) -> float:
-            state = self.properties.state_at_temperature(0.5 * (candidate_temperature_c + inputs.tcon))
+            try:
+                state = self.properties.state_at_temperature(0.5 * (candidate_temperature_c + inputs.tcon))
+            except PropertyRangeError as exc:
+                self._last_property_error = str(exc)
+                return np.nan
             return (
                 (inputs.tcon - candidate_temperature_c)
                 - (inlet_liquid_pressure_drop_pa / state.dp_sat_dT_pa_per_k)
@@ -1503,7 +1561,7 @@ class SteadyLoopSolver:
                 xtol=1e-12,
                 rtol=1e-12,
             )
-        except ValueError as exc:
+        except (PropertyRangeError, ValueError) as exc:
             return None, str(exc)
 
         if not sol.converged:
@@ -1511,6 +1569,23 @@ class SteadyLoopSolver:
         return float(sol.root), None
 
     def solve(self, inputs: SteadyLoopInputs) -> SteadyLoopResult:
+        try:
+            self.properties.state_at_temperature(inputs.tcon)
+        except PropertyRangeError as exc:
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                solver_status="property_out_of_range",
+                failure_reason=str(exc),
+                closure_name=self.closure_label(inputs),
+                property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
+                model_scientific_status=self.model_scientific_status(inputs),
+            )
+
         root_search = self.find_circulation_factor(inputs=inputs)
         if root_search.circulation_factor is None:
             return SteadyLoopResult(
@@ -1525,11 +1600,30 @@ class SteadyLoopSolver:
                 failure_reason=root_search.failure_reason,
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
             )
 
         final_ngrid = 400 if inputs.mode == "distributed_steady" else 1200
-        pass_result = self.one_pass(inputs=inputs, circulation_factor=root_search.circulation_factor, ngrid=final_ngrid)
+        try:
+            pass_result = self.one_pass(inputs=inputs, circulation_factor=root_search.circulation_factor, ngrid=final_ngrid)
+        except PropertyRangeError as exc:
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                circulation_factor=root_search.circulation_factor,
+                root_bracket=root_search.root_bracket,
+                n_sign_changes=root_search.n_sign_changes,
+                solver_status="property_out_of_range",
+                failure_reason=str(exc),
+                closure_name=self.closure_label(inputs),
+                property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
+                model_scientific_status=self.model_scientific_status(inputs),
+            )
         if pass_result is None:
             return SteadyLoopResult(
                 converged=False,
@@ -1544,6 +1638,7 @@ class SteadyLoopSolver:
                 failure_reason="После поиска корня не удалось восстановить стационарный проход.",
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
             )
 
@@ -1566,6 +1661,7 @@ class SteadyLoopSolver:
                 failure_reason=temperature_failure_reason,
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
             )
 
@@ -1607,5 +1703,6 @@ class SteadyLoopSolver:
             failure_reason=None,
             closure_name=self.closure_label(inputs),
             property_model_name=self.property_model_name,
+            **self.property_result_fields(inputs),
             model_scientific_status=self.model_scientific_status(inputs),
         )

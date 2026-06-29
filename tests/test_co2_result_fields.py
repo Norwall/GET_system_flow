@@ -22,6 +22,11 @@ def test_run_exposes_structured_diagnostics_and_alias_fields(co2_model: CO2Mathc
     assert result["n_sign_changes"] >= 1
     assert result["closure_name"] == "worksheet_compatible+darcy_friction_factor+martinelli+chisholm"
     assert result["property_model_name"] == "CO2SaturationProperties"
+    assert result["fluid"] == "CO2"
+    assert result["property_backend"] == "mathcad_table"
+    assert "CO2.xmcd" in result["property_source"]
+    assert "Mathcad CO2 table backend" in result["property_warning"]
+    assert result["near_critical_warning"] == ""
 
     assert result["GG0_liq_equiv_lph"] == pytest.approx(result["GG0_lph"], rel=0.0, abs=0.0)
     assert result["GG0_gas_lph"] > result["GG0_liq_equiv_lph"]

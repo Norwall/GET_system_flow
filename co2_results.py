@@ -178,6 +178,11 @@ class SteadyLoopResult:
     failure_reason: str | None = None
     closure_name: str = ""
     property_model_name: str = ""
+    fluid: str = ""
+    property_backend: str = ""
+    property_source: str = ""
+    property_warning: str = ""
+    near_critical_warning: str = ""
     model_scientific_status: str = ""
 
     def to_dict(self) -> Dict[str, float | bool | str | tuple[float, float] | None]:
@@ -193,6 +198,11 @@ class SteadyLoopResult:
             "failure_reason": self.failure_reason,
             "closure_name": self.closure_name,
             "property_model_name": self.property_model_name,
+            "fluid": self.fluid,
+            "property_backend": self.property_backend,
+            "property_source": self.property_source,
+            "property_warning": self.property_warning,
+            "near_critical_warning": self.near_critical_warning,
             "model_scientific_status": self.model_scientific_status,
         }
         if self.circulation_factor is not None:

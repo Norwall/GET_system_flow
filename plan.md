@@ -129,21 +129,21 @@ RefrigerantLoopModel(
 
 ### Задачи
 
-- [ ] Создать `refrigerant_properties.py`.
-- [ ] Ввести `SaturationState`.
-- [ ] Ввести protocol/interface `RefrigerantSaturationProperties`.
-- [ ] Реализовать backends:
+- [x] Создать `refrigerant_properties.py`.
+- [x] Ввести `SaturationState`.
+- [x] Ввести protocol/interface `RefrigerantSaturationProperties`.
+- [x] Реализовать backends:
   - `MathcadCO2SaturationProperties`;
   - `CoolPropSaturationProperties(fluid="CO2")`;
   - `CoolPropSaturationProperties(fluid="NH3")`;
   - `RefpropSaturationProperties` как optional adapter.
-- [ ] Добавить aliases рабочих тел:
+- [x] Добавить aliases рабочих тел:
   - `CO2`, `R744`, `CarbonDioxide`;
   - `NH3`, `R717`, `Ammonia`.
-- [ ] Добавить запрет неявной экстраполяции:
+- [x] Добавить запрет неявной экстраполяции:
   - `allow_property_extrapolation=False` по умолчанию;
   - выход за диапазон должен давать понятную ошибку.
-- [ ] В результат добавить:
+- [x] В результат добавить:
   - `fluid`;
   - `property_backend`;
   - `property_source`;
@@ -186,9 +186,11 @@ class SaturationState:
 
 Для NH₃ первичным практическим источником на первом этапе принять CoolProp/REFPROP. Конкретную reference-EOS для ammonia взять из документации CoolProp и/или REFPROP и внести в `docs/formula_registry.md` до реализации численных baseline-тестов.
 
+Статус Checkpoint 1: записи по property backends и reference-EOS для CO₂/NH₃ внесены в `docs/formula_registry.md`.
+
 ### Тесты
 
-- [ ] `tests/test_refrigerant_properties.py`
+- [x] `tests/test_refrigerant_properties.py`
   - CO₂: проверка насыщенного состояния на сетке температур;
   - NH₃: проверка насыщенного состояния на сетке температур;
   - `latent_heat_j_kg == h_g_j_kg - h_l_j_kg`;
@@ -207,7 +209,7 @@ CO₂ и NH₃ возвращают насыщенные свойства чер
 
 ### Задачи
 
-- [ ] Создать `docs/formula_registry.md`.
+- [x] Создать `docs/formula_registry.md`.
 - [ ] Для каждой формулы указать:
   - ID;
   - математическую запись;

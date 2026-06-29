@@ -65,6 +65,11 @@ OUTPUT_COLUMNS = [
     "riser_flow_regime_summary",
     "closure_name",
     "property_model_name",
+    "fluid",
+    "property_backend",
+    "property_source",
+    "property_warning",
+    "near_critical_warning",
     "root_bracket",
     "n_sign_changes",
 ]
