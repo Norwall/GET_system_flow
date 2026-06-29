@@ -18,9 +18,11 @@ from two_phase_regimes import (
 )
 from two_phase_closures import (
     chisholm_constant,
+    closure_model_scientific_status,
     closure_state_from_model,
     darcy_friction_factor,
     martinelli_parameter,
+    normalize_closure_model,
     two_phase_multiplier_liquid_reference,
 )
 
@@ -61,10 +63,21 @@ class SteadyLoopSolver:
     def property_model_name(self) -> str:
         return type(self.properties).__name__
 
+    def effective_closure_model(self, inputs: SteadyLoopInputs) -> str:
+        return normalize_closure_model(inputs.closure_model)
+
+    def model_scientific_status(self, inputs: SteadyLoopInputs) -> str:
+        return closure_model_scientific_status(inputs.closure_model)
+
     def closure_label(self, inputs: SteadyLoopInputs) -> str:
-        if inputs.closure_model == "regime_aware":
-            return "regime_aware+regime_selected_void_fraction+regime_selected_friction"
-        return f"{inputs.closure_model}+darcy_friction_factor+martinelli+chisholm"
+        effective_closure_model = self.effective_closure_model(inputs)
+        if effective_closure_model == "experimental_regime_aware":
+            alias_suffix = "(alias:regime_aware)" if inputs.closure_model == "regime_aware" else ""
+            return (
+                f"experimental_regime_aware{alias_suffix}"
+                "+regime_selected_void_fraction+regime_selected_friction"
+            )
+        return f"{effective_closure_model}+darcy_friction_factor+martinelli+chisholm"
 
     def one_pass(
         self,
@@ -438,7 +451,7 @@ class SteadyLoopSolver:
 
         flow_regime_full = np.full(ngrid, "single_liquid_heating", dtype=object)
         if np.any(boiling_mask):
-            if inputs.closure_model == "regime_aware":
+            if self.effective_closure_model(inputs) == "experimental_regime_aware":
                 boiling_regime_profile = [closure_state.diagnostic_regime or "boiling_two_phase" for closure_state in boiling_closure_states]
                 boiling_indices = np.searchsorted(boiling_coordinate, evaporator_coordinate[boiling_mask], side="left")
                 boiling_indices = np.clip(boiling_indices, 0, len(boiling_regime_profile) - 1)
@@ -1056,7 +1069,7 @@ class SteadyLoopSolver:
         riser_pressure_gradient_bottom_to_top_pa_per_m = riser_pressure_gradient_top_pa_per_m[::-1]
         riser_density_difference_bottom_to_top = density_difference_top[::-1]
         riser_cell_heights_bottom_to_top_m = riser_cell_heights_m[::-1]
-        if inputs.closure_model == "regime_aware":
+        if self.effective_closure_model(inputs) == "experimental_regime_aware":
             riser_flow_regime_bottom_to_top = tuple(
                 str(value) if str(value) else "two_phase_riser"
                 for value in riser_diagnostic_regime_top[::-1]
@@ -1213,7 +1226,7 @@ class SteadyLoopSolver:
 
         flow_regime_full = np.full(ngrid, "single_liquid_heating", dtype=object)
         if np.any(boiling_mask):
-            if inputs.closure_model == "regime_aware":
+            if self.effective_closure_model(inputs) == "experimental_regime_aware":
                 boiling_regime_profile = [str(value) if str(value) else "boiling_two_phase" for value in final_diagnostic_regime.tolist()]
                 boiling_indices = np.searchsorted(cell_center_coordinate, evaporator_coordinate[boiling_mask], side="left")
                 boiling_indices = np.clip(boiling_indices, 0, len(boiling_regime_profile) - 1)
@@ -1512,6 +1525,7 @@ class SteadyLoopSolver:
                 failure_reason=root_search.failure_reason,
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                model_scientific_status=self.model_scientific_status(inputs),
             )
 
         final_ngrid = 400 if inputs.mode == "distributed_steady" else 1200
@@ -1530,6 +1544,7 @@ class SteadyLoopSolver:
                 failure_reason="После поиска корня не удалось восстановить стационарный проход.",
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                model_scientific_status=self.model_scientific_status(inputs),
             )
 
         auxiliary_temperature_c, temperature_failure_reason = self.solve_auxiliary_temperature(
@@ -1551,6 +1566,7 @@ class SteadyLoopSolver:
                 failure_reason=temperature_failure_reason,
                 closure_name=self.closure_label(inputs),
                 property_model_name=self.property_model_name,
+                model_scientific_status=self.model_scientific_status(inputs),
             )
 
         state = self.properties.state_at_temperature(inputs.tcon)
@@ -1591,4 +1607,5 @@ class SteadyLoopSolver:
             failure_reason=None,
             closure_name=self.closure_label(inputs),
             property_model_name=self.property_model_name,
+            model_scientific_status=self.model_scientific_status(inputs),
         )

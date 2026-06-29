@@ -29,3 +29,8 @@ artifacts/*.log
 artifacts/*.md
 artifacts/*.pid
 artifacts/*.png
+artifacts/scenarios/*.json
+
+# Frontend dependencies and build output
+web/node_modules/
+web/dist/

@@ -25,6 +25,41 @@ class TwoPhaseClosureState:
     selected_friction_model: str = ""
 
 
+_CLOSURE_MODEL_ALIASES = {
+    "regime_aware": "experimental_regime_aware",
+}
+
+_PUBLISHED_CLOSURE_MODELS = {
+    "homogeneous_equilibrium",
+    "zivi",
+}
+
+_MATHCAD_COMPATIBLE_CLOSURE_MODELS = {
+    "worksheet_compatible",
+}
+
+_EXPERIMENTAL_CLOSURE_MODELS = {
+    "experimental_regime_aware",
+}
+
+
+def normalize_closure_model(model: str) -> str:
+    """Return the effective closure model name used by the numerical implementation."""
+    return _CLOSURE_MODEL_ALIASES.get(model, model)
+
+
+def closure_model_scientific_status(model: str) -> str:
+    """Classify whether a closure is Mathcad-compatible, published, or experimental."""
+    normalized_model = normalize_closure_model(model)
+    if normalized_model in _MATHCAD_COMPATIBLE_CLOSURE_MODELS:
+        return "mathcad_compatible"
+    if normalized_model in _PUBLISHED_CLOSURE_MODELS:
+        return "published"
+    if normalized_model in _EXPERIMENTAL_CLOSURE_MODELS:
+        return "experimental"
+    return "unknown"
+
+
 def mass_quality_from_mass_flows(
     vapor_mass_flow_kg_s: float | np.ndarray,
     liquid_mass_flow_kg_s: float | np.ndarray,
@@ -62,11 +97,30 @@ def void_fraction_from_quality(
     return liquid_volume_fraction, gas_volume_fraction
 
 
-def darcy_friction_factor(reynolds_number: float | np.ndarray, relative_roughness: float) -> Any:
+def rough_turbulent_friction_factor_ln(relative_roughness: float) -> float:
+    """Current Python rough-turbulent term, using the natural logarithm."""
+    return float((1.8 * np.log(8.3 / relative_roughness)) ** (-2))
+
+
+def rough_turbulent_friction_factor_log10(relative_roughness: float) -> float:
+    """Mathcad-compatible rough-turbulent term, using the decimal logarithm."""
+    return float((1.8 * np.log10(8.3 / relative_roughness)) ** (-2))
+
+
+def darcy_friction_factor(
+    reynolds_number: float | np.ndarray,
+    relative_roughness: float,
+    rough_log_base: str = "natural",
+) -> Any:
     reynolds_number = np.maximum(np.asarray(reynolds_number, dtype=float), 1e-12)
+    if rough_log_base not in {"natural", "log10"}:
+        raise ValueError(f"Unsupported rough_log_base: {rough_log_base!r}.")
     friction_laminar = 64.0 / reynolds_number
     friction_blasius = 0.3164 / np.power(reynolds_number, 0.25)
-    friction_rough = (1.8 * np.log(8.3 / relative_roughness)) ** (-2)
+    if rough_log_base == "log10":
+        friction_rough = rough_turbulent_friction_factor_log10(relative_roughness)
+    else:
+        friction_rough = rough_turbulent_friction_factor_ln(relative_roughness)
     turbulent_blend = 0.5 + 0.5 * erf((reynolds_number - 2850.0) / (600.0 * np.sqrt(2.0)))
     roughness_blend = erf((reynolds_number * relative_roughness) / (275.0 * np.sqrt(2.0)))
     return (
@@ -563,6 +617,7 @@ def closure_state_from_model(
     vapor_dynamic_viscosity_pa_s: float | None = None,
     liquid_dynamic_viscosity_pa_s: float | None = None,
 ) -> TwoPhaseClosureState:
+    model = normalize_closure_model(model)
     rho_l_kg_m3 = 1.0 / max(liquid_specific_volume_m3_per_kg, 1e-12)
     rho_g_kg_m3 = 1.0 / max(vapor_specific_volume_m3_per_kg, 1e-12)
     mass_quality = float(
@@ -590,7 +645,7 @@ def closure_state_from_model(
         slip_ratio = 1.0
     elif model == "zivi":
         slip_ratio = float(np.asarray(zivi_slip_ratio(rho_l_kg_m3=rho_l_kg_m3, rho_g_kg_m3=rho_g_kg_m3), dtype=float))
-    elif model == "regime_aware":
+    elif model == "experimental_regime_aware":
         base_two_phase_multiplier = float(phi2l) if phi2l is not None else 1.0
         zivi_slip = float(np.asarray(zivi_slip_ratio(rho_l_kg_m3=rho_l_kg_m3, rho_g_kg_m3=rho_g_kg_m3), dtype=float))
         gas_superficial_velocity_m_s = float(np.asarray(gas_mass_flux_kg_m2_s, dtype=float)) * vapor_specific_volume_m3_per_kg

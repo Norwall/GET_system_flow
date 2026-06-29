@@ -19,6 +19,10 @@ dependencies = [
 dev = [
     "pytest>=8",
 ]
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
 
 [tool.setuptools]
 py-modules = [
@@ -28,6 +32,8 @@ py-modules = [
     "co2_results",
     "co2_steady_solver",
     "co2_visualization",
+    "get_designer_api",
+    "get_designer_geometry",
     "get_co2_model",
     "two_phase_closures",
     "two_phase_regimes",
