@@ -210,7 +210,7 @@ CO₂ и NH₃ возвращают насыщенные свойства чер
 ### Задачи
 
 - [x] Создать `docs/formula_registry.md`.
-- [ ] Для каждой формулы указать:
+- [x] Для каждой реализованной формулы указать:
   - ID;
   - математическую запись;
   - переменные и размерности;
@@ -218,8 +218,11 @@ CO₂ и NH₃ возвращают насыщенные свойства чер
   - источник;
   - функцию/класс в коде;
   - тесты.
-- [ ] Запретить добавление новых published-моделей без записи в реестре.
-- [ ] Для эвристик указывать статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
+- [x] Запретить добавление новых published-моделей без записи в реестре через тестовую проверку.
+- [x] Для эвристик указывать статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
+
+Статус Checkpoint 2: реестр формул переведен на русский язык, покрывает текущие
+implemented-записи и проверяется тестом `tests/test_formula_registry.py`.
 
 ### Минимальный набор формул
 
@@ -707,6 +710,7 @@ Closed-loop pressure balance:
 
 - `tests/test_baseline_compatibility.py`;
 - `tests/test_mathcad_log_audit.py`;
+- `tests/test_formula_registry.py`;
 - `tests/test_refrigerant_properties.py`;
 - `tests/test_nh3_properties.py`;
 - `tests/test_friction_models.py`;

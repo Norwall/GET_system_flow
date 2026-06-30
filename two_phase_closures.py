@@ -42,6 +42,60 @@ _EXPERIMENTAL_CLOSURE_MODELS = {
     "experimental_regime_aware",
 }
 
+_CLOSURE_MODEL_FORMULA_REGISTRY_IDS = {
+    "worksheet_compatible": (
+        "FRIC-DARCY-MASS-FLUX",
+        "FRIC-LEGACY-BLENDED-DARCY",
+        "TP-LOCKHART-MARTINELLI",
+        "TP-CHISHOLM-CONSTANT",
+        "TP-CHISHOLM-MULTIPLIER",
+        "VOID-WORKSHEET-PHI2L",
+        "FLOW-PHASE-VELOCITIES",
+        "FLOW-SLIP-RATIO",
+        "FLOW-MIXTURE-DENSITY",
+    ),
+    "homogeneous_equilibrium": (
+        "FRIC-DARCY-MASS-FLUX",
+        "FRIC-LEGACY-BLENDED-DARCY",
+        "TP-LOCKHART-MARTINELLI",
+        "TP-CHISHOLM-CONSTANT",
+        "TP-CHISHOLM-MULTIPLIER",
+        "VOID-GENERIC-SLIP",
+        "VOID-HOMOGENEOUS-EQUILIBRIUM",
+        "FLOW-PHASE-VELOCITIES",
+        "FLOW-SLIP-RATIO",
+        "FLOW-MIXTURE-DENSITY",
+    ),
+    "zivi": (
+        "FRIC-DARCY-MASS-FLUX",
+        "FRIC-LEGACY-BLENDED-DARCY",
+        "TP-LOCKHART-MARTINELLI",
+        "TP-CHISHOLM-CONSTANT",
+        "TP-CHISHOLM-MULTIPLIER",
+        "VOID-GENERIC-SLIP",
+        "VOID-ZIVI-1964",
+        "FLOW-PHASE-VELOCITIES",
+        "FLOW-SLIP-RATIO",
+        "FLOW-MIXTURE-DENSITY",
+    ),
+    "experimental_regime_aware": (
+        "FRIC-DARCY-MASS-FLUX",
+        "FRIC-LEGACY-BLENDED-DARCY",
+        "TP-LOCKHART-MARTINELLI",
+        "TP-CHISHOLM-CONSTANT",
+        "TP-CHISHOLM-MULTIPLIER",
+        "VOID-GENERIC-SLIP",
+        "VOID-ZIVI-1964",
+        "EXP-REGIME-AWARE-CLASSIFIERS",
+        "EXP-DRIFT-FLUX-LIKE-VOID",
+        "EXP-ANNULAR-CORE-VOID",
+        "EXP-REGIME-FRICTION-GRADIENTS",
+        "FLOW-PHASE-VELOCITIES",
+        "FLOW-SLIP-RATIO",
+        "FLOW-MIXTURE-DENSITY",
+    ),
+}
+
 
 def normalize_closure_model(model: str) -> str:
     """Return the effective closure model name used by the numerical implementation."""
@@ -58,6 +112,11 @@ def closure_model_scientific_status(model: str) -> str:
     if normalized_model in _EXPERIMENTAL_CLOSURE_MODELS:
         return "experimental"
     return "unknown"
+
+
+def closure_model_formula_registry_ids(model: str) -> tuple[str, ...]:
+    """Return formula-registry IDs required by a closure model."""
+    return _CLOSURE_MODEL_FORMULA_REGISTRY_IDS.get(normalize_closure_model(model), ())
 
 
 def mass_quality_from_mass_flows(
