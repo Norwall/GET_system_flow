@@ -8,6 +8,7 @@ from scipy.optimize import root_scalar
 
 from co2_geometry import LoopGeometry
 from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, SteadyLoopResult, SteadyPassResult
+from pressure_balance import LoopPressureBalance, SectionPressureBalance, hydrostatic_pressure_pa
 from refrigerant_properties import PropertyRangeError, RefrigerantSaturationProperties
 from two_phase_regimes import (
     classify_horizontal_evaporator_regime,
@@ -20,9 +21,10 @@ from two_phase_closures import (
     chisholm_constant,
     closure_model_scientific_status,
     closure_state_from_model,
-    darcy_friction_factor,
+    friction_factor_from_model,
     martinelli_parameter,
     normalize_closure_model,
+    normalize_friction_model,
     two_phase_multiplier_liquid_reference,
 )
 
@@ -35,6 +37,7 @@ class SteadyLoopInputs:
     tcon: float
     mode: str = "worksheet_compatible"
     closure_model: str = "worksheet_compatible"
+    friction_model: str = "mathcad_compat"
 
 
 @dataclass(frozen=True)
@@ -101,6 +104,83 @@ class SteadyLoopSolver:
             )
         return f"{effective_closure_model}+darcy_friction_factor+martinelli+chisholm"
 
+    def effective_friction_model(self, inputs: SteadyLoopInputs) -> str:
+        return normalize_friction_model(inputs.friction_model)
+
+    def friction_factor(self, reynolds_number, relative_roughness: float, inputs: SteadyLoopInputs):
+        return friction_factor_from_model(
+            reynolds_number=reynolds_number,
+            relative_roughness=relative_roughness,
+            model=self.effective_friction_model(inputs),
+        )
+
+    def _build_pressure_balance(
+        self,
+        *,
+        downcomer_section,
+        riser_section,
+        preboiling_evaporator_section,
+        boiling_evaporator_section,
+        condenser_section,
+        downcomer_friction_pa: float,
+        riser_friction_pa: float,
+        preboiling_evaporator_friction_pa: float,
+        boiling_evaporator_friction_pa: float,
+        condenser_friction_pa: float,
+        acceleration_pressure_drop_pa: float,
+        downcomer_hydrostatic_pa: float,
+        riser_hydrostatic_pa: float,
+        driving_pressure_pa: float,
+    ) -> LoopPressureBalance:
+        return LoopPressureBalance(
+            sections=(
+                SectionPressureBalance(
+                    section_name=downcomer_section.name,
+                    section_kind=downcomer_section.section_kind,
+                    orientation=downcomer_section.orientation,
+                    length_m=downcomer_section.length_m,
+                    dz_m=-abs(riser_section.length_m),
+                    delta_p_hydrostatic_pa=float(downcomer_hydrostatic_pa),
+                    delta_p_friction_pa=float(downcomer_friction_pa),
+                ),
+                SectionPressureBalance(
+                    section_name=riser_section.name,
+                    section_kind=riser_section.section_kind,
+                    orientation=riser_section.orientation,
+                    length_m=riser_section.length_m,
+                    dz_m=float(riser_section.length_m),
+                    delta_p_hydrostatic_pa=float(riser_hydrostatic_pa),
+                    delta_p_friction_pa=float(riser_friction_pa),
+                ),
+                SectionPressureBalance(
+                    section_name=preboiling_evaporator_section.name,
+                    section_kind=preboiling_evaporator_section.section_kind,
+                    orientation=preboiling_evaporator_section.orientation,
+                    length_m=preboiling_evaporator_section.length_m,
+                    dz_m=0.0,
+                    delta_p_friction_pa=float(preboiling_evaporator_friction_pa),
+                ),
+                SectionPressureBalance(
+                    section_name=boiling_evaporator_section.name,
+                    section_kind=boiling_evaporator_section.section_kind,
+                    orientation=boiling_evaporator_section.orientation,
+                    length_m=boiling_evaporator_section.length_m,
+                    dz_m=0.0,
+                    delta_p_friction_pa=float(boiling_evaporator_friction_pa),
+                    delta_p_acceleration_pa=float(acceleration_pressure_drop_pa),
+                ),
+                SectionPressureBalance(
+                    section_name=condenser_section.name,
+                    section_kind=condenser_section.section_kind,
+                    orientation=condenser_section.orientation,
+                    length_m=condenser_section.length_m,
+                    dz_m=0.0,
+                    delta_p_friction_pa=float(condenser_friction_pa),
+                ),
+            ),
+            driving_pressure_pa=float(driving_pressure_pa),
+        )
+
     def one_pass(
         self,
         inputs: SteadyLoopInputs,
@@ -154,8 +234,8 @@ class SteadyLoopSolver:
         gas_mass_flux = vapor_mass_flow_profile_kg_s / self.geometry.flow_area_m2
         liquid_mass_flux = liquid_mass_flow_profile_kg_s / self.geometry.flow_area_m2
 
-        gas_friction_factor = darcy_friction_factor(gas_reynolds, self.geometry.relative_roughness)
-        liquid_friction_factor = darcy_friction_factor(liquid_reynolds, self.geometry.relative_roughness)
+        gas_friction_factor = self.friction_factor(gas_reynolds, self.geometry.relative_roughness, inputs)
+        liquid_friction_factor = self.friction_factor(liquid_reynolds, self.geometry.relative_roughness, inputs)
         martinelli_x_profile = martinelli_parameter(
             liquid_mass_flow_kg_s=liquid_mass_flow_profile_kg_s,
             vapor_mass_flow_kg_s=vapor_mass_flow_profile_kg_s,
@@ -187,6 +267,7 @@ class SteadyLoopSolver:
                 relative_roughness=self.geometry.relative_roughness,
                 vapor_dynamic_viscosity_pa_s=state.mu_g_pa_s,
                 liquid_dynamic_viscosity_pa_s=state.mu_l_pa_s,
+                friction_model=self.effective_friction_model(inputs),
             )
             for vapor_mass_flow_value, liquid_mass_flow_value, gas_mass_flux_value, liquid_mass_flux_value_m2, two_phase_multiplier_value in zip(
                 vapor_mass_flow_profile_kg_s,
@@ -234,8 +315,8 @@ class SteadyLoopSolver:
         liquid_mass_flux_out = liquid_mass_flow_out_kg_s / self.geometry.flow_area_m2
         liquid_mass_flux_in = liquid_mass_flow_in_kg_s / self.geometry.flow_area_m2
 
-        outlet_gas_friction_factor = darcy_friction_factor(gas_reynolds_out, self.geometry.relative_roughness)
-        outlet_liquid_friction_factor = darcy_friction_factor(liquid_reynolds_out, self.geometry.relative_roughness)
+        outlet_gas_friction_factor = self.friction_factor(gas_reynolds_out, self.geometry.relative_roughness, inputs)
+        outlet_liquid_friction_factor = self.friction_factor(liquid_reynolds_out, self.geometry.relative_roughness, inputs)
         martinelli_x_out = martinelli_parameter(
             liquid_mass_flow_kg_s=liquid_mass_flow_out_kg_s,
             vapor_mass_flow_kg_s=vapor_mass_flow_out_kg_s,
@@ -270,6 +351,7 @@ class SteadyLoopSolver:
             relative_roughness=self.geometry.relative_roughness,
             vapor_dynamic_viscosity_pa_s=state.mu_g_pa_s,
             liquid_dynamic_viscosity_pa_s=state.mu_l_pa_s,
+            friction_model=self.effective_friction_model(inputs),
         )
         liquid_volume_fraction_out = outlet_closure_state.liquid_volume_fraction
         gas_volume_fraction_out = outlet_closure_state.gas_volume_fraction
@@ -287,7 +369,7 @@ class SteadyLoopSolver:
             state.mu_l_pa_s * self.geometry.flow_area_m2
         )
         inlet_liquid_pressure_drop_pa = (
-            (darcy_friction_factor(liquid_reynolds_in, self.geometry.relative_roughness) * preboiling_path_length_m)
+            (self.friction_factor(liquid_reynolds_in, self.geometry.relative_roughness, inputs) * preboiling_path_length_m)
             * state.v_l_m3_per_kg
             * (liquid_mass_flux_in**2)
         ) / (self.geometry.inner_radius_m * 4.0)
@@ -533,6 +615,28 @@ class SteadyLoopSolver:
         condenser_section = self.geometry.condenser_section()
         riser_dominant_flow_regime = "single_liquid"
         riser_section_pressure_drop_pa = inlet_liquid_pressure_gradient_pa_per_m * riser_section.length_m
+        downcomer_friction_pa = inlet_liquid_pressure_gradient_pa_per_m * downcomer_section.length_m
+        preboiling_evaporator_friction_pa = (
+            inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m
+        )
+        downcomer_hydrostatic_pa = -hydrostatic_pressure_pa(state.v_l_m3_per_kg ** -1, riser_section.length_m)
+        riser_hydrostatic_pa = hydrostatic_pressure_pa(outlet_mixture_density_kg_m3, riser_section.length_m)
+        pressure_balance = self._build_pressure_balance(
+            downcomer_section=downcomer_section,
+            riser_section=riser_section,
+            preboiling_evaporator_section=preboiling_evaporator_section,
+            boiling_evaporator_section=boiling_evaporator_section,
+            condenser_section=condenser_section,
+            downcomer_friction_pa=downcomer_friction_pa,
+            riser_friction_pa=riser_section_pressure_drop_pa,
+            preboiling_evaporator_friction_pa=preboiling_evaporator_friction_pa,
+            boiling_evaporator_friction_pa=boiling_section_pressure_drop_pa,
+            condenser_friction_pa=outlet_section_pressure_drop_pa,
+            acceleration_pressure_drop_pa=acceleration_pressure_drop_pa,
+            downcomer_hydrostatic_pa=downcomer_hydrostatic_pa,
+            riser_hydrostatic_pa=riser_hydrostatic_pa,
+            driving_pressure_pa=driving_pressure_pa,
+        )
         section_states = (
             LoopSectionState(
                 section_name=downcomer_section.name,
@@ -540,7 +644,7 @@ class SteadyLoopSolver:
                 orientation=downcomer_section.orientation,
                 length_m=downcomer_section.length_m,
                 phase_regime="single_liquid",
-                pressure_drop_pa=float(inlet_liquid_pressure_gradient_pa_per_m * downcomer_section.length_m),
+                pressure_drop_pa=float(downcomer_friction_pa),
                 inlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
                 inlet_vapor_mass_flow_kg_s=0.0,
                 outlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
@@ -564,7 +668,7 @@ class SteadyLoopSolver:
                 orientation=preboiling_evaporator_section.orientation,
                 length_m=preboiling_evaporator_section.length_m,
                 phase_regime="single_liquid_heating",
-                pressure_drop_pa=float(inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m),
+                pressure_drop_pa=float(preboiling_evaporator_friction_pa),
                 inlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
                 inlet_vapor_mass_flow_kg_s=0.0,
                 outlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
@@ -633,6 +737,8 @@ class SteadyLoopSolver:
             riser_dominant_flow_regime="",
             evaporator_flow_regime_summary=evaporator_flow_regime_summary,
             riser_flow_regime_summary="",
+            friction_model=self.effective_friction_model(inputs),
+            pressure_balance=pressure_balance,
             model_mode=inputs.mode,
             section_states=section_states,
             evaporator_profile=evaporator_profile,
@@ -649,9 +755,7 @@ class SteadyLoopSolver:
         preboiling_length_fraction: float,
     ) -> Optional[SteadyPassResult]:
         preboiling_evaporator_length_m = preboiling_length_fraction * inputs.Li
-        preboiling_path_length_m = (
-            inputs.H + self.geometry.inlet_section_length_m
-        ) + preboiling_evaporator_length_m
+        preboiling_path_length_m = self.geometry.inlet_section_length_m + preboiling_evaporator_length_m
         boiling_length_m = inputs.Li - preboiling_evaporator_length_m
         if boiling_length_m <= 0.0:
             return None
@@ -729,8 +833,8 @@ class SteadyLoopSolver:
                 liquid_reynolds = (liquid_mass_flow_center_kg_s * self.geometry.hydraulic_diameter_m) / (
                     local_state.mu_l_pa_s * self.geometry.flow_area_m2
                 )
-                gas_friction_factor = darcy_friction_factor(gas_reynolds, self.geometry.relative_roughness)
-                liquid_friction_factor = darcy_friction_factor(liquid_reynolds, self.geometry.relative_roughness)
+                gas_friction_factor = self.friction_factor(gas_reynolds, self.geometry.relative_roughness, inputs)
+                liquid_friction_factor = self.friction_factor(liquid_reynolds, self.geometry.relative_roughness, inputs)
                 martinelli_x = float(
                     martinelli_parameter(
                         liquid_mass_flow_kg_s=liquid_mass_flow_center_kg_s,
@@ -772,6 +876,7 @@ class SteadyLoopSolver:
                     relative_roughness=self.geometry.relative_roughness,
                     vapor_dynamic_viscosity_pa_s=local_state.mu_g_pa_s,
                     liquid_dynamic_viscosity_pa_s=local_state.mu_l_pa_s,
+                    friction_model=self.effective_friction_model(inputs),
                 )
                 effective_two_phase_multiplier = (
                     cell_closure_state.effective_two_phase_multiplier
@@ -870,7 +975,7 @@ class SteadyLoopSolver:
             preboiling_state.mu_l_pa_s * self.geometry.flow_area_m2
         )
         inlet_liquid_pressure_drop_pa = (
-            (darcy_friction_factor(liquid_reynolds_in, self.geometry.relative_roughness) * preboiling_path_length_m)
+            (self.friction_factor(liquid_reynolds_in, self.geometry.relative_roughness, inputs) * preboiling_path_length_m)
             * preboiling_state.v_l_m3_per_kg
             * (liquid_mass_flux_in**2)
         ) / (self.geometry.inner_radius_m * 4.0)
@@ -888,8 +993,8 @@ class SteadyLoopSolver:
         )
         gas_mass_flux_out = vapor_mass_flow_out_kg_s / self.geometry.flow_area_m2
         liquid_mass_flux_out = liquid_mass_flow_out_kg_s / self.geometry.flow_area_m2
-        outlet_gas_friction_factor = darcy_friction_factor(gas_reynolds_out, self.geometry.relative_roughness)
-        outlet_liquid_friction_factor = darcy_friction_factor(liquid_reynolds_out, self.geometry.relative_roughness)
+        outlet_gas_friction_factor = self.friction_factor(gas_reynolds_out, self.geometry.relative_roughness, inputs)
+        outlet_liquid_friction_factor = self.friction_factor(liquid_reynolds_out, self.geometry.relative_roughness, inputs)
         martinelli_x_out = float(
             martinelli_parameter(
                 liquid_mass_flow_kg_s=liquid_mass_flow_out_kg_s,
@@ -926,6 +1031,7 @@ class SteadyLoopSolver:
             relative_roughness=self.geometry.relative_roughness,
             vapor_dynamic_viscosity_pa_s=final_outlet_state.mu_g_pa_s,
             liquid_dynamic_viscosity_pa_s=final_outlet_state.mu_l_pa_s,
+            friction_model=self.effective_friction_model(inputs),
         )
         liquid_volume_fraction_out = outlet_closure_state.liquid_volume_fraction
         gas_volume_fraction_out = outlet_closure_state.gas_volume_fraction
@@ -974,6 +1080,8 @@ class SteadyLoopSolver:
         riser_liquid_superficial_velocity_top_m_s = np.zeros(n_riser, dtype=float)
         riser_diagnostic_regime_top = np.full(n_riser, "", dtype=object)
         riser_pressure_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
+        riser_friction_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
+        riser_hydrostatic_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
 
         for idx, cell_height_m in enumerate(riser_cell_heights_m):
             riser_temperature_c = float(self.properties.temperature_from_pressure_pa(riser_local_pressure_pa))
@@ -984,8 +1092,8 @@ class SteadyLoopSolver:
             riser_liquid_reynolds = (liquid_mass_flow_out_kg_s * self.geometry.hydraulic_diameter_m) / (
                 riser_state.mu_l_pa_s * self.geometry.flow_area_m2
             )
-            riser_gas_friction_factor = darcy_friction_factor(riser_gas_reynolds, self.geometry.relative_roughness)
-            riser_liquid_friction_factor = darcy_friction_factor(riser_liquid_reynolds, self.geometry.relative_roughness)
+            riser_gas_friction_factor = self.friction_factor(riser_gas_reynolds, self.geometry.relative_roughness, inputs)
+            riser_liquid_friction_factor = self.friction_factor(riser_liquid_reynolds, self.geometry.relative_roughness, inputs)
             riser_martinelli_x = float(
                 martinelli_parameter(
                     liquid_mass_flow_kg_s=liquid_mass_flow_out_kg_s,
@@ -1022,6 +1130,7 @@ class SteadyLoopSolver:
                 relative_roughness=self.geometry.relative_roughness,
                 vapor_dynamic_viscosity_pa_s=riser_state.mu_g_pa_s,
                 liquid_dynamic_viscosity_pa_s=riser_state.mu_l_pa_s,
+                friction_model=self.effective_friction_model(inputs),
             )
             riser_liquid_only_gradient_pa_per_m = (
                 riser_liquid_friction_factor * riser_state.v_l_m3_per_kg * (liquid_mass_flux_out**2)
@@ -1050,10 +1159,15 @@ class SteadyLoopSolver:
             riser_liquid_superficial_velocity_top_m_s[idx] = liquid_mass_flux_out * riser_state.v_l_m3_per_kg
             riser_diagnostic_regime_top[idx] = riser_closure_state.diagnostic_regime
             riser_pressure_gradient_top_pa_per_m[idx] = riser_total_gradient_pa_per_m
+            riser_friction_gradient_top_pa_per_m[idx] = riser_friction_gradient_pa_per_m
+            riser_hydrostatic_gradient_top_pa_per_m[idx] = riser_closure_state.mixture_density_kg_m3 * 9.81
 
             riser_local_pressure_pa += riser_total_gradient_pa_per_m * cell_height_m
 
-        riser_section_pressure_drop_pa = float(np.sum(riser_pressure_gradient_top_pa_per_m * riser_cell_heights_m))
+        riser_section_pressure_drop_pa = float(np.sum(riser_friction_gradient_top_pa_per_m * riser_cell_heights_m))
+        riser_hydrostatic_pressure_drop_pa = float(
+            np.sum(riser_hydrostatic_gradient_top_pa_per_m * riser_cell_heights_m)
+        )
         density_difference_top = reference_liquid_density_kg_m3 - riser_mixture_density_top
         driving_pressure_pa = float(np.sum(9.81 * density_difference_top * riser_cell_heights_m))
         effective_density_difference_kg_m3 = (
@@ -1306,6 +1420,27 @@ class SteadyLoopSolver:
             name="evaporator_boiling",
         )
         condenser_section = self.geometry.condenser_section()
+        downcomer_friction_pa = inlet_liquid_pressure_gradient_pa_per_m * downcomer_section.length_m
+        preboiling_evaporator_friction_pa = (
+            inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m
+        )
+        downcomer_hydrostatic_pa = -hydrostatic_pressure_pa(reference_liquid_density_kg_m3, riser_section.length_m)
+        pressure_balance = self._build_pressure_balance(
+            downcomer_section=downcomer_section,
+            riser_section=riser_section,
+            preboiling_evaporator_section=preboiling_evaporator_section,
+            boiling_evaporator_section=boiling_evaporator_section,
+            condenser_section=condenser_section,
+            downcomer_friction_pa=downcomer_friction_pa,
+            riser_friction_pa=riser_section_pressure_drop_pa,
+            preboiling_evaporator_friction_pa=preboiling_evaporator_friction_pa,
+            boiling_evaporator_friction_pa=boiling_section_pressure_drop_pa,
+            condenser_friction_pa=outlet_section_pressure_drop_pa,
+            acceleration_pressure_drop_pa=acceleration_pressure_drop_pa,
+            downcomer_hydrostatic_pa=downcomer_hydrostatic_pa,
+            riser_hydrostatic_pa=riser_hydrostatic_pressure_drop_pa,
+            driving_pressure_pa=driving_pressure_pa,
+        )
         section_states = (
             LoopSectionState(
                 section_name=downcomer_section.name,
@@ -1313,7 +1448,7 @@ class SteadyLoopSolver:
                 orientation=downcomer_section.orientation,
                 length_m=downcomer_section.length_m,
                 phase_regime="single_liquid",
-                pressure_drop_pa=float(inlet_liquid_pressure_gradient_pa_per_m * downcomer_section.length_m),
+                pressure_drop_pa=float(downcomer_friction_pa),
                 inlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
                 inlet_vapor_mass_flow_kg_s=0.0,
                 outlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
@@ -1337,7 +1472,7 @@ class SteadyLoopSolver:
                 orientation=preboiling_evaporator_section.orientation,
                 length_m=preboiling_evaporator_section.length_m,
                 phase_regime="single_liquid_heating",
-                pressure_drop_pa=float(inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m),
+                pressure_drop_pa=float(preboiling_evaporator_friction_pa),
                 inlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
                 inlet_vapor_mass_flow_kg_s=0.0,
                 outlet_liquid_mass_flow_kg_s=float(liquid_mass_flow_in_kg_s),
@@ -1406,6 +1541,8 @@ class SteadyLoopSolver:
             riser_dominant_flow_regime=riser_dominant_flow_regime,
             evaporator_flow_regime_summary=evaporator_flow_regime_summary,
             riser_flow_regime_summary=riser_flow_regime_summary,
+            friction_model=self.effective_friction_model(inputs),
+            pressure_balance=pressure_balance,
             model_mode="distributed_steady",
             section_states=section_states,
             evaporator_profile=evaporator_profile,
@@ -1569,6 +1706,36 @@ class SteadyLoopSolver:
         return float(sol.root), None
 
     def solve(self, inputs: SteadyLoopInputs) -> SteadyLoopResult:
+        if inputs.H < 0.0:
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                solver_status="validation_error",
+                failure_reason="H must be non-negative.",
+                closure_name=self.closure_label(inputs),
+                property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
+                model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
+            )
+        if inputs.H == 0.0:
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                solver_status="no_driving_head",
+                failure_reason="H=0 gives no hydrostatic driving head for natural circulation.",
+                closure_name=self.closure_label(inputs),
+                property_model_name=self.property_model_name,
+                **self.property_result_fields(inputs),
+                model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
+            )
         try:
             self.properties.state_at_temperature(inputs.tcon)
         except PropertyRangeError as exc:
@@ -1584,6 +1751,7 @@ class SteadyLoopSolver:
                 property_model_name=self.property_model_name,
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
             )
 
         root_search = self.find_circulation_factor(inputs=inputs)
@@ -1602,6 +1770,7 @@ class SteadyLoopSolver:
                 property_model_name=self.property_model_name,
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
             )
 
         final_ngrid = 400 if inputs.mode == "distributed_steady" else 1200
@@ -1623,6 +1792,7 @@ class SteadyLoopSolver:
                 property_model_name=self.property_model_name,
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
             )
         if pass_result is None:
             return SteadyLoopResult(
@@ -1640,6 +1810,7 @@ class SteadyLoopSolver:
                 property_model_name=self.property_model_name,
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
             )
 
         auxiliary_temperature_c, temperature_failure_reason = self.solve_auxiliary_temperature(
@@ -1663,6 +1834,7 @@ class SteadyLoopSolver:
                 property_model_name=self.property_model_name,
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
+                friction_model=self.effective_friction_model(inputs),
             )
 
         state = self.properties.state_at_temperature(inputs.tcon)
@@ -1705,4 +1877,5 @@ class SteadyLoopSolver:
             property_model_name=self.property_model_name,
             **self.property_result_fields(inputs),
             model_scientific_status=self.model_scientific_status(inputs),
+            friction_model=self.effective_friction_model(inputs),
         )

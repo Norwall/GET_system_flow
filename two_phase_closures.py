@@ -189,6 +189,80 @@ def darcy_friction_factor(
     )
 
 
+def laminar_darcy_friction_factor(reynolds_number: float | np.ndarray) -> Any:
+    reynolds_number = np.maximum(np.asarray(reynolds_number, dtype=float), 1e-12)
+    return 64.0 / reynolds_number
+
+
+def colebrook_white_friction_factor(
+    reynolds_number: float | np.ndarray,
+    relative_roughness: float,
+) -> Any:
+    reynolds = np.maximum(np.asarray(reynolds_number, dtype=float), 1e-12)
+    relative_roughness = max(float(relative_roughness), 0.0)
+    turbulent = np.maximum(reynolds, 2300.0)
+    friction = np.full_like(turbulent, 0.02, dtype=float)
+    for _ in range(24):
+        argument = (relative_roughness / 3.7) + (2.51 / (turbulent * np.sqrt(np.maximum(friction, 1e-12))))
+        friction = np.power(-2.0 * np.log10(np.maximum(argument, 1e-30)), -2.0)
+    result = np.where(reynolds < 2300.0, laminar_darcy_friction_factor(reynolds), friction)
+    return float(result) if np.ndim(result) == 0 else result
+
+
+def churchill_1977_friction_factor(
+    reynolds_number: float | np.ndarray,
+    relative_roughness: float,
+) -> Any:
+    reynolds = np.maximum(np.asarray(reynolds_number, dtype=float), 1e-12)
+    relative_roughness = max(float(relative_roughness), 0.0)
+    a_term = np.power(
+        2.457
+        * np.log(
+            1.0
+            / np.maximum(
+                np.power(7.0 / reynolds, 0.9) + (0.27 * relative_roughness),
+                1e-30,
+            )
+        ),
+        16.0,
+    )
+    b_term = np.power(37530.0 / reynolds, 16.0)
+    result = 8.0 * np.power(np.power(8.0 / reynolds, 12.0) + np.power(a_term + b_term, -1.5), 1.0 / 12.0)
+    return float(result) if np.ndim(result) == 0 else result
+
+
+def normalize_friction_model(model: str) -> str:
+    aliases = {
+        "worksheet_compatible": "mathcad_compat",
+        "legacy": "mathcad_compat",
+        "legacy_blended": "mathcad_compat",
+        "colebrook": "colebrook_white",
+        "churchill": "churchill_explicit",
+    }
+    return aliases.get(model, model)
+
+
+def friction_factor_from_model(
+    reynolds_number: float | np.ndarray,
+    relative_roughness: float,
+    model: str = "mathcad_compat",
+) -> Any:
+    normalized_model = normalize_friction_model(model)
+    if normalized_model == "mathcad_compat":
+        return darcy_friction_factor(reynolds_number, relative_roughness, rough_log_base="natural")
+    if normalized_model == "colebrook_white":
+        return colebrook_white_friction_factor(reynolds_number, relative_roughness)
+    if normalized_model == "churchill_explicit":
+        return churchill_1977_friction_factor(reynolds_number, relative_roughness)
+    if normalized_model == "laminar_only":
+        return laminar_darcy_friction_factor(reynolds_number)
+    if normalized_model == "zero_friction":
+        reynolds = np.asarray(reynolds_number, dtype=float)
+        result = np.zeros_like(reynolds, dtype=float)
+        return float(result) if np.ndim(result) == 0 else result
+    raise ValueError(f"Unsupported friction_model: {model!r}.")
+
+
 def martinelli_parameter(
     liquid_mass_flow_kg_s: float | np.ndarray,
     vapor_mass_flow_kg_s: float | np.ndarray,
@@ -491,6 +565,7 @@ def _resolve_two_phase_friction_response(
     liquid_dynamic_viscosity_pa_s: float | None,
     hydraulic_diameter_m: float | None,
     relative_roughness: float | None,
+    friction_model: str = "mathcad_compat",
 ) -> tuple[float, float | None]:
     if (
         vapor_dynamic_viscosity_pa_s is None
@@ -529,8 +604,8 @@ def _resolve_two_phase_friction_response(
 
     liquid_reynolds = (liquid_mass_flux_kg_m2_s * hydraulic_diameter_m) / liquid_dynamic_viscosity_pa_s
     gas_reynolds = (gas_mass_flux_kg_m2_s * hydraulic_diameter_m) / vapor_dynamic_viscosity_pa_s
-    liquid_friction_factor = float(darcy_friction_factor(liquid_reynolds, relative_roughness))
-    gas_friction_factor = float(darcy_friction_factor(gas_reynolds, relative_roughness))
+    liquid_friction_factor = float(friction_factor_from_model(liquid_reynolds, relative_roughness, friction_model))
+    gas_friction_factor = float(friction_factor_from_model(gas_reynolds, relative_roughness, friction_model))
     liquid_only_pressure_gradient_pa_per_m = float(
         single_phase_pressure_gradient_pa_per_m(
             mass_flux_kg_m2_s=liquid_mass_flux_kg_m2_s,
@@ -565,7 +640,7 @@ def _resolve_two_phase_friction_response(
         )
         total_mass_flux_kg_m2_s = gas_mass_flux_kg_m2_s + liquid_mass_flux_kg_m2_s
         mixture_reynolds = (total_mass_flux_kg_m2_s * hydraulic_diameter_m) / max(mixture_viscosity_pa_s, 1e-12)
-        mixture_friction_factor = float(darcy_friction_factor(mixture_reynolds, relative_roughness))
+        mixture_friction_factor = float(friction_factor_from_model(mixture_reynolds, relative_roughness, friction_model))
         friction_pressure_gradient_pa_per_m = float(
             single_phase_pressure_gradient_pa_per_m(
                 mass_flux_kg_m2_s=total_mass_flux_kg_m2_s,
@@ -675,6 +750,7 @@ def closure_state_from_model(
     relative_roughness: float | None = None,
     vapor_dynamic_viscosity_pa_s: float | None = None,
     liquid_dynamic_viscosity_pa_s: float | None = None,
+    friction_model: str = "mathcad_compat",
 ) -> TwoPhaseClosureState:
     model = normalize_closure_model(model)
     rho_l_kg_m3 = 1.0 / max(liquid_specific_volume_m3_per_kg, 1e-12)
@@ -858,6 +934,7 @@ def closure_state_from_model(
             liquid_dynamic_viscosity_pa_s=liquid_dynamic_viscosity_pa_s,
             hydraulic_diameter_m=hydraulic_diameter_m,
             relative_roughness=relative_roughness,
+            friction_model=friction_model,
         )
         return TwoPhaseClosureState(
             liquid_volume_fraction=float(np.asarray(liquid_volume_fraction, dtype=float)),
@@ -915,6 +992,7 @@ def closure_state_from_model(
             liquid_dynamic_viscosity_pa_s=liquid_dynamic_viscosity_pa_s,
             hydraulic_diameter_m=hydraulic_diameter_m,
             relative_roughness=relative_roughness,
+            friction_model=friction_model,
         )
     return TwoPhaseClosureState(
         liquid_volume_fraction=float(np.asarray(liquid_volume_fraction, dtype=float)),

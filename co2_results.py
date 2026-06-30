@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any, Dict
+
+from pressure_balance import LoopPressureBalance
 
 
 @dataclass(frozen=True)
@@ -102,14 +104,17 @@ class SteadyPassResult:
     riser_dominant_flow_regime: str = ""
     evaporator_flow_regime_summary: str = ""
     riser_flow_regime_summary: str = ""
+    friction_model: str = "mathcad_compat"
+    pressure_balance: LoopPressureBalance | None = None
     model_mode: str = "worksheet_compatible"
     section_states: tuple[LoopSectionState, ...] = ()
     evaporator_profile: EvaporatorProfile | None = None
     riser_profile: RiserProfile | None = None
 
-    def to_dict(self) -> Dict[str, float | int | str]:
-        return {
+    def to_dict(self) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
             "model_mode": self.model_mode,
+            "friction_model": self.friction_model,
             "U_W": self.total_heat_w,
             "yn": self.preboiling_length_fraction,
             "preboiling_evaporator_length_m": self.preboiling_evaporator_length_m,
@@ -155,6 +160,21 @@ class SteadyPassResult:
             "outlet_gas_volume_fraction_closure": self.outlet_gas_volume_fraction_closure,
             "outlet_liquid_volume_fraction_closure": self.outlet_liquid_volume_fraction_closure,
         }
+        if self.pressure_balance is not None:
+            data.update(
+                {
+                    "pressure_balance_terms": self.pressure_balance.terms_as_dicts(),
+                    "pressure_balance_sections": self.pressure_balance.sections_as_dicts(),
+                    "pressure_balance_summary": self.pressure_balance.summary_string(),
+                    "pressure_balance_total_friction_pa": self.pressure_balance.total_friction_pa,
+                    "pressure_balance_total_hydrostatic_pa": self.pressure_balance.total_hydrostatic_pa,
+                    "pressure_balance_total_acceleration_pa": self.pressure_balance.total_acceleration_pa,
+                    "pressure_balance_total_local_pa": self.pressure_balance.total_local_pa,
+                    "pressure_balance_total_resistance_pa": self.pressure_balance.total_resistance_pa,
+                    "pressure_balance_residual_pa": self.pressure_balance.residual_pa,
+                }
+            )
+        return data
 
 
 @dataclass(frozen=True)
@@ -184,9 +204,10 @@ class SteadyLoopResult:
     property_warning: str = ""
     near_critical_warning: str = ""
     model_scientific_status: str = ""
+    friction_model: str = "mathcad_compat"
 
-    def to_dict(self) -> Dict[str, float | bool | str | tuple[float, float] | None]:
-        data: Dict[str, float | bool | str | tuple[float, float] | None] = {
+    def to_dict(self) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
             "converged": self.converged,
             "H": self.H,
             "qtr": self.qtr,
@@ -204,6 +225,7 @@ class SteadyLoopResult:
             "property_warning": self.property_warning,
             "near_critical_warning": self.near_critical_warning,
             "model_scientific_status": self.model_scientific_status,
+            "friction_model": self.friction_model,
         }
         if self.circulation_factor is not None:
             data["fff"] = self.circulation_factor

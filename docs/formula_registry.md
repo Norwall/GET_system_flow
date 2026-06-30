@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-2`.
+Версия реестра: `checkpoint-3`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -27,6 +27,9 @@
 | `FRIC-LAMINAR-DARCY` | PUBLISHED | `darcy_friction_factor` |
 | `FRIC-BLASIUS-SMOOTH` | PUBLISHED | `darcy_friction_factor` |
 | `FRIC-LEGACY-BLENDED-DARCY` | MATHCAD_COMPATIBLE / REQUIRES_AUDIT | `darcy_friction_factor` |
+| `FRIC-COLEBROOK-WHITE` | PUBLISHED | `colebrook_white_friction_factor` |
+| `FRIC-CHURCHILL-1977` | PUBLISHED | `churchill_1977_friction_factor` |
+| `FRIC-ZERO-TEST` | TEST_ONLY | `friction_factor_from_model("zero_friction")` |
 | `TP-LOCKHART-MARTINELLI` | PUBLISHED | `martinelli_parameter` |
 | `TP-CHISHOLM-CONSTANT` | PUBLISHED | `chisholm_constant` |
 | `TP-CHISHOLM-MULTIPLIER` | PUBLISHED | `two_phase_multiplier_liquid_reference` |
@@ -41,6 +44,8 @@
 | `PRESS-ACCELERATION-MOMENTUM` | DISSERTATION / ENGINEERING | `SteadyLoopSolver.one_pass` |
 | `PRESS-WORKSHEET-DRIVING-HEAD` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `PRESS-DISTRIBUTED-RISER-GRADIENT` | ENGINEERING / REQUIRES_AUDIT | `SteadyLoopSolver._one_pass_distributed` |
+| `PRESS-HYDROSTATIC-SECTION` | PUBLISHED / DEFINITIONAL | `pressure_balance.hydrostatic_pressure_pa` |
+| `PRESS-LOOP-BALANCE` | PUBLISHED / DEFINITIONAL | `LoopPressureBalance` |
 | `EXP-REGIME-AWARE-CLASSIFIERS` | EXPERIMENTAL / NO PRIMARY SOURCE | `two_phase_regimes.py` |
 | `EXP-DRIFT-FLUX-LIKE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `drift_flux_void_fraction` |
 | `EXP-ANNULAR-CORE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `annular_core_void_fraction` |
@@ -242,6 +247,62 @@ f_{\rm rough} =
 - Источник: `CO2.xmcd`; аудит логарифма Mathcad/Python в `docs/get_co2_academic_reference.md`.
 - Код: `two_phase_closures.darcy_friction_factor`; `rough_turbulent_friction_factor_ln`; `rough_turbulent_friction_factor_log10`.
 - Тесты: `tests/test_mathcad_log_audit.py`; `tests/test_baseline_compatibility.py`.
+
+## FRIC-COLEBROOK-WHITE
+
+- Статус: PUBLISHED.
+- Математическая запись:
+
+```math
+\frac{1}{\sqrt{f_D}} =
+-2\log_{10}\left(
+\frac{\varepsilon/D_h}{3.7}
++\frac{2.51}{Re\sqrt{f_D}}
+\right)
+```
+
+- Переменные и размерности: `f_D`, `Re`, `epsilon/D_h` безразмерны.
+- Область применимости: турбулентное однофазное трубное течение; в коде ламинарная ветка `64/Re` используется ниже `Re=2300`.
+- Источник: Colebrook, White, 1939, Journal of the Institution of Civil Engineers, https://doi.org/10.1680/ijoti.1939.13150.
+- Код: `two_phase_closures.colebrook_white_friction_factor`; `two_phase_closures.friction_factor_from_model`.
+- Тесты: `tests/test_pressure_balance.py`; `tests/test_mathcad_log_audit.py`.
+
+## FRIC-CHURCHILL-1977
+
+- Статус: PUBLISHED.
+- Математическая запись:
+
+```math
+f_D=8\left[\left(\frac{8}{Re}\right)^{12}
++(A+B)^{-3/2}\right]^{1/12}
+```
+
+```math
+A=\left[2.457\ln\frac{1}{(7/Re)^{0.9}+0.27\varepsilon/D_h}\right]^{16},
+\quad
+B=\left(\frac{37530}{Re}\right)^{16}
+```
+
+- Переменные и размерности: `f_D`, `Re`, `epsilon/D_h`, `A`, `B` безразмерны.
+- Область применимости: явная all-regime аппроксимация для внутреннего трубного течения.
+- Источник: Churchill, S. W., 1977, "Friction-factor equation spans all fluid-flow regimes", Chemical Engineering, 84(24), 91-92.
+- Код: `two_phase_closures.churchill_1977_friction_factor`; `two_phase_closures.friction_factor_from_model`.
+- Тесты: `tests/test_pressure_balance.py`.
+
+## FRIC-ZERO-TEST
+
+- Статус: TEST_ONLY.
+- Математическая запись:
+
+```math
+f_D = 0
+```
+
+- Переменные и размерности: `f_D` безразмерен.
+- Область применимости: только unit-тесты гидравлического баланса; не является физической моделью.
+- Источник: тестовый предел для изоляции гидростатики и ускорительного слагаемого.
+- Код: `two_phase_closures.friction_factor_from_model`.
+- Тесты: `tests/test_pressure_balance.py`.
 
 ## TP-LOCKHART-MARTINELLI
 
@@ -477,10 +538,49 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 ```
 
 - Переменные и размерности: градиент давления, Па/м; давление, Па; плотность, кг/м3; `g`, м/с2; `dz`, м.
-- Область применимости: текущий `distributed_steady` riser. Учет гидростатики помечен для Checkpoint 3 из-за риска двойного учета.
+- Область применимости: текущий `distributed_steady` riser. Локальный профиль давления в riser использует полный градиент, а замкнутый баланс контура разносит фрикционный и гидростатический вклады через `PRESS-HYDROSTATIC-SECTION` и `PRESS-LOOP-BALANCE`.
 - Источник: текущая Python-реализация; `docs/get_co2_academic_reference.md`, разделы 10 и 18.2.
 - Код: `co2_steady_solver.SteadyLoopSolver._one_pass_distributed`.
-- Тесты: `tests/test_baseline_compatibility.py`; будущий `tests/test_pressure_balance.py`.
+- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_pressure_balance.py`.
+
+## PRESS-HYDROSTATIC-SECTION
+
+- Статус: PUBLISHED / DEFINITIONAL.
+- Математическая запись:
+
+```math
+\Delta p_h = \rho g \Delta z
+```
+
+- Переменные и размерности: `delta_p_h`, Па; `rho`, кг/м3; `g`, м/с2; `dz`, м.
+- Область применимости: signed hydrostatic term по каждому участку контура; подъем положителен, спуск отрицателен.
+- Источник: стандартная гидростатика.
+- Код: `pressure_balance.hydrostatic_pressure_pa`; `SectionPressureBalance`.
+- Тесты: `tests/test_pressure_balance.py`.
+
+## PRESS-LOOP-BALANCE
+
+- Статус: PUBLISHED / DEFINITIONAL.
+- Математическая запись:
+
+```math
+\sum_i \Delta p_{h,i}
++\sum_i \Delta p_{f,i}
++\sum_i \Delta p_{a,i}
++\sum_i \Delta p_{loc,i}=0
+```
+
+и:
+
+```math
+\Delta p_{\rm drive}=-\sum_i \Delta p_{h,i}
+```
+
+- Переменные и размерности: все `delta_p`, Па.
+- Область применимости: замкнутый контур steady-state естественной циркуляции.
+- Источник: интегральный баланс давления замкнутого контура.
+- Код: `pressure_balance.LoopPressureBalance`; `co2_steady_solver.SteadyLoopSolver._build_pressure_balance`.
+- Тесты: `tests/test_pressure_balance.py`; `tests/test_co2_result_fields.py`.
 
 ## EXP-REGIME-AWARE-CLASSIFIERS
 
@@ -547,5 +647,5 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
-- Текущая blended-модель трения не является Colebrook-White. Colebrook-White и Churchill explicit friction относятся к Checkpoint 3.
+- Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
 - Опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 2 не реализованы.

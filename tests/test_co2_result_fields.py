@@ -188,7 +188,7 @@ def test_regime_aware_closure_switches_to_direct_regime_specific_models() -> Non
 def test_regime_aware_high_load_reaches_annular_film_branch(co2_model: CO2MathcadModel) -> None:
     result = co2_model.run_result(
         2.5,
-        110.0,
+        160.0,
         200.0,
         0.0,
         mode="distributed_steady",

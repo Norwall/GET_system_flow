@@ -56,11 +56,23 @@ print(result["converged"], result["fff"], result["Hy_m"])
 ```
 
 Для структурированного результата используйте `run_result(...)`. Для распределенного
-профиля испарителя и райзера задайте `mode="distributed_steady"`.
+профиля испарителя и райзера задайте `mode="distributed_steady"`. Модель трения
+выбирается параметром `friction_model`, например:
+
+```python
+result = model.run(
+    H=2.5,
+    qtr=76.68,
+    Li=200.0,
+    tcon=0.0,
+    mode="distributed_steady",
+    friction_model="colebrook_white",
+)
+```
 
 ## Статус физической доработки
 
-В текущей версии закрыты первые три шага аудита модели:
+В текущей версии закрыты Checkpoint 0-3 аудита модели:
 
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
@@ -68,12 +80,20 @@ print(result["converged"], result["fff"], result["Hy_m"])
 - результаты содержат `model_scientific_status`, `fluid`, `property_backend`,
   `property_source`, `property_warning` и `near_critical_warning`;
 - добавлен общий интерфейс свойств насыщения CO2/NH3 в `refrigerant_properties.py`;
-- создан русскоязычный реестр формул и свойств `docs/formula_registry.md`.
+- создан русскоязычный реестр формул и свойств `docs/formula_registry.md`;
+- введен явный баланс давления в `pressure_balance.py`;
+- `distributed_steady` разносит гидростатику, трение, ускорительные и местные
+  члены по отдельным pressure-balance термам;
+- добавлен выбор модели трения: `mathcad_compat`, `colebrook_white`,
+  `churchill_explicit`, `laminar_only`, `zero_friction`.
 
 Реестр формул фиксирует источник, область применимости, код и тесты для каждой
 реализованной формулы. Опубликованные модели отделены от MathCAD-compatible
 записей и эвристик. Все эвристики без первоисточника помечены как
-`EXPERIMENTAL / NO PRIMARY SOURCE`.
+`EXPERIMENTAL / NO PRIMARY SOURCE`. Результаты `run(...)` и `run_result(...)`
+дополнительно содержат `friction_model`, `pressure_balance_terms`,
+`pressure_balance_sections`, суммарные pressure-balance вклады и
+`pressure_balance_residual_pa`.
 
 ## Демонстрационный отчет
 
@@ -129,5 +149,5 @@ pytest -q -m slow
   но полноценная ветка NH3 в loop solver еще не завершена.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
-- Checkpoint 3 еще не выполнен: строгий раздельный баланс гидростатики, трения,
-  ускорительных и местных потерь будет вынесен в отдельный слой позже.
+- Геометрический конструктор пока не передает произвольные длины, диаметры и
+  шероховатости всех участков в гидравлическое ядро.

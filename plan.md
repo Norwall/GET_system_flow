@@ -336,29 +336,29 @@ Closed-loop pressure balance:
 
 ### Задачи
 
-- [ ] Создать `pressure_balance.py`.
-- [ ] Ввести `PressureTerm`.
-- [ ] Ввести `SectionPressureBalance`.
-- [ ] Для каждого участка отдельно считать:
+- [x] Создать `pressure_balance.py`.
+- [x] Ввести `PressureTerm`.
+- [x] Ввести `SectionPressureBalance`.
+- [x] Для каждого участка отдельно считать:
   - `delta_p_hydrostatic_pa`;
   - `delta_p_friction_pa`;
   - `delta_p_acceleration_pa`;
   - `delta_p_local_pa`;
   - `delta_p_total_pa`.
-- [ ] Для замкнутого контура считать:
+- [x] Для замкнутого контура считать:
   - сумму гидростатики;
   - сумму трения;
   - сумму ускорительных потерь;
   - сумму местных сопротивлений;
   - итоговую невязку.
-- [ ] Добавить `friction_model`:
+- [x] Добавить `friction_model`:
   - `mathcad_compat`;
   - `colebrook_white`;
   - `churchill_explicit`;
   - `laminar_only`;
   - `zero_friction` для тестов.
-- [ ] Сделать `log10` явным в опубликованных формулах трения.
-- [ ] Оставить Mathcad-вариант как отдельный compatibility mode.
+- [x] Сделать `log10` явным в опубликованных формулах трения.
+- [x] Оставить Mathcad-вариант как отдельный compatibility mode.
 
 ### Сценарии, которые должны быть обработаны
 
@@ -374,7 +374,7 @@ Closed-loop pressure balance:
 
 ### Тесты
 
-- [ ] `tests/test_pressure_balance.py`
+- [x] `tests/test_pressure_balance.py`
   - `zero_friction` даёт чисто гидростатический предел;
   - сумма pressure terms равна total;
   - гидростатика не учитывается дважды;
