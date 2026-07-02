@@ -476,19 +476,24 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 Цель: заменить фиксированные эвристические пороги на published-классификаторы.
 
+Статус: выполнен безопасный structural split. Текущие эвристики вынесены в
+`experimental_regimes.py` и снабжены source/status metadata. `published_regimes.py`
+создан только как guarded-заготовка и возвращает `unknown_or_out_of_range` /
+`not_implemented`, пока полные первоисточники не сверены.
+
 ### Задачи
 
-- [ ] Создать `published_regimes.py`.
-- [ ] Создать `experimental_regimes.py`.
-- [ ] Перенести текущие эвристики в `experimental_regimes.py`.
+- [x] Создать `published_regimes.py`.
+- [x] Создать `experimental_regimes.py`.
+- [x] Перенести текущие эвристики в `experimental_regimes.py`.
 - [ ] Для горизонтального испарителя реализовать карту Wojtan–Ursenbacher–Thome.
 - [ ] Для вертикального подъёмного участка реализовать Taitel–Barnea–Dukler.
-- [ ] В каждом локальном control volume сохранять:
+- [x] В каждом локальном control volume сохранять:
   - regime name;
   - source;
   - transition criteria;
   - confidence/status.
-- [ ] В результатах выводить summary режимов по длине участка.
+- [x] В результатах выводить summary режимов по длине участка.
 
 ### Режимы, которые должны поддерживаться
 
@@ -508,9 +513,9 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 ### Тесты
 
-- [ ] `tests/test_regime_maps.py`
+- [x] `tests/test_regime_maps.py`
   - старые пороги доступны только через `experimental_*`;
-  - published classifier возвращает source-tagged regime;
+  - published-заготовка возвращает source-tagged `not_implemented`;
   - out-of-range сценарий не маскируется под физический режим;
   - summary по длине участка суммируется к 100%.
 

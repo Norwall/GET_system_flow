@@ -18,7 +18,11 @@ from published_void_fraction import (
     void_fraction_from_quality,
     zivi_1964_slip_ratio,
 )
-from two_phase_regimes import classify_horizontal_evaporator_regime, classify_vertical_riser_regime
+from two_phase_regimes import (
+    FlowRegimeClassification,
+    classify_horizontal_evaporator_regime_result,
+    classify_vertical_riser_regime_result,
+)
 
 
 @dataclass(frozen=True)
@@ -35,6 +39,10 @@ class TwoPhaseClosureState:
     base_two_phase_multiplier: float | None = None
     selected_void_fraction_model: str = ""
     selected_friction_model: str = ""
+    diagnostic_regime_source: str = ""
+    diagnostic_regime_status: str = ""
+    diagnostic_regime_transition_criteria: str = ""
+    diagnostic_regime_confidence: str = ""
 
 
 _CLOSURE_MODEL_ALIASES = {
@@ -414,6 +422,28 @@ def _select_friction_model_for_regime(
     return "lockhart_martinelli_chisholm"
 
 
+def _classify_experimental_regime(
+    orientation: str,
+    mass_quality: float,
+    gas_volume_fraction: float,
+    gas_superficial_velocity_m_s: float,
+    liquid_superficial_velocity_m_s: float,
+    slip_ratio: float,
+) -> FlowRegimeClassification:
+    if orientation == "vertical_up":
+        return classify_vertical_riser_regime_result(
+            gas_volume_fraction=gas_volume_fraction,
+            gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+        )
+    return classify_horizontal_evaporator_regime_result(
+        mass_quality=mass_quality,
+        gas_volume_fraction=gas_volume_fraction,
+        gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+        liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+        slip_ratio=slip_ratio,
+    )
+
+
 def _resolve_void_fraction_from_selected_model(
     selected_void_fraction_model: str,
     mass_quality: float,
@@ -704,6 +734,10 @@ def closure_state_from_model(
         gas_superficial_velocity_m_s = float(np.asarray(gas_mass_flux_kg_m2_s, dtype=float)) * vapor_specific_volume_m3_per_kg
         liquid_superficial_velocity_m_s = float(np.asarray(liquid_mass_flux_kg_m2_s, dtype=float)) * liquid_specific_volume_m3_per_kg
         diagnostic_regime = ""
+        diagnostic_regime_source = ""
+        diagnostic_regime_status = ""
+        diagnostic_regime_transition_criteria = ""
+        diagnostic_regime_confidence = ""
         selected_void_fraction_model = "zivi"
         selected_friction_model = "lockhart_martinelli_chisholm"
         for _ in range(2):
@@ -736,19 +770,19 @@ def closure_state_from_model(
                     dtype=float,
                 )
             )
-            if orientation == "vertical_up":
-                diagnostic_regime = classify_vertical_riser_regime(
-                    gas_volume_fraction=gas_volume_fraction,
-                    gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
-                )
-            else:
-                diagnostic_regime = classify_horizontal_evaporator_regime(
-                    mass_quality=mass_quality,
-                    gas_volume_fraction=gas_volume_fraction,
-                    gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
-                    liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
-                    slip_ratio=loop_slip_ratio,
-                )
+            diagnostic_classification = _classify_experimental_regime(
+                orientation=orientation,
+                mass_quality=mass_quality,
+                gas_volume_fraction=gas_volume_fraction,
+                gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+                liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+                slip_ratio=loop_slip_ratio,
+            )
+            diagnostic_regime = diagnostic_classification.name
+            diagnostic_regime_source = diagnostic_classification.source
+            diagnostic_regime_status = diagnostic_classification.status
+            diagnostic_regime_transition_criteria = diagnostic_classification.transition_criteria
+            diagnostic_regime_confidence = diagnostic_classification.confidence
             selected_void_fraction_model = _select_void_fraction_model_for_regime(
                 regime=diagnostic_regime,
                 orientation=orientation,
@@ -785,19 +819,19 @@ def closure_state_from_model(
             vapor_specific_volume_m3_per_kg=vapor_specific_volume_m3_per_kg,
             liquid_specific_volume_m3_per_kg=liquid_specific_volume_m3_per_kg,
         )
-        if orientation == "vertical_up":
-            diagnostic_regime = classify_vertical_riser_regime(
-                gas_volume_fraction=gas_volume_fraction,
-                gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
-            )
-        else:
-            diagnostic_regime = classify_horizontal_evaporator_regime(
-                mass_quality=mass_quality,
-                gas_volume_fraction=gas_volume_fraction,
-                gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
-                liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
-                slip_ratio=slip_ratio,
-            )
+        diagnostic_classification = _classify_experimental_regime(
+            orientation=orientation,
+            mass_quality=mass_quality,
+            gas_volume_fraction=gas_volume_fraction,
+            gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+            liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+            slip_ratio=slip_ratio,
+        )
+        diagnostic_regime = diagnostic_classification.name
+        diagnostic_regime_source = diagnostic_classification.source
+        diagnostic_regime_status = diagnostic_classification.status
+        diagnostic_regime_transition_criteria = diagnostic_classification.transition_criteria
+        diagnostic_regime_confidence = diagnostic_classification.confidence
         final_selected_void_fraction_model = _select_void_fraction_model_for_regime(
             regime=diagnostic_regime,
             orientation=orientation,
@@ -867,6 +901,10 @@ def closure_state_from_model(
             base_two_phase_multiplier=float(base_two_phase_multiplier),
             selected_void_fraction_model=selected_void_fraction_model,
             selected_friction_model=selected_friction_model,
+            diagnostic_regime_source=diagnostic_regime_source,
+            diagnostic_regime_status=diagnostic_regime_status,
+            diagnostic_regime_transition_criteria=diagnostic_regime_transition_criteria,
+            diagnostic_regime_confidence=diagnostic_regime_confidence,
         )
     else:
         raise ValueError(f"Unsupported closure model: {model}")

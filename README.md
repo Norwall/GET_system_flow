@@ -116,6 +116,16 @@ Wojtan-Ursenbacher-Thome пока не подключаются как расч�
 для них требуется сверка точных формул и областей применимости по полному
 первоисточнику.
 
+Checkpoint 6 split:
+
+- текущие эвристические режимные классификаторы вынесены в
+  `experimental_regimes.py`;
+- `two_phase_regimes.py` оставлен как compatibility-слой для старых imports и
+  summary helpers;
+- `published_regimes.py` пока содержит только guarded-заготовки с
+  `unknown_or_out_of_range` / `not_implemented`, без опубликованных режимных
+  карт.
+
 ## Демонстрационный отчет
 
 ```powershell

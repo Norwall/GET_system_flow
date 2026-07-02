@@ -143,6 +143,16 @@ def test_experimental_heuristics_are_marked_without_primary_source(
     assert "- Статус: EXPERIMENTAL / NO PRIMARY SOURCE." in registry_sections[entry_id]
 
 
+def test_regime_classifier_registry_points_to_experimental_layer(
+    registry_sections: dict[str, str],
+) -> None:
+    section = registry_sections["EXP-REGIME-AWARE-CLASSIFIERS"]
+
+    assert "experimental_regimes.classify_horizontal_evaporator_regime_result" in section
+    assert "compatibility wrappers in `two_phase_regimes.py`" in section
+    assert "published_regimes.py` содержит только guarded-заготовки" in REGISTRY_TEXT
+
+
 def test_current_rough_friction_blend_is_not_claimed_as_colebrook_white(
     registry_sections: dict[str, str],
 ) -> None:

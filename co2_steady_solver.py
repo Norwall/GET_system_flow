@@ -11,10 +11,12 @@ from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, Stead
 from pressure_balance import LoopPressureBalance, SectionPressureBalance, hydrostatic_pressure_pa
 from refrigerant_properties import PropertyRangeError, RefrigerantSaturationProperties
 from two_phase_regimes import (
-    classify_horizontal_evaporator_regime,
-    classify_vertical_riser_regime,
+    FlowRegimeClassification,
+    classify_horizontal_evaporator_regime_result,
+    classify_vertical_riser_regime_result,
     dominant_regime,
     format_regime_summary,
+    single_liquid_heating_classification,
     summarize_regime_fractions,
 )
 from two_phase_closures import (
@@ -27,6 +29,32 @@ from two_phase_closures import (
     normalize_friction_model,
     two_phase_multiplier_liquid_reference,
 )
+
+
+def _regime_metadata_arrays(
+    n_items: int,
+    classification: FlowRegimeClassification,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    return (
+        np.full(n_items, classification.source, dtype=object),
+        np.full(n_items, classification.status, dtype=object),
+        np.full(n_items, classification.transition_criteria, dtype=object),
+        np.full(n_items, classification.confidence, dtype=object),
+    )
+
+
+def _write_regime_metadata(
+    source_values: np.ndarray,
+    status_values: np.ndarray,
+    transition_values: np.ndarray,
+    confidence_values: np.ndarray,
+    index: int,
+    classification: FlowRegimeClassification,
+) -> None:
+    source_values[index] = classification.source
+    status_values[index] = classification.status
+    transition_values[index] = classification.transition_criteria
+    confidence_values[index] = classification.confidence
 
 
 @dataclass(frozen=True)
@@ -584,24 +612,72 @@ class SteadyLoopSolver:
             local_temperature_profile_c = np.full(ngrid, inputs.tcon, dtype=float)
             local_pressure_profile_pa = np.full(ngrid, state.pressure_pa, dtype=float)
 
-        flow_regime_full = np.full(ngrid, "single_liquid_heating", dtype=object)
+        single_liquid_regime = single_liquid_heating_classification()
+        flow_regime_full = np.full(ngrid, single_liquid_regime.name, dtype=object)
+        (
+            flow_regime_source_full,
+            flow_regime_status_full,
+            flow_regime_transition_criteria_full,
+            flow_regime_confidence_full,
+        ) = _regime_metadata_arrays(ngrid, single_liquid_regime)
         if np.any(boiling_mask):
             if self.effective_closure_model(inputs) == "experimental_regime_aware":
                 boiling_regime_profile = [closure_state.diagnostic_regime or "boiling_two_phase" for closure_state in boiling_closure_states]
+                boiling_regime_source_profile = [
+                    closure_state.diagnostic_regime_source or "experimental_regime_aware heuristic thresholds; no primary source"
+                    for closure_state in boiling_closure_states
+                ]
+                boiling_regime_status_profile = [
+                    closure_state.diagnostic_regime_status or "experimental"
+                    for closure_state in boiling_closure_states
+                ]
+                boiling_regime_transition_profile = [
+                    closure_state.diagnostic_regime_transition_criteria or "legacy experimental fallback"
+                    for closure_state in boiling_closure_states
+                ]
+                boiling_regime_confidence_profile = [
+                    closure_state.diagnostic_regime_confidence or "heuristic"
+                    for closure_state in boiling_closure_states
+                ]
                 boiling_indices = np.searchsorted(boiling_coordinate, evaporator_coordinate[boiling_mask], side="left")
                 boiling_indices = np.clip(boiling_indices, 0, len(boiling_regime_profile) - 1)
                 flow_regime_full[boiling_mask] = np.asarray(
                     [boiling_regime_profile[int(index)] for index in boiling_indices],
                     dtype=object,
                 )
+                flow_regime_source_full[boiling_mask] = np.asarray(
+                    [boiling_regime_source_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_status_full[boiling_mask] = np.asarray(
+                    [boiling_regime_status_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_transition_criteria_full[boiling_mask] = np.asarray(
+                    [boiling_regime_transition_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_confidence_full[boiling_mask] = np.asarray(
+                    [boiling_regime_confidence_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
             else:
                 for point_index in np.where(boiling_mask)[0]:
-                    flow_regime_full[point_index] = classify_horizontal_evaporator_regime(
+                    regime_classification = classify_horizontal_evaporator_regime_result(
                         mass_quality=float(vapor_mass_flow_profile_full_kg_s[point_index] / max(total_mass_flow_kg_s, 1e-12)),
                         gas_volume_fraction=float(gas_volume_fraction_full[point_index]),
                         gas_superficial_velocity_m_s=float(gas_superficial_velocity_full_m_s[point_index]),
                         liquid_superficial_velocity_m_s=float(liquid_superficial_velocity_full_m_s[point_index]),
                         slip_ratio=float(slip_ratio_full[point_index]),
+                    )
+                    flow_regime_full[point_index] = regime_classification.name
+                    _write_regime_metadata(
+                        source_values=flow_regime_source_full,
+                        status_values=flow_regime_status_full,
+                        transition_values=flow_regime_transition_criteria_full,
+                        confidence_values=flow_regime_confidence_full,
+                        index=int(point_index),
+                        classification=regime_classification,
                     )
 
         evaporator_segment_lengths_m = np.full(ngrid, inputs.Li / max(ngrid, 1), dtype=float)
@@ -631,6 +707,10 @@ class SteadyLoopSolver:
             martinelli_x=tuple(np.asarray(martinelli_x_full, dtype=float).tolist()),
             two_phase_multiplier=tuple(np.asarray(two_phase_multiplier_full, dtype=float).tolist()),
             two_phase_pressure_gradient_pa_per_m=tuple(np.asarray(pressure_gradient_full_pa_per_m, dtype=float).tolist()),
+            flow_regime_source=tuple(str(value) for value in flow_regime_source_full.tolist()),
+            flow_regime_status=tuple(str(value) for value in flow_regime_status_full.tolist()),
+            flow_regime_transition_criteria=tuple(str(value) for value in flow_regime_transition_criteria_full.tolist()),
+            flow_regime_confidence=tuple(str(value) for value in flow_regime_confidence_full.tolist()),
         )
 
         riser_section = self.geometry.riser_section(height_m=inputs.H)
@@ -824,6 +904,10 @@ class SteadyLoopSolver:
         final_liquid_superficial_velocity_m_s = None
         final_slip_ratio = None
         final_diagnostic_regime = None
+        final_diagnostic_regime_source = None
+        final_diagnostic_regime_status = None
+        final_diagnostic_regime_transition_criteria = None
+        final_diagnostic_regime_confidence = None
         final_pressure_profile_pa = None
         final_temperature_profile_c = None
         final_vapor_mass_flow_out_kg_s = None
@@ -848,6 +932,10 @@ class SteadyLoopSolver:
             liquid_superficial_velocity_profile_m_s = np.zeros(n_boil, dtype=float)
             slip_ratio_profile = np.zeros(n_boil, dtype=float)
             diagnostic_regime_profile = np.full(n_boil, "", dtype=object)
+            diagnostic_regime_source_profile = np.full(n_boil, "", dtype=object)
+            diagnostic_regime_status_profile = np.full(n_boil, "", dtype=object)
+            diagnostic_regime_transition_profile = np.full(n_boil, "", dtype=object)
+            diagnostic_regime_confidence_profile = np.full(n_boil, "", dtype=object)
             pressure_profile_pa = np.zeros(n_boil, dtype=float)
             temperature_profile_c = np.zeros(n_boil, dtype=float)
 
@@ -941,6 +1029,10 @@ class SteadyLoopSolver:
                 liquid_superficial_velocity_profile_m_s[idx] = liquid_superficial_velocity_m_s
                 slip_ratio_profile[idx] = cell_closure_state.slip_ratio
                 diagnostic_regime_profile[idx] = cell_closure_state.diagnostic_regime
+                diagnostic_regime_source_profile[idx] = cell_closure_state.diagnostic_regime_source
+                diagnostic_regime_status_profile[idx] = cell_closure_state.diagnostic_regime_status
+                diagnostic_regime_transition_profile[idx] = cell_closure_state.diagnostic_regime_transition_criteria
+                diagnostic_regime_confidence_profile[idx] = cell_closure_state.diagnostic_regime_confidence
 
                 local_pressure_pa -= two_phase_pressure_gradient_pa_per_m * cell_width_m
                 vapor_mass_flow_in_kg_s += cell_evaporation_kg_s
@@ -960,6 +1052,10 @@ class SteadyLoopSolver:
             final_liquid_superficial_velocity_m_s = liquid_superficial_velocity_profile_m_s
             final_slip_ratio = slip_ratio_profile
             final_diagnostic_regime = diagnostic_regime_profile
+            final_diagnostic_regime_source = diagnostic_regime_source_profile
+            final_diagnostic_regime_status = diagnostic_regime_status_profile
+            final_diagnostic_regime_transition_criteria = diagnostic_regime_transition_profile
+            final_diagnostic_regime_confidence = diagnostic_regime_confidence_profile
             final_pressure_profile_pa = pressure_profile_pa
             final_temperature_profile_c = temperature_profile_c
             final_vapor_mass_flow_out_kg_s = updated_vapor_mass_flow_out_kg_s
@@ -991,6 +1087,10 @@ class SteadyLoopSolver:
             or final_liquid_superficial_velocity_m_s is None
             or final_slip_ratio is None
             or final_diagnostic_regime is None
+            or final_diagnostic_regime_source is None
+            or final_diagnostic_regime_status is None
+            or final_diagnostic_regime_transition_criteria is None
+            or final_diagnostic_regime_confidence is None
             or final_pressure_profile_pa is None
             or final_temperature_profile_c is None
             or final_vapor_mass_flow_out_kg_s is None
@@ -1112,6 +1212,10 @@ class SteadyLoopSolver:
         riser_gas_superficial_velocity_top_m_s = np.zeros(n_riser, dtype=float)
         riser_liquid_superficial_velocity_top_m_s = np.zeros(n_riser, dtype=float)
         riser_diagnostic_regime_top = np.full(n_riser, "", dtype=object)
+        riser_diagnostic_regime_source_top = np.full(n_riser, "", dtype=object)
+        riser_diagnostic_regime_status_top = np.full(n_riser, "", dtype=object)
+        riser_diagnostic_regime_transition_top = np.full(n_riser, "", dtype=object)
+        riser_diagnostic_regime_confidence_top = np.full(n_riser, "", dtype=object)
         riser_pressure_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
         riser_friction_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
         riser_hydrostatic_gradient_top_pa_per_m = np.zeros(n_riser, dtype=float)
@@ -1191,6 +1295,10 @@ class SteadyLoopSolver:
             riser_gas_superficial_velocity_top_m_s[idx] = gas_mass_flux_out * riser_state.v_g_m3_per_kg
             riser_liquid_superficial_velocity_top_m_s[idx] = liquid_mass_flux_out * riser_state.v_l_m3_per_kg
             riser_diagnostic_regime_top[idx] = riser_closure_state.diagnostic_regime
+            riser_diagnostic_regime_source_top[idx] = riser_closure_state.diagnostic_regime_source
+            riser_diagnostic_regime_status_top[idx] = riser_closure_state.diagnostic_regime_status
+            riser_diagnostic_regime_transition_top[idx] = riser_closure_state.diagnostic_regime_transition_criteria
+            riser_diagnostic_regime_confidence_top[idx] = riser_closure_state.diagnostic_regime_confidence
             riser_pressure_gradient_top_pa_per_m[idx] = riser_total_gradient_pa_per_m
             riser_friction_gradient_top_pa_per_m[idx] = riser_friction_gradient_pa_per_m
             riser_hydrostatic_gradient_top_pa_per_m[idx] = riser_closure_state.mixture_density_kg_m3 * 9.81
@@ -1243,9 +1351,25 @@ class SteadyLoopSolver:
                 str(value) if str(value) else "two_phase_riser"
                 for value in riser_diagnostic_regime_top[::-1]
             )
+            riser_flow_regime_source_bottom_to_top = tuple(
+                str(value) if str(value) else "experimental_regime_aware heuristic thresholds; no primary source"
+                for value in riser_diagnostic_regime_source_top[::-1]
+            )
+            riser_flow_regime_status_bottom_to_top = tuple(
+                str(value) if str(value) else "experimental"
+                for value in riser_diagnostic_regime_status_top[::-1]
+            )
+            riser_flow_regime_transition_bottom_to_top = tuple(
+                str(value) if str(value) else "legacy experimental fallback"
+                for value in riser_diagnostic_regime_transition_top[::-1]
+            )
+            riser_flow_regime_confidence_bottom_to_top = tuple(
+                str(value) if str(value) else "heuristic"
+                for value in riser_diagnostic_regime_confidence_top[::-1]
+            )
         else:
-            riser_flow_regime_bottom_to_top = tuple(
-                classify_vertical_riser_regime(
+            riser_classifications = tuple(
+                classify_vertical_riser_regime_result(
                     gas_volume_fraction=float(gas_volume_fraction),
                     gas_superficial_velocity_m_s=float(gas_superficial_velocity_m_s),
                 )
@@ -1253,6 +1377,15 @@ class SteadyLoopSolver:
                     riser_gas_volume_fraction_bottom_to_top,
                     riser_gas_superficial_velocity_bottom_to_top_m_s,
                 )
+            )
+            riser_flow_regime_bottom_to_top = tuple(classification.name for classification in riser_classifications)
+            riser_flow_regime_source_bottom_to_top = tuple(classification.source for classification in riser_classifications)
+            riser_flow_regime_status_bottom_to_top = tuple(classification.status for classification in riser_classifications)
+            riser_flow_regime_transition_bottom_to_top = tuple(
+                classification.transition_criteria for classification in riser_classifications
+            )
+            riser_flow_regime_confidence_bottom_to_top = tuple(
+                classification.confidence for classification in riser_classifications
             )
         riser_regime_fractions = summarize_regime_fractions(
             regimes=list(riser_flow_regime_bottom_to_top),
@@ -1276,6 +1409,10 @@ class SteadyLoopSolver:
             slip_ratio=tuple(np.asarray(riser_slip_ratio_bottom_to_top, dtype=float).tolist()),
             pressure_gradient_pa_per_m=tuple(np.asarray(riser_pressure_gradient_bottom_to_top_pa_per_m, dtype=float).tolist()),
             cumulative_driving_pressure_pa=tuple(np.asarray(riser_cumulative_driving_pressure_pa, dtype=float).tolist()),
+            flow_regime_source=riser_flow_regime_source_bottom_to_top,
+            flow_regime_status=riser_flow_regime_status_bottom_to_top,
+            flow_regime_transition_criteria=riser_flow_regime_transition_bottom_to_top,
+            flow_regime_confidence=riser_flow_regime_confidence_bottom_to_top,
         )
 
         evaporator_coordinate = np.linspace(0.0, 1.0, ngrid)
@@ -1393,24 +1530,72 @@ class SteadyLoopSolver:
                 final_pressure_profile_pa,
             )
 
-        flow_regime_full = np.full(ngrid, "single_liquid_heating", dtype=object)
+        single_liquid_regime = single_liquid_heating_classification()
+        flow_regime_full = np.full(ngrid, single_liquid_regime.name, dtype=object)
+        (
+            flow_regime_source_full,
+            flow_regime_status_full,
+            flow_regime_transition_criteria_full,
+            flow_regime_confidence_full,
+        ) = _regime_metadata_arrays(ngrid, single_liquid_regime)
         if np.any(boiling_mask):
             if self.effective_closure_model(inputs) == "experimental_regime_aware":
                 boiling_regime_profile = [str(value) if str(value) else "boiling_two_phase" for value in final_diagnostic_regime.tolist()]
+                boiling_regime_source_profile = [
+                    str(value) if str(value) else "experimental_regime_aware heuristic thresholds; no primary source"
+                    for value in final_diagnostic_regime_source.tolist()
+                ]
+                boiling_regime_status_profile = [
+                    str(value) if str(value) else "experimental"
+                    for value in final_diagnostic_regime_status.tolist()
+                ]
+                boiling_regime_transition_profile = [
+                    str(value) if str(value) else "legacy experimental fallback"
+                    for value in final_diagnostic_regime_transition_criteria.tolist()
+                ]
+                boiling_regime_confidence_profile = [
+                    str(value) if str(value) else "heuristic"
+                    for value in final_diagnostic_regime_confidence.tolist()
+                ]
                 boiling_indices = np.searchsorted(cell_center_coordinate, evaporator_coordinate[boiling_mask], side="left")
                 boiling_indices = np.clip(boiling_indices, 0, len(boiling_regime_profile) - 1)
                 flow_regime_full[boiling_mask] = np.asarray(
                     [boiling_regime_profile[int(index)] for index in boiling_indices],
                     dtype=object,
                 )
+                flow_regime_source_full[boiling_mask] = np.asarray(
+                    [boiling_regime_source_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_status_full[boiling_mask] = np.asarray(
+                    [boiling_regime_status_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_transition_criteria_full[boiling_mask] = np.asarray(
+                    [boiling_regime_transition_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
+                flow_regime_confidence_full[boiling_mask] = np.asarray(
+                    [boiling_regime_confidence_profile[int(index)] for index in boiling_indices],
+                    dtype=object,
+                )
             else:
                 for point_index in np.where(boiling_mask)[0]:
-                    flow_regime_full[point_index] = classify_horizontal_evaporator_regime(
+                    regime_classification = classify_horizontal_evaporator_regime_result(
                         mass_quality=float(vapor_mass_flow_profile_full_kg_s[point_index] / max(total_mass_flow_kg_s, 1e-12)),
                         gas_volume_fraction=float(gas_volume_fraction_full[point_index]),
                         gas_superficial_velocity_m_s=float(gas_superficial_velocity_full_m_s[point_index]),
                         liquid_superficial_velocity_m_s=float(liquid_superficial_velocity_full_m_s[point_index]),
                         slip_ratio=float(slip_ratio_full[point_index]),
+                    )
+                    flow_regime_full[point_index] = regime_classification.name
+                    _write_regime_metadata(
+                        source_values=flow_regime_source_full,
+                        status_values=flow_regime_status_full,
+                        transition_values=flow_regime_transition_criteria_full,
+                        confidence_values=flow_regime_confidence_full,
+                        index=int(point_index),
+                        classification=regime_classification,
                     )
 
         evaporator_segment_lengths_m = np.full(ngrid, inputs.Li / max(ngrid, 1), dtype=float)
@@ -1440,6 +1625,10 @@ class SteadyLoopSolver:
             martinelli_x=tuple(np.asarray(martinelli_x_full, dtype=float).tolist()),
             two_phase_multiplier=tuple(np.asarray(two_phase_multiplier_full, dtype=float).tolist()),
             two_phase_pressure_gradient_pa_per_m=tuple(np.asarray(pressure_gradient_full_pa_per_m, dtype=float).tolist()),
+            flow_regime_source=tuple(str(value) for value in flow_regime_source_full.tolist()),
+            flow_regime_status=tuple(str(value) for value in flow_regime_status_full.tolist()),
+            flow_regime_transition_criteria=tuple(str(value) for value in flow_regime_transition_criteria_full.tolist()),
+            flow_regime_confidence=tuple(str(value) for value in flow_regime_confidence_full.tolist()),
         )
 
         riser_section = self.geometry.riser_section(height_m=inputs.H)

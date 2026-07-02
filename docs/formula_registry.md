@@ -46,7 +46,7 @@
 | `PRESS-DISTRIBUTED-RISER-GRADIENT` | ENGINEERING / REQUIRES_AUDIT | `SteadyLoopSolver._one_pass_distributed` |
 | `PRESS-HYDROSTATIC-SECTION` | PUBLISHED / DEFINITIONAL | `pressure_balance.hydrostatic_pressure_pa` |
 | `PRESS-LOOP-BALANCE` | PUBLISHED / DEFINITIONAL | `LoopPressureBalance` |
-| `EXP-REGIME-AWARE-CLASSIFIERS` | EXPERIMENTAL / NO PRIMARY SOURCE | `two_phase_regimes.py` |
+| `EXP-REGIME-AWARE-CLASSIFIERS` | EXPERIMENTAL / NO PRIMARY SOURCE | `experimental_regimes.py` |
 | `EXP-DRIFT-FLUX-LIKE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `drift_flux_void_fraction` |
 | `EXP-ANNULAR-CORE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `annular_core_void_fraction` |
 | `EXP-REGIME-FRICTION-GRADIENTS` | EXPERIMENTAL / NO PRIMARY SOURCE | `_resolve_two_phase_friction_response` |
@@ -146,7 +146,7 @@ SaturationState(
 - Область применимости: насыщенная зона кипения при заданном тепловом потоке.
 - Источник: баланс энергии; `CO2.xmcd`; диссертация; `docs/get_co2_academic_reference.md`.
 - Код: `co2_steady_solver.SteadyLoopSolver.one_pass`; `co2_steady_solver.SteadyLoopSolver._one_pass_distributed`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`; `tests/test_regime_maps.py`.
 
 ## BAL-PREBOILING-FRACTION
 
@@ -589,7 +589,7 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 - Переменные и размерности: массовая сухость, объемные доли и slip ratio безразмерны; superficial velocities, м/с.
 - Область применимости: только diagnostics и switching внутри `experimental_regime_aware`; это не опубликованная режимная карта.
 - Источник: текущая проектная эвристика; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_regimes.classify_horizontal_evaporator_regime`; `classify_vertical_riser_regime`.
+- Код: `experimental_regimes.classify_horizontal_evaporator_regime_result`; `classify_vertical_riser_regime_result`; compatibility wrappers in `two_phase_regimes.py`.
 - Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## EXP-DRIFT-FLUX-LIKE-VOID
@@ -649,5 +649,5 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
-- Опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
+- `published_regimes.py` содержит только guarded-заготовки, возвращающие `unknown_or_out_of_range` / `not_implemented`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
 - Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome не подключаются как расчетные `published`-модели, пока точные формулы и области применимости не сверены с полным первоисточником.

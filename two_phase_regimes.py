@@ -2,6 +2,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from experimental_regimes import (
+    FlowRegimeClassification,
+    classify_horizontal_evaporator_regime as _classify_horizontal_evaporator_regime,
+    classify_horizontal_evaporator_regime_result,
+    classify_vertical_riser_regime as _classify_vertical_riser_regime,
+    classify_vertical_riser_regime_result,
+    single_liquid_heating_classification,
+    unknown_or_out_of_range_classification,
+)
+
 
 FLOW_REGIME_COLORS = {
     "single_liquid_heating": "#d7dee7",
@@ -27,45 +37,23 @@ def classify_horizontal_evaporator_regime(
     liquid_superficial_velocity_m_s: float,
     slip_ratio: float,
 ) -> str:
-    mass_quality = max(0.0, min(1.0, float(mass_quality)))
-    gas_volume_fraction = max(0.0, min(1.0, float(gas_volume_fraction)))
-    gas_superficial_velocity_m_s = max(0.0, float(gas_superficial_velocity_m_s))
-    liquid_superficial_velocity_m_s = max(0.0, float(liquid_superficial_velocity_m_s))
-    slip_ratio = max(0.0, float(slip_ratio))
-
-    if mass_quality <= 1e-4 or gas_volume_fraction < 0.01:
-        return "bubble_onset"
-    if gas_volume_fraction < 0.12:
-        return "bubbly" if gas_superficial_velocity_m_s < 0.6 else "plug"
-    if gas_volume_fraction < 0.35:
-        if gas_superficial_velocity_m_s < 1.0 and liquid_superficial_velocity_m_s > 0.10:
-            return "stratified_wavy"
-        return "plug"
-    if gas_volume_fraction < 0.75:
-        if gas_superficial_velocity_m_s < 2.5 and liquid_superficial_velocity_m_s > 0.05:
-            return "intermittent"
-        return "annular_transition"
-    if gas_volume_fraction < 0.93:
-        return "annular" if slip_ratio < 12.0 else "annular_transition"
-    return "annular_mist"
+    return _classify_horizontal_evaporator_regime(
+        mass_quality=mass_quality,
+        gas_volume_fraction=gas_volume_fraction,
+        gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+        liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+        slip_ratio=slip_ratio,
+    )
 
 
 def classify_vertical_riser_regime(
     gas_volume_fraction: float,
     gas_superficial_velocity_m_s: float,
 ) -> str:
-    gas_volume_fraction = max(0.0, min(1.0, float(gas_volume_fraction)))
-    gas_superficial_velocity_m_s = max(0.0, float(gas_superficial_velocity_m_s))
-
-    if gas_volume_fraction < 0.15:
-        return "bubbly"
-    if gas_volume_fraction < 0.45:
-        return "slug"
-    if gas_volume_fraction < 0.80:
-        return "churn"
-    if gas_volume_fraction < 0.95 and gas_superficial_velocity_m_s < 8.0:
-        return "annular"
-    return "annular_mist"
+    return _classify_vertical_riser_regime(
+        gas_volume_fraction=gas_volume_fraction,
+        gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+    )
 
 
 def summarize_regime_fractions(

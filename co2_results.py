@@ -6,6 +6,15 @@ from typing import Any, Dict
 from pressure_balance import LoopPressureBalance
 
 
+def _format_unique_summary(values: tuple[str, ...]) -> str:
+    ordered_values = []
+    for value in values:
+        text = str(value)
+        if text and text not in ordered_values:
+            ordered_values.append(text)
+    return "; ".join(ordered_values)
+
+
 @dataclass(frozen=True)
 class LoopSectionState:
     section_name: str
@@ -40,6 +49,10 @@ class EvaporatorProfile:
     martinelli_x: tuple[float, ...]
     two_phase_multiplier: tuple[float, ...]
     two_phase_pressure_gradient_pa_per_m: tuple[float, ...]
+    flow_regime_source: tuple[str, ...] = ()
+    flow_regime_status: tuple[str, ...] = ()
+    flow_regime_transition_criteria: tuple[str, ...] = ()
+    flow_regime_confidence: tuple[str, ...] = ()
 
     @property
     def n_points(self) -> int:
@@ -60,6 +73,10 @@ class RiserProfile:
     slip_ratio: tuple[float, ...]
     pressure_gradient_pa_per_m: tuple[float, ...]
     cumulative_driving_pressure_pa: tuple[float, ...]
+    flow_regime_source: tuple[str, ...] = ()
+    flow_regime_status: tuple[str, ...] = ()
+    flow_regime_transition_criteria: tuple[str, ...] = ()
+    flow_regime_confidence: tuple[str, ...] = ()
 
     @property
     def n_points(self) -> int:
@@ -162,6 +179,28 @@ class SteadyPassResult:
             "outlet_gas_volume_fraction_closure": self.outlet_gas_volume_fraction_closure,
             "outlet_liquid_volume_fraction_closure": self.outlet_liquid_volume_fraction_closure,
         }
+        if self.evaporator_profile is not None:
+            data.update(
+                {
+                    "evaporator_flow_regime_source_summary": _format_unique_summary(
+                        self.evaporator_profile.flow_regime_source
+                    ),
+                    "evaporator_flow_regime_status_summary": _format_unique_summary(
+                        self.evaporator_profile.flow_regime_status
+                    ),
+                }
+            )
+        if self.riser_profile is not None:
+            data.update(
+                {
+                    "riser_flow_regime_source_summary": _format_unique_summary(
+                        self.riser_profile.flow_regime_source
+                    ),
+                    "riser_flow_regime_status_summary": _format_unique_summary(
+                        self.riser_profile.flow_regime_status
+                    ),
+                }
+            )
         if self.pressure_balance is not None:
             data.update(
                 {

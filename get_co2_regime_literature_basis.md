@@ -80,6 +80,15 @@
 worksheet/experimental-логику, но published-функции больше не добавляются туда
 как первичное место реализации.
 
+После Checkpoint 6 split режимная часть также разделена:
+
+- `experimental_regimes.py` — текущие эвристические пороги, явно помеченные как
+  `EXPERIMENTAL / NO PRIMARY SOURCE`;
+- `two_phase_regimes.py` — compatibility wrappers и summary helpers;
+- `published_regimes.py` — guarded-заготовки published-карт, которые пока
+  возвращают `unknown_or_out_of_range` / `not_implemented`, а не физический
+  режим.
+
 То есть режимы:
 
 - `worksheet_compatible`
@@ -90,10 +99,10 @@ worksheet/experimental-логику, но published-функции больше 
 
 ## 4. Что в текущем коде не должно считаться научно верифицированным
 
-Следующие части текущего `regime_aware` режима нельзя считать опубикованными
+Следующие части текущего `regime_aware` режима нельзя считать опубликованными
 корреляциями в строгом смысле:
 
-- пороги в `two_phase_regimes.py`
+- пороги в `experimental_regimes.py`
   для переходов `bubbly / intermittent / annular / churn`;
 - коэффициенты `distribution_parameter` и `drift_prefactor`
   в `drift_flux_void_fraction(...)` из `two_phase_closures.py`;
@@ -204,22 +213,29 @@ flow-pattern-based pressure-drop model из специализированных
 - published closures;
 - эвристические experimental closures.
 
-Практически это означает:
+Практический статус:
 
-- сохранить текущий `regime_aware` только как `experimental_regime_aware`;
-- новый научно корректный режим вводить отдельно, например:
+- текущий `regime_aware` сохранён только как alias на
+  `experimental_regime_aware`;
+- published closures вынесены в `published_friction.py` и
+  `published_void_fraction.py`;
+- режимные эвристики вынесены в `experimental_regimes.py`;
+- новый научно корректный режим нужно вводить отдельно, например:
   - `literature_regime_model`
   - или `published_regime_model`.
 
 ### Шаг 2. Вынести режимные карты в отдельный published layer
 
-В `two_phase_regimes.py`
-нужно отделить:
+Структурное разделение уже выполнено:
 
-- текущую эвристическую карту;
-- новую published-карту для:
-  - горизонтального испарителя;
-  - вертикального riser.
+- текущая эвристическая карта находится в `experimental_regimes.py`;
+- `two_phase_regimes.py` оставлен как слой совместимости;
+- `published_regimes.py` содержит только guarded-заготовки.
+
+Остаётся реализовать новые published-карты для:
+
+- горизонтального испарителя;
+- вертикального riser.
 
 ### Шаг 3. Вынести published closures отдельно от экспериментальных
 
@@ -262,14 +278,15 @@ flow-pattern-based pressure-drop model из специализированных
 
 - текущие коэффициенты `drift_flux_void_fraction(...)`;
 - текущие `annular_core`, `separated_shear`, `annular_film`;
-- текущие пороги режима в `two_phase_regimes.py`.
+- текущие пороги режима в `experimental_regimes.py`.
 
 ## 9. Практический следующий шаг
 
 Следующий корректный шаг не в том, чтобы "подкрутить" существующие эвристики,
 а в том, чтобы:
 
-1. изолировать текущий experimental режим; базовая изоляция уже выполнена;
+1. изолировать текущий experimental режим; структурная изоляция и
+   source/status metadata уже выполнены;
 2. получить полный текст и точные формулы для нового published vertical layer:
    - `Zuber-Findlay (1965)` для void fraction в riser;
    - `Taitel-Barnea-Dukler (1980)` для вертикальной regime map;
@@ -278,14 +295,16 @@ flow-pattern-based pressure-drop model из специализированных
 
 ## 10. Ограничение текущего этапа
 
-По состоянию на Checkpoint 5 точные формулы для HEM, Zivi и
-Lockhart-Martinelli/Chisholm уже вынесены в source-strict published-слой.
-Следующий шаг реализации должен выполняться только после того, как точные
-формулы остальных перечисленных статей будут доступны локально или
-подтверждены по полному тексту статей.
+По состоянию на Checkpoint 6 split точные формулы для HEM, Zivi и
+Lockhart-Martinelli/Chisholm уже вынесены в source-strict published-слой, а
+режимные эвристики отделены от будущих published-карт. Следующий шаг реализации
+published-карт должен выполняться только после того, как точные формулы
+остальных перечисленных статей будут доступны локально или подтверждены по
+полному тексту статей.
 
 До этого момента корректно считать, что:
 
 - `worksheet_compatible`, `homogeneous_equilibrium`, `zivi` — научно прослеживаемые режимы;
 - `published_friction.py` и `published_void_fraction.py` — единственные места для новых published closure-функций;
-- текущий `regime_aware` — исследовательский режим, а не окончательная научная модель.
+- `published_regimes.py` — только заготовка с `not_implemented`, не published-карта;
+- текущий `regime_aware` / `experimental_regime_aware` — исследовательский режим, а не окончательная научная модель.

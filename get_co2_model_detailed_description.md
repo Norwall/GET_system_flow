@@ -143,6 +143,16 @@
 - общая связь массовой сухости и пустотности реализована отдельно от
   experimental regime-aware эвристик.
 
+После Checkpoint 6 split режимные классификаторы также разделены по статусу:
+
+- `experimental_regimes.py` содержит текущие эвристические пороги и возвращает
+  имя режима вместе с source/status/criteria/confidence metadata;
+- `two_phase_regimes.py` оставлен как compatibility-слой для старых импортов и
+  summary helpers;
+- `published_regimes.py` пока содержит только guarded-заготовки
+  `unknown_or_out_of_range` / `not_implemented`; опубликованные карты
+  Wojtan-Ursenbacher-Thome и Taitel-Barnea-Dukler в расчёт не подключены.
+
 ### 4.6. Ускорительные потери
 
 Кроме трения модель учитывает ускорительные потери давления.
@@ -241,6 +251,12 @@
 - `pressure_balance_total_hydrostatic_pa` — сумма гидростатических вкладов
 - `pressure_balance_total_resistance_pa` — сопротивление без гидростатики
 - `pressure_balance_residual_pa` — невязка явного баланса
+- `evaporator_flow_regime_source_summary` — источники диагностических режимов
+  испарителя
+- `evaporator_flow_regime_status_summary` — статусы диагностических режимов
+  испарителя
+- `riser_flow_regime_source_summary` — источники диагностических режимов riser
+- `riser_flow_regime_status_summary` — статусы диагностических режимов riser
 
 ## 7. Полный workflow расчета в `get_co2_model.py`
 
@@ -400,6 +416,7 @@
 - потери давления;
 - выбранную модель трения;
 - раздельный баланс давления;
+- диагностические режимы течения с source/status metadata;
 - напор;
 - газосодержание;
 - температуры;
@@ -488,6 +505,12 @@ Lockhart-Martinelli/Chisholm. Müller-Steinhagen-Heck, Friedel,
 Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome пока остаются
 задачами следующих этапов до сверки точных формул по полному первоисточнику.
 
+Checkpoint 6 split не добавляет новых published-карт. Он только делает
+академическую границу явной: legacy `flow_regime` остаётся диагностическим
+полем, а новые поля профилей показывают, что текущие переходы получены из
+`experimental_regimes.py` и имеют статус `experimental`. Published-заготовки
+не возвращают физический режим, пока первоисточник не сверен.
+
 ## 10. Как правильно понимать результаты модели
 
 Результаты нужно трактовать как:
@@ -513,7 +536,8 @@ Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome пока ост�
 - явный баланс гидростатических, фрикционных, ускорительных и местных членов;
 - табличная термодинамика насыщенного CO2;
 - source-strict published-замыкания HEM, Zivi и Lockhart-Martinelli/Chisholm;
-- experimental-замыкания для исследовательского regime-aware режима.
+- experimental-замыкания для исследовательского regime-aware режима;
+- source-tagged диагностические режимы течения без заявления published-карты.
 
 Полный workflow модели выглядит так:
 
