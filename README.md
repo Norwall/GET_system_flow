@@ -70,6 +70,17 @@ result = model.run(
 )
 ```
 
+Для расчетов через общий интерфейс свойств CO2/NH3 используйте универсальный
+фасад:
+
+```python
+from refrigerant_loop_model import RefrigerantLoopModel
+
+model = RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")
+result = model.run(H=2.5, qtr=76.68, Li=200.0, tcon=0.0)
+print(result["fluid"], result["property_backend"], result["converged"])
+```
+
 ## Статус физической доработки
 
 В текущей версии закрыты Checkpoint 0-4 аудита модели и выполнена
@@ -97,6 +108,13 @@ source-strict часть Checkpoint 5:
   отдельными unit-тестами;
 - published closure-модели дополнительно проверяются на отсутствие зависимостей
   от `EXP-*` записей реестра.
+- добавлен универсальный фасад `RefrigerantLoopModel` для CO2/NH3 через общий
+  `RefrigerantSaturationProperties`;
+- NH3/R717/Ammonia считается тем же steady solver на CoolProp-свойствах без
+  переноса CO2-specific табличного backend;
+- добавлены reference CSV для CoolProp CO2/NH3 в `data/reference_properties/`;
+- результаты содержат `fluid_cas`, `refrigerant_name`, `outlet_mass_quality`,
+  `outlet_no_slip_gas_volume_fraction` и `outlet_closure_void_fraction`.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -176,8 +194,8 @@ pytest -q -m slow
   как полный внешний алгоритм поиска границ.
 - Свойства CO2 заданы таблично и интерполируются; расчеты вне области исходных
   таблиц нужно трактовать осторожно.
-- Для CO2/NH3 через CoolProp свойства насыщения доступны через общий интерфейс,
-  но полноценная ветка NH3 в loop solver еще не завершена.
+- NH3 через CoolProp доступен в общем loop solver, но режимные карты, boiling
+  diagnostics и qcrit для него еще не доведены до published-физики.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
 - Геометрический конструктор передает основные расчетные участки, но пока не

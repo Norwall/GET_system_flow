@@ -101,7 +101,8 @@ SaturationState(
 - Область применимости: aliases CO2/R744/CarbonDioxide в диапазоне насыщения CoolProp ниже критической точки.
 - Источник: CoolProp HEOS; Span and Wagner, equation of state for carbon dioxide, DOI `10.1063/1.555991`.
 - Код: `refrigerant_properties.CoolPropSaturationProperties(fluid="CO2")`.
-- Тесты: `tests/test_refrigerant_properties.py`.
+- Reference CSV: `data/reference_properties/co2_saturation_coolprop.csv`.
+- Тесты: `tests/test_refrigerant_properties.py`; `tests/test_nh3_properties.py`; `tests/test_refrigerant_loop_model.py`.
 
 ## PROP-COOLPROP-NH3-HEOS
 
@@ -111,7 +112,8 @@ SaturationState(
 - Область применимости: aliases NH3/R717/Ammonia в диапазоне насыщения CoolProp ниже критической точки.
 - Источник: CoolProp HEOS; Gao, Wu, Bell, Lemmon, ammonia EOS, J. Phys. Chem. Ref. Data, 2020.
 - Код: `refrigerant_properties.CoolPropSaturationProperties(fluid="NH3")`.
-- Тесты: `tests/test_refrigerant_properties.py`.
+- Reference CSV: `data/reference_properties/nh3_saturation_coolprop.csv`.
+- Тесты: `tests/test_refrigerant_properties.py`; `tests/test_nh3_properties.py`; `tests/test_nh3_loop_solver.py`; `tests/test_refrigerant_loop_model.py`.
 
 ## PROP-REFPROP-ADAPTER
 

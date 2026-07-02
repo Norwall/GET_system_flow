@@ -160,6 +160,7 @@ class SteadyPassResult:
             "rhoef_kg_m3": self.outlet_mixture_density_kg_m3,
             "Hy_m": self.required_head_m,
             "chiG1_mass": self.outlet_mass_quality,
+            "outlet_mass_quality": self.outlet_mass_quality,
             "GL1_lph": self.liquid_mass_flow_out_lph,
             "GL0_lph": self.liquid_mass_flow_in_lph,
             "GG0_lph": self.vapor_mass_flow_liq_equiv_lph,
@@ -176,7 +177,9 @@ class SteadyPassResult:
             "evaporator_flow_regime_summary": self.evaporator_flow_regime_summary,
             "riser_flow_regime_summary": self.riser_flow_regime_summary,
             "outlet_gas_volume_fraction_true": self.outlet_gas_volume_fraction_true,
+            "outlet_no_slip_gas_volume_fraction": self.outlet_gas_volume_fraction_true,
             "outlet_gas_volume_fraction_closure": self.outlet_gas_volume_fraction_closure,
+            "outlet_closure_void_fraction": self.outlet_gas_volume_fraction_closure,
             "outlet_liquid_volume_fraction_closure": self.outlet_liquid_volume_fraction_closure,
         }
         if self.evaporator_profile is not None:
@@ -240,6 +243,8 @@ class SteadyLoopResult:
     closure_name: str = ""
     property_model_name: str = ""
     fluid: str = ""
+    fluid_cas: str = ""
+    refrigerant_name: str = ""
     property_backend: str = ""
     property_source: str = ""
     property_warning: str = ""
@@ -262,6 +267,8 @@ class SteadyLoopResult:
             "closure_name": self.closure_name,
             "property_model_name": self.property_model_name,
             "fluid": self.fluid,
+            "fluid_cas": self.fluid_cas,
+            "refrigerant_name": self.refrigerant_name,
             "property_backend": self.property_backend,
             "property_source": self.property_source,
             "property_warning": self.property_warning,

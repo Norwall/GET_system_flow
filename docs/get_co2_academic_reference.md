@@ -1,5 +1,5 @@
 ---
-title: "Академическая справка по программной модели естественной циркуляции CO₂ в системе ГЕТ"
+title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
 date: "2 июля 2026 г."
@@ -8,7 +8,7 @@ toc-title: "Содержание"
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции диоксида углерода в горизонтальной естественно действующей трубчатой системе (ГЕТ). Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5 и structural split Checkpoint 6: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, а также разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и guarded-заготовки `published_regimes.py`. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures и source-tagged regime diagnostics.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6 и NH₃-ветки Checkpoint 8: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и guarded-заготовки `published_regimes.py`, а также универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics и CoolProp reference CSV для CO₂/NH₃.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -29,6 +29,8 @@ toc-title: "Содержание"
 После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
 
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
+
+Для CO₂ доступны две ветки свойств: Mathcad-compatible таблицы из `CO2.xmcd` и CoolProp HEOS. Для NH₃ доступна CoolProp/REFPROP-ориентированная ветка через `RefrigerantSaturationProperties`; перенос CO₂-табличных коэффициентов на аммиак запрещён. NH₃-результаты являются расчётом тем же стационарным гидравлическим solver, но не являются экспериментальной валидацией аммиачной установки из [5] и не добавляют published режимных карт или qcrit-модели.
 
 Документ содержит:
 
@@ -59,6 +61,8 @@ toc-title: "Содержание"
 | \(q_\ell\) | qtr | линейная тепловая нагрузка испарителя | Вт/м |
 | \(L_i\) | Li | суммарная длина испарителя | м |
 | \(t_k\) | tcon | температура конденсации | °C |
+| — | fluid | рабочее тело: CO2/R744 или NH3/R717 | строка |
+| — | property_backend | источник свойств: mathcad_table, coolprop, refprop | строка |
 | — | mode | алгоритм расчёта профиля | строка |
 | — | closure_model | замыкание двухфазной модели | строка |
 | — | friction_model | модель коэффициента трения Дарси | строка |
@@ -70,6 +74,7 @@ toc-title: "Содержание"
 - массовые расходы жидкости и пара;
 - массовая сухость;
 - расчётная пустотность, скорости фаз и коэффициент скольжения;
+- идентификаторы рабочего тела, CAS, backend свойств и источник свойств;
 - потери давления на участках;
 - требуемый напор \(H_y\);
 - распределения температуры, давления и гидравлических параметров;
@@ -89,6 +94,7 @@ toc-title: "Содержание"
 - расчёт заправочной массы и уровня хладагента;
 - опубликованные режимные карты Wojtan–Ursenbacher–Thome и Taitel–Barnea–Dukler;
 - полный диссертационный алгоритм поиска нижней и верхней критических нагрузок с шагом \(0{,}01\) Вт/м и специальным пределом \(f=0\);
+- экспериментальную валидацию NH₃-ветки против стенда из [5];
 - оценка неопределённости и доверительных интервалов.
 
 # 2. Архитектура программной реализации
@@ -103,12 +109,16 @@ toc-title: "Содержание"
     derive_geometry
             |
             v
-    H, qtr, Li, tcon, mode, closure_model, friction_model
+    H, qtr, Li, tcon, fluid, property_backend, mode, closure_model, friction_model
             |
             v
-    CO2MathcadModel / SteadyLoopSolver
+    CO2MathcadModel / RefrigerantLoopModel / SteadyLoopSolver
             |
             +--> CO2SaturationProperties
+            +--> RefrigerantSaturationProperties
+            |       +--> MathcadCO2SaturationProperties
+            |       +--> CoolPropSaturationProperties(CO2/NH3)
+            |       +--> RefpropSaturationProperties
             +--> two_phase_closures
             |       +--> published_friction
             |       +--> published_void_fraction
@@ -125,9 +135,11 @@ toc-title: "Содержание"
 
 | Модуль | Назначение |
 |---|---|
-| get_co2_model.py | публичный фасад, совместимость с ранними именами Mathcad |
+| get_co2_model.py | публичный CO₂-фасад, совместимость с ранними именами Mathcad |
+| refrigerant_loop_model.py | универсальный фасад CO₂/NH₃ поверх общего steady solver |
+| refrigerant_properties.py | общий интерфейс свойств насыщения, Mathcad CO₂, CoolProp CO₂/NH₃ и REFPROP adapter |
 | co2_steady_solver.py | основной стационарный решатель и поиск параметра \(f\) |
-| co2_properties.py | табличные свойства насыщенного CO₂ и сплайн-интерполяция |
+| co2_properties.py | compatibility alias для табличных свойств насыщенного CO₂ |
 | co2_geometry.py | базовая геометрия и типы участков контура |
 | pressure_balance.py | раздельный баланс гидростатики, трения, ускорительных и местных потерь |
 | published_friction.py | опубликованные/definitional фрикционные формулы: Darcy mass-flux, Lockhart–Martinelli, Chisholm |
@@ -238,7 +250,7 @@ toc-title: "Содержание"
 - Текущий solver поддерживает ровно один участок каждого расчётного типа: evaporator, riser, condenser и downcomer. Сегмент connector сохраняется в JSON, но при запуске solver отклоняется как неподдержанная участковая гидравлика.
 - Параметры грунта имеют статус dynamic_placeholder и не входят ни в одно уравнение решателя.
 
-# 5. Геометрия и свойства CO₂
+# 5. Геометрия и свойства хладагента
 
 ## 5.1. Базовая геометрия
 
@@ -319,9 +331,9 @@ U=q_\ell L_i.
 \tag{5.8}
 \]
 
-## 5.3. Табличная модель свойств
+## 5.3. Табличная модель свойств CO₂
 
-Класс CO2SaturationProperties не использует уравнение состояния. Давление насыщения, теплота парообразования, вязкости, теплоёмкость и удельные объёмы задаются таблицами и интерполируются CubicSpline из SciPy. По умолчанию применяется граничное условие not-a-knot и разрешена экстраполяция [17, 19].
+Класс `CO2SaturationProperties` является compatibility alias для `MathcadCO2SaturationProperties` и не использует уравнение состояния. Давление насыщения, теплота парообразования, вязкости, теплоёмкость и удельные объёмы задаются таблицами и интерполируются CubicSpline из SciPy. По умолчанию применяется граничное условие not-a-knot [17, 19].
 
 Основные температурные диапазоны таблиц:
 
@@ -331,7 +343,29 @@ U=q_\ell L_i.
 | \(c_{p,l}\) | от −50 до 20 °C |
 | \(v_l,v_g\) | от −56,60 до 31,04 °C |
 
-Код не проверяет выход температуры за эти диапазоны. Поэтому возможность вычислить число не означает физическую достоверность экстраполированного свойства.
+По умолчанию неявная экстраполяция запрещена: выход за диапазон таблицы даёт `PropertyRangeError` и в solver возвращается как `property_out_of_range`. Экстраполяция допускается только при явном `allow_property_extrapolation=True` и должна трактоваться как compatibility-исследование, а не как физически подтверждённый расчёт.
+
+## 5.3.1. Общий интерфейс свойств насыщения
+
+`refrigerant_properties.py` вводит общий protocol `RefrigerantSaturationProperties` и dataclass `SaturationState`. Через него solver получает \(p_s\), \(dp_s/dT\), \(h_l\), \(h_g\), \(r=h_g-h_l\), \(\rho_l\), \(\rho_g\), \(v_l\), \(v_g\), \(\mu_l\), \(\mu_g\), \(c_p\), теплопроводность и поверхностное натяжение.
+
+Поддержанные рабочие тела и aliases:
+
+| Каноническое имя | Aliases | CAS | Backend |
+|---|---|---|---|
+| CO2 | CO2, R744, CarbonDioxide | 124-38-9 | mathcad_table, coolprop, refprop |
+| NH3 | NH3, R717, Ammonia | 7664-41-7 | coolprop, refprop |
+
+Для CoolProp backend свойства насыщения запрашиваются через `PropsSI` с качеством `Q=0` для насыщенной жидкости и `Q=1` для насыщенного пара. Официальная документация CoolProp указывает этот способ получения насыщенных жидкостных и паровых свойств, а также расчёт скрытой теплоты как \(h_g-h_l\) [24].
+
+Для CO₂ CoolProp использует Span-Wagner equation of state [25]. Для NH₃ в документации CoolProp указан EOS Gao, Wu, Bell and Lemmon [26]. Транспортные свойства и поверхностное натяжение также берутся из CoolProp-ссылок на соответствующие опубликованные корреляции; в текущем коде они используются как свойства backend, а не как отдельно реализованные формулы.
+
+Для численной регрессии добавлены reference CSV:
+
+- `data/reference_properties/co2_saturation_coolprop.csv`;
+- `data/reference_properties/nh3_saturation_coolprop.csv`.
+
+Эти CSV фиксируют выбранные точки CoolProp 8.0.0 на линии насыщения и проверяются тестами, но не заменяют первоисточник EOS.
 
 ## 5.4. Преобразования единиц исходных таблиц
 
@@ -1512,7 +1546,7 @@ SteadyLoopResult содержит:
 - интервал корня;
 - число смен знака;
 - статус и причину отказа;
-- имя пакета свойств и замыкания;
+- имя пакета свойств, рабочее тело, CAS, backend и source metadata;
 - итог одного стационарного прохода;
 - вспомогательные температуры и показатели Mathcad.
 
@@ -1543,6 +1577,12 @@ SteadyPassResult содержит интегральные расходы, пу�
 | GG0_liq_equiv_lph | паровой массовый расход в эквиваленте жидкого объёма |
 | GG0_gas_lph | объёмный расход пара при \(v_g\) |
 | phiG1_true | no-slip-объёмная доля по (8.11) |
+| outlet_no_slip_gas_volume_fraction | физически явный alias для phiG1_true |
+| outlet_gas_volume_fraction_closure | замыкающая пустотность \(\alpha\) |
+| outlet_closure_void_fraction | физически явный alias для outlet_gas_volume_fraction_closure |
+| outlet_mass_quality | физически явный alias для chiG1_mass |
+| fluid, fluid_cas, refrigerant_name | идентификаторы рабочего тела |
+| property_backend, property_source | источник термодинамических свойств |
 | tmm_C, tvih_C, tav_C | вспомогательные температуры Mathcad |
 | RVN0, RVN, RV1 | нормированные индикаторы |
 | friction_model | фактически выбранная модель коэффициента трения |
@@ -1738,27 +1778,26 @@ React-интерфейс позволяет:
 
 ## 16.5. Полный автоматизированный набор
 
-После Checkpoint 3 запускались целевые наборы:
+После Checkpoint 8 выполнены проверки:
 
-- `pytest tests/test_pressure_balance.py tests/test_mathcad_log_audit.py tests/test_formula_registry.py tests/test_baseline_compatibility.py -q` — 93 passed;
-- `pytest tests/test_co2_result_fields.py -q` — 6 passed;
-- `pytest tests/test_co2_model_regression.py tests/test_get_designer_geometry.py tests/test_get_designer_api.py -q --basetemp=.pytest-tmp` — 11 passed.
+- `pytest tests/test_formula_registry.py tests/test_co2_result_fields.py tests/test_refrigerant_properties.py tests/test_nh3_properties.py tests/test_refrigerant_loop_model.py tests/test_nh3_loop_solver.py -q` — 111 passed;
+- `pytest -q` — 165 passed.
 
-Тесты включают свойства, регрессию, формульный реестр, pressure balance, результаты, геометрию и API. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
+Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel` и NH₃ loop scenarios. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
 
 ## 16.6. Экспериментальные данные
 
 Работа [5] сообщает высокую связь расчётной и экспериментальной средней температуры аммиачного испарителя; до введения перегрева коэффициент детерминации составил \(R^2=96{,}12\%\), а расчёт систематически занижал температуру примерно на 2,52 °C. Для согласования был введён параметр перегрева.
 
-Ограничения переноса этого вывода на текущий код:
+Ограничения переноса этого вывода на текущий код после Checkpoint 8:
 
-1. экспериментальный хладагент — аммиак, текущий пакет свойств — CO₂;
+1. экспериментальный хладагент — аммиак, но новая NH₃-ветка пока проверена программно через CoolProp, а не по экспериментальным рядам;
 2. параметр перегрева в Python отсутствует;
 3. текущие режимы distributed_steady и experimental_regime_aware появились позже;
 4. тесты не загружают экспериментальные ряды и не вычисляют метрики ошибки;
 5. геометрия и теплообмен экспериментального стенда не воспроизводятся полностью.
 
-Следовательно, текущий Python-код имеет регрессионную верификацию, частичную проверку переноса Mathcad и косвенную опору на валидацию семейства моделей, но не прямую экспериментальную валидацию для CO₂.
+Следовательно, текущий Python-код имеет регрессионную верификацию, частичную проверку переноса Mathcad, CoolProp sanity-базис для CO₂/NH₃ и косвенную опору на валидацию семейства моделей, но не прямую экспериментальную валидацию ни для CO₂, ни для новой NH₃-ветки.
 
 # 17. Матрица научной прослеживаемости
 
@@ -1767,6 +1806,12 @@ React-интерфейс позволяет:
 | \(U=q_\ell L_i\) | solver и designer | баланс энергии, [1] | DISSERTATION |
 | расходы (6.3)–(6.5) | solver | [1], (2.75) | DISSERTATION |
 | \(y_n\), (6.7) | solver | [1], (2.77) | DISSERTATION |
+| общий интерфейс свойств | refrigerant_properties | API-инвариант проекта | ENGINEERING |
+| CO₂ Mathcad table backend | MathcadCO2SaturationProperties | CO2.xmcd [2], справочные таблицы [13] | MATHCAD |
+| CO₂ CoolProp HEOS | CoolPropSaturationProperties(CO2) | CoolProp [24], Span-Wagner [25] | PUBLISHED BACKEND |
+| NH₃ CoolProp HEOS | CoolPropSaturationProperties(NH3) | CoolProp [24], Gao-Wu-Bell-Lemmon [26] | PUBLISHED BACKEND |
+| REFPROP adapter | RefpropSaturationProperties | NIST REFPROP [14] | OPTIONAL |
+| RefrigerantLoopModel | refrigerant_loop_model | общий facade над тем же solver | ENGINEERING |
 | \(Re\) | closures | классическая гидравлика, [12] | PUBLISHED |
 | \(64/Re\) | closures | Hagen–Poiseuille | PUBLISHED |
 | \(0{,}3164/Re^{0,25}\) | closures | Blasius | PUBLISHED |
@@ -1817,11 +1862,16 @@ Python использует натуральный логарифм вместо
 
 Статус Checkpoint 0–6 split: режим переименован в `experimental_regime_aware`, старое имя `regime_aware` оставлено как alias, все связанные эвристики внесены в `docs/formula_registry.md` со статусом `EXPERIMENTAL / NO PRIMARY SOURCE`, а подтвержденные published-замыкания вынесены в отдельные модули. Режимные эвристики вынесены в `experimental_regimes.py`; `published_regimes.py` пока не реализует опубликованные карты и явно возвращает статус `not_implemented`. Опубликованный режим следует реализовать отдельным вариантом на основе [9–11, 15, 16] только после проверки точных формул.
 
-## 18.4. Свойства и экстраполяция
+## 18.4. Свойства, backend и экстраполяция
 
-CubicSpline экстраполирует данные, а близость к критической точке CO₂ резко повышает чувствительность свойств.
+Неявная экстраполяция табличного CO₂ backend теперь запрещена по умолчанию, а CoolProp backend отклоняет запросы вне диапазона насыщения и около критической границы через `PropertyRangeError` / `property_out_of_range`. Оставшиеся риски связаны с тем, что:
 
-Рекомендация: ввести допустимый диапазон, предупреждения, сравнение с REFPROP и shape-preserving-интерполяцию там, где кубический сплайн создаёт немонотонность.
+- табличный CO₂ backend остаётся интерполяцией ограниченных Mathcad-данных;
+- явное `allow_property_extrapolation=True` может вернуть число без физической гарантии;
+- near-critical область CO₂/NH₃ чувствительна к малым ошибкам свойств;
+- CoolProp/REFPROP дают свойства, но не валидируют выбранную гидродинамическую постановку контура.
+
+Рекомендация: для published-расчётов фиксировать backend, версию CoolProp/REFPROP и reference CSV, а near-critical сценарии оставлять предупреждением или отказом до отдельной валидации.
 
 ## 18.5. Геометрический конструктор
 
@@ -1852,6 +1902,7 @@ CubicSpline экстраполирует данные, а близость к к
 Результаты допустимо использовать для:
 
 - воспроизведения и исследования инженерной стационарной модели Mathcad;
+- sanity-расчётов NH₃ через тот же steady solver и CoolProp-свойства;
 - сравнительного анализа влияния \(H,q_\ell,L_i,t_k\);
 - программных экспериментов с замыканиями;
 - построения профилей и предварительной карты сходимости;
@@ -1875,11 +1926,11 @@ CubicSpline экстраполирует данные, а близость к к
 {\rm closure=worksheet\_compatible},
 \]
 
-при условии отдельной проверки legacy-логарифма коэффициента трения. Для сравнительных расчетов с опубликованными двухфазными замыканиями доступны `homogeneous_equilibrium` и `zivi`; их пустотность и фрикционная база отделены от experimental-слоя. `experimental_regime_aware` следует считать исследовательским режимом.
+при условии отдельной проверки legacy-логарифма коэффициента трения. Для сравнительных расчетов с опубликованными двухфазными замыканиями доступны `homogeneous_equilibrium` и `zivi`; их пустотность и фрикционная база отделены от experimental-слоя. Новый `RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")` использует тот же гидравлический solver и published fallback closure, но не закрывает валидацию аммиачной ГЕТ. `experimental_regime_aware` следует считать исследовательским режимом.
 
 # 20. Заключение
 
-Разработанный код представляет собой функциональную Python-реализацию стационарной модели естественной циркуляции CO₂ в системе ГЕТ. В нём реализованы балансы тепла и массы, гидравлические потери, двухфазный множитель Lockhart–Martinelli–Chisholm, несколько моделей пустотности, source-strict слой опубликованных замыканий и численный поиск рабочего режима.
+Разработанный код представляет собой функциональную Python-реализацию стационарной модели естественной циркуляции хладагента в системе ГЕТ. CO₂/R744 Mathcad-compatible ветка воспроизводит исходную инженерную постановку `CO2.xmcd`; CO₂/NH₃ CoolProp ветка использует общий интерфейс свойств и тот же steady solver. В коде реализованы балансы тепла и массы, гидравлические потери, двухфазный множитель Lockhart–Martinelli–Chisholm, несколько моделей пустотности, source-strict слой опубликованных замыканий и численный поиск рабочего режима.
 
 Сильные стороны:
 
@@ -1890,14 +1941,17 @@ CubicSpline экстраполирует данные, а близость к к
 - возможность сравнения замыканий;
 - явное отделение published closure-функций от experimental-эвристик;
 - расчёт большой матрицы параметров;
-- геометрический интерфейс и локальный API.
+- геометрический интерфейс и локальный API;
+- общий property backend для CO₂/NH₃;
+- CoolProp reference CSV и тесты NH₃ loop solver.
 
 Научные ограничения:
 
 - неполная трассировка некоторых коэффициентов;
 - эвристическая режимная модель;
-- отсутствие прямой CO₂-валидации;
+- отсутствие прямой CO₂/NH₃-валидации текущего кода;
 - отсутствие полной модели критических нагрузок;
+- отсутствие published режимных карт и boiling/qcrit diagnostics для NH₃;
 - неподключённая физика грунта и произвольной геометрии;
 - обнаруженные вопросы к legacy-логарифму трения и неподключённой произвольной геометрии конструктора.
 
@@ -2048,3 +2102,9 @@ CubicSpline экстраполирует данные, а близость к к
 22. Черный Г. Г. Газовая динамика. М.: Наука, 1988. 424 с.
 
 23. Марон В. И. Гидравлика двухфазных потоков в трубопроводах. СПб.: Лань, 2012. 256 с.
+
+24. CoolProp 8.0.0 documentation. High-Level Interface; Fluid Properties for CarbonDioxide and Ammonia. URL: [https://coolprop.org/coolprop/HighLevelAPI.html](https://coolprop.org/coolprop/HighLevelAPI.html), [https://coolprop.org/fluid_properties/fluids/CarbonDioxide.html](https://coolprop.org/fluid_properties/fluids/CarbonDioxide.html), [https://coolprop.org/fluid_properties/fluids/Ammonia.html](https://coolprop.org/fluid_properties/fluids/Ammonia.html).
+
+25. Span R., Wagner W. A New Equation of State for Carbon Dioxide Covering the Fluid Region from the Triple-Point Temperature to 1100 K at Pressures up to 800 MPa // Journal of Physical and Chemical Reference Data. 1996. Vol. 25. P. 1509–1596. DOI: [10.1063/1.555991](https://doi.org/10.1063/1.555991).
+
+26. Gao K., Wu J., Bell I. H., Lemmon E. W. Thermodynamic Properties of Ammonia for Temperatures from the Melting Line to 725 K and Pressures to 1000 MPa // Journal of Physical and Chemical Reference Data. 2020. Указано в документации CoolProp как equation-of-state reference для Ammonia.

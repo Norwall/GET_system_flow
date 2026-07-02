@@ -40,6 +40,7 @@ py-modules = [
     "published_friction",
     "published_regimes",
     "published_void_fraction",
+    "refrigerant_loop_model",
     "refrigerant_properties",
     "get_co2_model",
     "two_phase_closures",

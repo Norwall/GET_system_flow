@@ -1,4 +1,4 @@
-# Научная основа для режимно-зависимой модели GET CO2
+# Научная основа для режимно-зависимой модели GET CO₂/NH₃
 
 ## 1. Зачем нужен этот файл
 
@@ -14,6 +14,11 @@
 - какие элементы текущей модели уже имеют опору на классические публикации;
 - какие элементы нужно заменить на корреляции из литературы;
 - в каком порядке это лучше реализовывать.
+
+После Checkpoint 8 модель умеет считать NH₃/R717 через тот же `SteadyLoopSolver`
+и CoolProp-свойства, но этот файл по-прежнему относится к режимной физике, а не
+к backend свойств. NH₃-ветка не добавляет опубликованных режимных карт и не
+легализует перенос CO₂-ориентированных эвристик на аммиак.
 
 ## 2. Какие режимы реально наблюдаются в системе
 
@@ -69,6 +74,8 @@
 - `Chisholm` для двухфазного множителя к жидкостным потерям
 - `Zivi` для оценки скольжения фаз
 - `homogeneous equilibrium` как опубликованное предельное допущение без скольжения
+- CoolProp/REFPROP свойства насыщения CO₂/NH₃ как published property backend,
+  но не как валидация гидродинамической режимной карты
 
 После source-strict части Checkpoint 5 эти элементы вынесены в отдельные
 модули:
@@ -114,6 +121,10 @@ worksheet/experimental-логику, но published-функции больше 
 
 - заменены опубликованными корреляциями;
 - либо оставлены только как `experimental`.
+
+Это ограничение одинаково важно для CO₂ и NH₃. Новая возможность выбрать
+`fluid="NH3"` меняет свойства фаз, но не превращает текущие пороги
+`experimental_regimes.py` в опубликованную карту аммиачного течения.
 
 ## 5. Какие первоисточники следует принять за основу
 
@@ -271,6 +282,8 @@ flow-pattern-based pressure-drop model из специализированных
 - использовать `worksheet_compatible` как reference mode;
 - использовать `zivi` и `homogeneous_equilibrium` как published fallback closures;
 - использовать `Lockhart-Martinelli + Chisholm` как published базовый pressure-drop layer.
+- использовать `RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")`
+  для программно проверенных steady-state sanity-сценариев;
 - проверять published closures тестами `tests/test_void_fraction_models.py`,
   `tests/test_two_phase_pressure_drop.py` и guard-тестом реестра формул.
 
@@ -279,6 +292,8 @@ flow-pattern-based pressure-drop model из специализированных
 - текущие коэффициенты `drift_flux_void_fraction(...)`;
 - текущие `annular_core`, `separated_shear`, `annular_film`;
 - текущие пороги режима в `experimental_regimes.py`.
+- результаты NH₃ как экспериментально валидированную аммиачную ГЕТ без
+  отдельного сопоставления с данными.
 
 ## 9. Практический следующий шаг
 
@@ -305,6 +320,8 @@ published-карт должен выполняться только после �
 До этого момента корректно считать, что:
 
 - `worksheet_compatible`, `homogeneous_equilibrium`, `zivi` — научно прослеживаемые режимы;
+- NH₃ поддержан на уровне свойств и общего solver, но не на уровне published
+  regime map;
 - `published_friction.py` и `published_void_fraction.py` — единственные места для новых published closure-функций;
 - `published_regimes.py` — только заготовка с `not_implemented`, не published-карта;
 - текущий `regime_aware` / `experimental_regime_aware` — исследовательский режим, а не окончательная научная модель.

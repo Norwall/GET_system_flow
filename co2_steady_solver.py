@@ -111,6 +111,8 @@ class SteadyLoopSolver:
         )
         return {
             "fluid": getattr(self.properties, "fluid", ""),
+            "fluid_cas": getattr(self.properties, "fluid_cas", ""),
+            "refrigerant_name": getattr(self.properties, "refrigerant_name", ""),
             "property_backend": getattr(self.properties, "property_backend", ""),
             "property_source": getattr(self.properties, "property_source", ""),
             "property_warning": property_warning,

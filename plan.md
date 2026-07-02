@@ -565,39 +565,46 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 ### Задачи
 
-- [ ] Добавить aliases:
+- [x] Добавить aliases:
   - `NH3`;
   - `Ammonia`;
   - `R717`.
-- [ ] Подключить NH₃ через общий `RefrigerantSaturationProperties`.
-- [ ] Использовать те же уравнения баланса массы, энергии и давления.
-- [ ] Не переносить CO₂-калибровки на NH₃ без источника.
-- [ ] Добавить reference CSV:
+- [x] Подключить NH₃ через общий `RefrigerantSaturationProperties`.
+- [x] Использовать те же уравнения баланса массы, энергии и давления.
+- [x] Не переносить CO₂-калибровки на NH₃ без источника.
+- [x] Добавить reference CSV:
   - `data/reference_properties/co2_saturation_coolprop.csv`;
   - `data/reference_properties/nh3_saturation_coolprop.csv`.
-- [ ] Добавить NH₃ scenarios:
+- [x] Добавить NH₃ scenarios:
   - номинальный режим;
   - малый `qtr`;
   - высокий `qtr`;
   - низкая температура насыщения;
   - около верхней границы допустимого диапазона.
-- [ ] В результатах явно указывать:
+- [x] В результатах явно указывать:
   - `fluid`;
   - `fluid_cas`;
   - `refrigerant_name`;
   - `property_backend`.
 
+Статус Checkpoint 8: добавлен универсальный фасад `RefrigerantLoopModel`,
+NH₃/R717/Ammonia считается через CoolProp backend и общий steady solver,
+а CO₂ Mathcad-compatible фасад оставлен без изменения.
+
 ### Тесты
 
-- [ ] `tests/test_nh3_properties.py`
+- [x] `tests/test_nh3_properties.py`
   - NH₃ насыщенная жидкость плотнее пара;
   - latent heat положительна;
   - давление насыщения растёт с температурой;
   - вязкости положительны.
-- [ ] `tests/test_nh3_loop_solver.py`
+- [x] `tests/test_nh3_loop_solver.py`
   - один и тот же geometry object считается для CO₂ и NH₃;
   - результаты CO₂ и NH₃ различаются;
   - solver не использует `CO2SaturationProperties` напрямую.
+- [x] `tests/test_refrigerant_loop_model.py`
+  - новый фасад по умолчанию использует CoolProp, `zivi` и `colebrook_white`;
+  - результат содержит рабочее тело, backend и source-status metadata.
 
 ### Критерий готовности
 
