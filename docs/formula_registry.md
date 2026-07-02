@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-3`.
+Версия реестра: `checkpoint-5-source-strict`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -23,21 +23,21 @@
 | `BAL-VAPOR-GENERATION` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `FRIC-REYNOLDS` | PUBLISHED | `co2_steady_solver`, `two_phase_closures` |
-| `FRIC-DARCY-MASS-FLUX` | PUBLISHED | `single_phase_pressure_gradient_pa_per_m` |
+| `FRIC-DARCY-MASS-FLUX` | PUBLISHED | `published_friction.single_phase_pressure_gradient_pa_per_m` |
 | `FRIC-LAMINAR-DARCY` | PUBLISHED | `darcy_friction_factor` |
 | `FRIC-BLASIUS-SMOOTH` | PUBLISHED | `darcy_friction_factor` |
 | `FRIC-LEGACY-BLENDED-DARCY` | MATHCAD_COMPATIBLE / REQUIRES_AUDIT | `darcy_friction_factor` |
 | `FRIC-COLEBROOK-WHITE` | PUBLISHED | `colebrook_white_friction_factor` |
 | `FRIC-CHURCHILL-1977` | PUBLISHED | `churchill_1977_friction_factor` |
 | `FRIC-ZERO-TEST` | TEST_ONLY | `friction_factor_from_model("zero_friction")` |
-| `TP-LOCKHART-MARTINELLI` | PUBLISHED | `martinelli_parameter` |
-| `TP-CHISHOLM-CONSTANT` | PUBLISHED | `chisholm_constant` |
-| `TP-CHISHOLM-MULTIPLIER` | PUBLISHED | `two_phase_multiplier_liquid_reference` |
-| `FLOW-MASS-QUALITY` | PUBLISHED / DEFINITIONAL | `mass_quality_from_mass_flows` |
-| `VOID-GENERIC-SLIP` | PUBLISHED / DEFINITIONAL | `void_fraction_from_quality` |
+| `TP-LOCKHART-MARTINELLI` | PUBLISHED | `published_friction.martinelli_parameter` |
+| `TP-CHISHOLM-CONSTANT` | PUBLISHED | `published_friction.chisholm_constant` |
+| `TP-CHISHOLM-MULTIPLIER` | PUBLISHED | `published_friction.two_phase_multiplier_liquid_reference` |
+| `FLOW-MASS-QUALITY` | PUBLISHED / DEFINITIONAL | `published_void_fraction.mass_quality_from_mass_flows` |
+| `VOID-GENERIC-SLIP` | PUBLISHED / DEFINITIONAL | `published_void_fraction.void_fraction_from_quality` |
 | `VOID-WORKSHEET-PHI2L` | MATHCAD_COMPATIBLE / DISSERTATION | `worksheet_void_fraction_from_phi2l` |
-| `VOID-HOMOGENEOUS-EQUILIBRIUM` | PUBLISHED LIMITING MODEL | `closure_state_from_model("homogeneous_equilibrium")` |
-| `VOID-ZIVI-1964` | PUBLISHED | `zivi_slip_ratio` |
+| `VOID-HOMOGENEOUS-EQUILIBRIUM` | PUBLISHED LIMITING MODEL | `published_void_fraction.homogeneous_equilibrium_slip_ratio` |
+| `VOID-ZIVI-1964` | PUBLISHED | `published_void_fraction.zivi_1964_slip_ratio` |
 | `FLOW-PHASE-VELOCITIES` | DEFINITIONAL | `compute_phase_velocities` |
 | `FLOW-SLIP-RATIO` | DEFINITIONAL | `compute_slip_ratio` |
 | `FLOW-MIXTURE-DENSITY` | DEFINITIONAL | `compute_mixture_density` |
@@ -324,8 +324,8 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Переменные и размерности: `X` безразмерен; массовые расходы, кг/с; friction factors безразмерны; удельные объемы, м3/кг.
 - Область применимости: liquid-reference separated two-phase friction multiplier.
 - Источник: Lockhart and Martinelli, 1949; диссертация; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.martinelli_parameter`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_friction.martinelli_parameter`; compatibility re-export `two_phase_closures.martinelli_parameter`.
+- Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## TP-CHISHOLM-CONSTANT
 
@@ -334,8 +334,8 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Переменные и размерности: газовое и жидкостное `Re` безразмерны; `C` безразмерна.
 - Область применимости: текущий множитель Lockhart-Martinelli по жидкостной базе.
 - Источник: Chisholm; таблица 2.1 диссертации; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.chisholm_constant`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_friction.chisholm_constant`; compatibility re-export `two_phase_closures.chisholm_constant`.
+- Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## TP-CHISHOLM-MULTIPLIER
 
@@ -349,8 +349,8 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Переменные и размерности: `Phi_l^2`, `C`, `X` безразмерны.
 - Область применимости: двухфазный множитель трения для worksheet, homogeneous, Zivi и базового experimental пути.
 - Источник: Chisholm; диссертация; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.two_phase_multiplier_liquid_reference`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_friction.two_phase_multiplier_liquid_reference`; compatibility re-export `two_phase_closures.two_phase_multiplier_liquid_reference`.
+- Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## FLOW-MASS-QUALITY
 
@@ -364,8 +364,8 @@ x = \frac{\dot m_g}{\dot m_g+\dot m_l}
 - Переменные и размерности: массовые расходы пара и жидкости, кг/с; `x` безразмерен.
 - Область применимости: локальная и выходная массовая сухость.
 - Источник: стандартное определение двухфазного течения; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.mass_quality_from_mass_flows`; эквивалентные inline-выражения в solver.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_void_fraction.mass_quality_from_mass_flows`; compatibility re-export `two_phase_closures.mass_quality_from_mass_flows`; эквивалентные inline-выражения в solver.
+- Тесты: `tests/test_void_fraction_models.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## VOID-GENERIC-SLIP
 
@@ -382,8 +382,8 @@ x = \frac{\dot m_g}{\dot m_g+\dot m_l}
 - Переменные и размерности: `alpha`, `x`, `S` безразмерны; плотности, кг/м3.
 - Область применимости: преобразование массовой сухости в пустотность для homogeneous, Zivi и selected-slip эвристик; точки `x=0` и `x=1` обрабатываются явно.
 - Источник: стандартная slip relation; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.void_fraction_from_quality`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_void_fraction.void_fraction_from_quality`; compatibility re-export `two_phase_closures.void_fraction_from_quality`.
+- Тесты: `tests/test_void_fraction_models.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## VOID-WORKSHEET-PHI2L
 
@@ -414,8 +414,8 @@ S=1
 - Переменные и размерности: `S` безразмерен.
 - Область применимости: гомогенный равновесный предельный случай, не режимная карта.
 - Источник: стандартный limiting model двухфазного течения; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.closure_state_from_model(model="homogeneous_equilibrium")`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_void_fraction.homogeneous_equilibrium_slip_ratio`; `two_phase_closures.closure_state_from_model(model="homogeneous_equilibrium")`.
+- Тесты: `tests/test_void_fraction_models.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## VOID-ZIVI-1964
 
@@ -431,8 +431,8 @@ S_{\rm Zivi}=\left(\frac{\rho_l}{\rho_g}\right)^{1/3}
 - Переменные и размерности: плотности, кг/м3; `S` безразмерен.
 - Область применимости: Zivi slip closure. Исходный вывод относится к идеализированному предельному случаю; применение к текущему горизонтальному испарителю является инженерным переносом корреляции.
 - Источник: Zivi, 1964, DOI `10.1115/1.3687113`; `docs/get_co2_academic_reference.md`.
-- Код: `two_phase_closures.zivi_slip_ratio`; `closure_state_from_model(model="zivi")`.
-- Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
+- Код: `published_void_fraction.zivi_1964_slip_ratio`; compatibility wrapper `two_phase_closures.zivi_slip_ratio`; `closure_state_from_model(model="zivi")`.
+- Тесты: `tests/test_void_fraction_models.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
 ## FLOW-PHASE-VELOCITIES
 
@@ -646,6 +646,8 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
+- Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
-- Опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 2 не реализованы.
+- Опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
+- Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome не подключаются как расчетные `published`-модели, пока точные формулы и области применимости не сверены с полным первоисточником.

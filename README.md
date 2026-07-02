@@ -72,7 +72,8 @@ result = model.run(
 
 ## Статус физической доработки
 
-В текущей версии закрыты Checkpoint 0-4 аудита модели:
+В текущей версии закрыты Checkpoint 0-4 аудита модели и выполнена
+source-strict часть Checkpoint 5:
 
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
@@ -90,6 +91,12 @@ result = model.run(
   диаметры, шероховатости, площади, ориентации и `heat_mode` основных участков;
 - результат содержит `geometry_source`, а `pressure_balance_sections` показывает
   геометрию каждого расчетного участка.
+- опубликованные двухфазные замыкания, уже подтвержденные источниками,
+  вынесены в `published_friction.py` и `published_void_fraction.py`;
+- `homogeneous_equilibrium`, `zivi` и Lockhart-Martinelli/Chisholm покрыты
+  отдельными unit-тестами;
+- published closure-модели дополнительно проверяются на отсутствие зависимостей
+  от `EXP-*` записей реестра.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -103,6 +110,11 @@ result = model.run(
 дополнительно содержат `friction_model`, `pressure_balance_terms`,
 `pressure_balance_sections`, суммарные pressure-balance вклады и
 `pressure_balance_residual_pa`.
+
+Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и
+Wojtan-Ursenbacher-Thome пока не подключаются как расчетные `published`-модели:
+для них требуется сверка точных формул и областей применимости по полному
+первоисточнику.
 
 ## Демонстрационный отчет
 
@@ -158,5 +170,8 @@ pytest -q -m slow
   но полноценная ветка NH3 в loop solver еще не завершена.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
-- Геометрический конструктор пока не передает произвольные длины, диаметры и
-  шероховатости всех участков в гидравлическое ядро.
+- Геометрический конструктор передает основные расчетные участки, но пока не
+  поддерживает произвольное число однотипных участков, connector-сегменты и
+  местные сопротивления на переходах диаметра.
+- Режимные карты и drift-flux-коэффициенты без полного первоисточника остаются
+  experimental, даже если их структура похожа на опубликованные модели.

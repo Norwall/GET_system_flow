@@ -433,17 +433,24 @@ Closed-loop pressure balance:
 
 Цель: отделить published-слой от эвристик.
 
+Статус: source-strict published-слой для уже подтверждённых HEM, Zivi и
+Lockhart–Martinelli/Chisholm вынесен в `published_void_fraction.py` и
+`published_friction.py`. Müller-Steinhagen-Heck, Friedel, Zuber–Findlay,
+Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не реализованными
+до сверки точных формул по полному первоисточнику.
+
 ### Задачи
 
-- [ ] Разделить closure models на:
+- [x] Разделить closure models на:
   - `mathcad_compatible`;
   - `published`;
   - `experimental`.
-- [ ] Оставить текущие эвристики только в `experimental_regime_aware`.
-- [ ] Реализовать или формально подтвердить:
+- [x] Оставить текущие эвристики только в `experimental_regime_aware`.
+- [x] Реализовать или формально подтвердить:
   - `homogeneous_equilibrium`;
   - `zivi_1964`;
-  - `lockhart_martinelli_chisholm`;
+  - `lockhart_martinelli_chisholm`.
+- [ ] Реализовать или формально подтвердить по полному первоисточнику:
   - `muller_steinhagen_heck_1986`;
   - `friedel_1979`, если первоисточник доступен и формула точно воспроизведена.
 - [ ] Для вертикального riser добавить published drift-flux-ветку на основе Zuber–Findlay.
@@ -451,12 +458,12 @@ Closed-loop pressure balance:
 
 ### Тесты
 
-- [ ] `tests/test_void_fraction_models.py`
+- [x] `tests/test_void_fraction_models.py`
   - `0 <= alpha <= 1`;
   - homogeneous-пределы при `x -> 0` и `x -> 1`;
   - Zivi даёт `S > 1` при `rho_l > rho_g`;
   - mixture density лежит между `rho_g` и `rho_l`.
-- [ ] `tests/test_two_phase_pressure_drop.py`
+- [x] `tests/test_two_phase_pressure_drop.py`
   - Lockhart–Martinelli/Chisholm возвращает положительный multiplier;
   - pressure gradient положителен при положительном расходе;
   - нулевой vapor mass flow обрабатывается без NaN/Inf.

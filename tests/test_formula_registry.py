@@ -118,6 +118,17 @@ def test_closure_models_have_registry_ids(registry_sections: dict[str, str]) -> 
         assert all(registry_id in registry_sections for registry_id in registry_ids)
 
 
+def test_published_closure_models_do_not_depend_on_experimental_registry_entries(
+    registry_sections: dict[str, str],
+) -> None:
+    for model in CLOSURE_MODELS:
+        if closure_model_scientific_status(model) != "published":
+            continue
+        registry_ids = closure_model_formula_registry_ids(model)
+        assert not any(registry_id.startswith("EXP-") for registry_id in registry_ids)
+        assert all("EXPERIMENTAL / NO PRIMARY SOURCE" not in registry_sections[registry_id] for registry_id in registry_ids)
+
+
 def test_regime_aware_alias_uses_experimental_registry_ids() -> None:
     assert closure_model_formula_registry_ids("regime_aware") == closure_model_formula_registry_ids(
         "experimental_regime_aware"

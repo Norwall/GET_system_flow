@@ -70,6 +70,16 @@
 - `Zivi` для оценки скольжения фаз
 - `homogeneous equilibrium` как опубликованное предельное допущение без скольжения
 
+После source-strict части Checkpoint 5 эти элементы вынесены в отдельные
+модули:
+
+- `published_friction.py`;
+- `published_void_fraction.py`.
+
+`two_phase_closures.py` остаётся совместимым фасадом solver и хранит
+worksheet/experimental-логику, но published-функции больше не добавляются туда
+как первичное место реализации.
+
 То есть режимы:
 
 - `worksheet_compatible`
@@ -83,13 +93,13 @@
 Следующие части текущего `regime_aware` режима нельзя считать опубикованными
 корреляциями в строгом смысле:
 
-- пороги в [two_phase_regimes.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/two_phase_regimes.py)
+- пороги в `two_phase_regimes.py`
   для переходов `bubbly / intermittent / annular / churn`;
 - коэффициенты `distribution_parameter` и `drift_prefactor`
-  в `drift_flux_void_fraction(...)` из [two_phase_closures.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/two_phase_closures.py);
+  в `drift_flux_void_fraction(...)` из `two_phase_closures.py`;
 - коэффициенты в `annular_core_void_fraction(...)`;
 - коэффициенты и веса в `separated_shear`, `annular_film`,
-  `stratified_separated`, `homogeneous_mixture` из [two_phase_closures.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/two_phase_closures.py).
+  `stratified_separated`, `homogeneous_mixture` из `two_phase_closures.py`.
 
 Эти элементы были введены как исследовательские эвристики и должны быть либо:
 
@@ -203,7 +213,7 @@ flow-pattern-based pressure-drop model из специализированных
 
 ### Шаг 2. Вынести режимные карты в отдельный published layer
 
-В [two_phase_regimes.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/two_phase_regimes.py)
+В `two_phase_regimes.py`
 нужно отделить:
 
 - текущую эвристическую карту;
@@ -213,18 +223,24 @@ flow-pattern-based pressure-drop model из специализированных
 
 ### Шаг 3. Вынести published closures отдельно от экспериментальных
 
-В [two_phase_closures.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/two_phase_closures.py)
-нужно выделить отдельный published слой:
+Статус: базовый published слой выделен. Уже реализованы:
 
-- `zivi_1964_slip_ratio(...)`
-- `zuber_findlay_1965_void_fraction(...)`
-- `lockhart_martinelli_1949_x(...)`
-- `chisholm_1973_multiplier(...)`
-- `friedel_1979_pressure_gradient(...)` или `muller_steinhagen_heck_1986_pressure_gradient(...)`
+- `published_void_fraction.zivi_1964_slip_ratio(...)`;
+- `published_void_fraction.homogeneous_equilibrium_slip_ratio(...)`;
+- `published_void_fraction.void_fraction_from_quality(...)`;
+- `published_friction.martinelli_parameter(...)`;
+- `published_friction.chisholm_constant(...)`;
+- `published_friction.two_phase_multiplier_liquid_reference(...)`.
+
+Не реализованы без полного первоисточника:
+
+- `zuber_findlay_1965_void_fraction(...)`;
+- `friedel_1979_pressure_gradient(...)`;
+- `muller_steinhagen_heck_1986_pressure_gradient(...)`.
 
 ### Шаг 4. Перевести solver на published mode
 
-В [co2_steady_solver.py](/C:/Users/Prof_tmn/YandexDisk/GPN/Coding/mathCAD_to_PY/co2_steady_solver.py)
+В `co2_steady_solver.py`
 новый published mode должен:
 
 - для испарителя использовать published horizontal flow-pattern map;
@@ -239,6 +255,8 @@ flow-pattern-based pressure-drop model из специализированных
 - использовать `worksheet_compatible` как reference mode;
 - использовать `zivi` и `homogeneous_equilibrium` как published fallback closures;
 - использовать `Lockhart-Martinelli + Chisholm` как published базовый pressure-drop layer.
+- проверять published closures тестами `tests/test_void_fraction_models.py`,
+  `tests/test_two_phase_pressure_drop.py` и guard-тестом реестра формул.
 
 ### Нельзя считать научно корректным без замены
 
@@ -251,8 +269,8 @@ flow-pattern-based pressure-drop model из специализированных
 Следующий корректный шаг не в том, чтобы "подкрутить" существующие эвристики,
 а в том, чтобы:
 
-1. изолировать текущий experimental режим;
-2. реализовать новый published vertical layer:
+1. изолировать текущий experimental режим; базовая изоляция уже выполнена;
+2. получить полный текст и точные формулы для нового published vertical layer:
    - `Zuber-Findlay (1965)` для void fraction в riser;
    - `Taitel-Barnea-Dukler (1980)` для вертикальной regime map;
 3. после этого внедрить published horizontal regime map:
@@ -260,12 +278,14 @@ flow-pattern-based pressure-drop model из специализированных
 
 ## 10. Ограничение текущего этапа
 
-В текущем окружении нет прямого доступа к PDF-первоисточникам и DOI-страницам,
-поэтому следующий шаг реализации должен выполняться только после того,
-как точные формулы из перечисленных статей будут доступны локально
-или подтверждены по полному тексту статей.
+По состоянию на Checkpoint 5 точные формулы для HEM, Zivi и
+Lockhart-Martinelli/Chisholm уже вынесены в source-strict published-слой.
+Следующий шаг реализации должен выполняться только после того, как точные
+формулы остальных перечисленных статей будут доступны локально или
+подтверждены по полному тексту статей.
 
 До этого момента корректно считать, что:
 
 - `worksheet_compatible`, `homogeneous_equilibrium`, `zivi` — научно прослеживаемые режимы;
+- `published_friction.py` и `published_void_fraction.py` — единственные места для новых published closure-функций;
 - текущий `regime_aware` — исследовательский режим, а не окончательная научная модель.

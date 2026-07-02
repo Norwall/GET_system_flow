@@ -36,6 +36,8 @@ py-modules = [
     "get_designer_api",
     "get_designer_geometry",
     "pressure_balance",
+    "published_friction",
+    "published_void_fraction",
     "refrigerant_properties",
     "get_co2_model",
     "two_phase_closures",

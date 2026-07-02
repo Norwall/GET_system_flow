@@ -6,6 +6,18 @@ from typing import Any
 import numpy as np
 from scipy.special import erf
 
+from published_friction import (
+    chisholm_constant,
+    martinelli_parameter,
+    single_phase_pressure_gradient_pa_per_m,
+    two_phase_multiplier_liquid_reference,
+)
+from published_void_fraction import (
+    homogeneous_equilibrium_slip_ratio,
+    mass_quality_from_mass_flows,
+    void_fraction_from_quality,
+    zivi_1964_slip_ratio,
+)
 from two_phase_regimes import classify_horizontal_evaporator_regime, classify_vertical_riser_regime
 
 
@@ -119,43 +131,6 @@ def closure_model_formula_registry_ids(model: str) -> tuple[str, ...]:
     return _CLOSURE_MODEL_FORMULA_REGISTRY_IDS.get(normalize_closure_model(model), ())
 
 
-def mass_quality_from_mass_flows(
-    vapor_mass_flow_kg_s: float | np.ndarray,
-    liquid_mass_flow_kg_s: float | np.ndarray,
-) -> Any:
-    vapor_mass_flow_kg_s = np.asarray(vapor_mass_flow_kg_s, dtype=float)
-    liquid_mass_flow_kg_s = np.asarray(liquid_mass_flow_kg_s, dtype=float)
-    return vapor_mass_flow_kg_s / np.maximum(vapor_mass_flow_kg_s + liquid_mass_flow_kg_s, 1e-12)
-
-
-def void_fraction_from_quality(
-    mass_quality: float | np.ndarray,
-    rho_l_kg_m3: float | np.ndarray,
-    rho_g_kg_m3: float | np.ndarray,
-    slip_ratio: float | np.ndarray,
-) -> tuple[Any, Any]:
-    mass_quality = np.clip(np.asarray(mass_quality, dtype=float), 0.0, 1.0)
-    rho_l_kg_m3 = np.maximum(np.asarray(rho_l_kg_m3, dtype=float), 1e-12)
-    rho_g_kg_m3 = np.maximum(np.asarray(rho_g_kg_m3, dtype=float), 1e-12)
-    slip_ratio = np.maximum(np.asarray(slip_ratio, dtype=float), 1e-12)
-
-    gas_volume_fraction = np.zeros_like(mass_quality, dtype=float)
-    all_liquid_mask = mass_quality <= 0.0
-    all_gas_mask = mass_quality >= 1.0
-    mixed_mask = ~(all_liquid_mask | all_gas_mask)
-
-    gas_volume_fraction[all_gas_mask] = 1.0
-    gas_volume_fraction[all_liquid_mask] = 0.0
-    gas_volume_fraction[mixed_mask] = 1.0 / (
-        1.0
-        + ((1.0 - mass_quality[mixed_mask]) / mass_quality[mixed_mask])
-        * (rho_g_kg_m3[mixed_mask] / rho_l_kg_m3[mixed_mask])
-        * slip_ratio[mixed_mask]
-    )
-    liquid_volume_fraction = 1.0 - gas_volume_fraction
-    return liquid_volume_fraction, gas_volume_fraction
-
-
 def rough_turbulent_friction_factor_ln(relative_roughness: float) -> float:
     """Current Python rough-turbulent term, using the natural logarithm."""
     return float((1.8 * np.log(8.3 / relative_roughness)) ** (-2))
@@ -263,47 +238,6 @@ def friction_factor_from_model(
     raise ValueError(f"Unsupported friction_model: {model!r}.")
 
 
-def martinelli_parameter(
-    liquid_mass_flow_kg_s: float | np.ndarray,
-    vapor_mass_flow_kg_s: float | np.ndarray,
-    liquid_friction_factor: float | np.ndarray,
-    gas_friction_factor: float | np.ndarray,
-    liquid_specific_volume_m3_per_kg: float | np.ndarray,
-    vapor_specific_volume_m3_per_kg: float | np.ndarray,
-) -> Any:
-    liquid_mass_flow_kg_s = np.asarray(liquid_mass_flow_kg_s, dtype=float)
-    vapor_mass_flow_kg_s = np.maximum(np.asarray(vapor_mass_flow_kg_s, dtype=float), 1e-12)
-    liquid_friction_factor = np.maximum(np.asarray(liquid_friction_factor, dtype=float), 1e-12)
-    gas_friction_factor = np.maximum(np.asarray(gas_friction_factor, dtype=float), 1e-12)
-    liquid_specific_volume_m3_per_kg = np.maximum(np.asarray(liquid_specific_volume_m3_per_kg, dtype=float), 1e-12)
-    vapor_specific_volume_m3_per_kg = np.maximum(np.asarray(vapor_specific_volume_m3_per_kg, dtype=float), 1e-12)
-    martinelli_argument = (liquid_friction_factor * liquid_specific_volume_m3_per_kg) / (
-        gas_friction_factor * vapor_specific_volume_m3_per_kg
-    )
-    return (liquid_mass_flow_kg_s / vapor_mass_flow_kg_s) * np.sqrt(np.maximum(martinelli_argument, 1e-30))
-
-
-def chisholm_constant(gas_reynolds: float | np.ndarray, liquid_reynolds: float | np.ndarray) -> Any:
-    gas_reynolds = np.asarray(gas_reynolds, dtype=float)
-    liquid_reynolds = np.asarray(liquid_reynolds, dtype=float)
-    return np.where(
-        (gas_reynolds > 2320.0) & (liquid_reynolds > 2320.0),
-        20.0,
-        np.where(
-            (gas_reynolds > 2320.0) & (liquid_reynolds <= 2320.0),
-            12.0,
-            np.where((gas_reynolds <= 2320.0) & (liquid_reynolds > 2320.0), 10.0, 5.0),
-        ),
-    )
-
-
-def two_phase_multiplier_liquid_reference(
-    martinelli_x: float | np.ndarray,
-    chisholm_c: float | np.ndarray,
-) -> Any:
-    return 1.0 + chisholm_c / martinelli_x + 1.0 / martinelli_x**2
-
-
 def worksheet_void_fraction_from_phi2l(phi2l: float | np.ndarray) -> tuple[Any, Any]:
     liquid_volume_fraction = 1.0 / np.power(phi2l, 1.0 / 3.0)
     gas_volume_fraction = 1.0 - liquid_volume_fraction
@@ -363,23 +297,7 @@ def zivi_slip_ratio(
     rho_l_kg_m3: float | np.ndarray,
     rho_g_kg_m3: float | np.ndarray,
 ) -> Any:
-    rho_l_kg_m3 = np.maximum(np.asarray(rho_l_kg_m3, dtype=float), 1e-12)
-    rho_g_kg_m3 = np.maximum(np.asarray(rho_g_kg_m3, dtype=float), 1e-12)
-    return np.power(rho_l_kg_m3 / rho_g_kg_m3, 1.0 / 3.0)
-
-
-def single_phase_pressure_gradient_pa_per_m(
-    mass_flux_kg_m2_s: float | np.ndarray,
-    specific_volume_m3_per_kg: float | np.ndarray,
-    friction_factor: float | np.ndarray,
-    hydraulic_diameter_m: float,
-) -> Any:
-    hydraulic_diameter_m = max(float(hydraulic_diameter_m), 1e-12)
-    return (
-        np.asarray(friction_factor, dtype=float)
-        * np.asarray(specific_volume_m3_per_kg, dtype=float)
-        * np.asarray(mass_flux_kg_m2_s, dtype=float) ** 2
-    ) / (2.0 * hydraulic_diameter_m)
+    return zivi_1964_slip_ratio(rho_l_kg_m3=rho_l_kg_m3, rho_g_kg_m3=rho_g_kg_m3)
 
 
 def homogeneous_mixture_dynamic_viscosity_pa_s(
@@ -777,7 +695,7 @@ def closure_state_from_model(
         )
 
     if model == "homogeneous_equilibrium":
-        slip_ratio = 1.0
+        slip_ratio = float(np.asarray(homogeneous_equilibrium_slip_ratio(), dtype=float))
     elif model == "zivi":
         slip_ratio = float(np.asarray(zivi_slip_ratio(rho_l_kg_m3=rho_l_kg_m3, rho_g_kg_m3=rho_g_kg_m3), dtype=float))
     elif model == "experimental_regime_aware":
