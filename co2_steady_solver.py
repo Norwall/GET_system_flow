@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import numpy as np
@@ -38,6 +38,7 @@ class SteadyLoopInputs:
     mode: str = "worksheet_compatible"
     closure_model: str = "worksheet_compatible"
     friction_model: str = "mathcad_compat"
+    geometry: LoopGeometry | None = None
 
 
 @dataclass(frozen=True)
@@ -107,12 +108,24 @@ class SteadyLoopSolver:
     def effective_friction_model(self, inputs: SteadyLoopInputs) -> str:
         return normalize_friction_model(inputs.friction_model)
 
+    def geometry_source(self, inputs: SteadyLoopInputs) -> str:
+        return inputs.geometry.geometry_source if inputs.geometry is not None else self.geometry.geometry_source
+
     def friction_factor(self, reynolds_number, relative_roughness: float, inputs: SteadyLoopInputs):
         return friction_factor_from_model(
             reynolds_number=reynolds_number,
             relative_roughness=relative_roughness,
             model=self.effective_friction_model(inputs),
         )
+
+    def _section_geometry_fields(self, section) -> dict[str, float | str]:
+        return {
+            "hydraulic_diameter_m": float(section.hydraulic_diameter_m),
+            "roughness_m": float(section.roughness_m),
+            "relative_roughness": float(section.relative_roughness),
+            "area_m2": float(section.area_m2),
+            "heat_mode": str(section.heat_mode),
+        }
 
     def _build_pressure_balance(
         self,
@@ -139,7 +152,8 @@ class SteadyLoopSolver:
                     section_kind=downcomer_section.section_kind,
                     orientation=downcomer_section.orientation,
                     length_m=downcomer_section.length_m,
-                    dz_m=-abs(riser_section.length_m),
+                    dz_m=downcomer_section.dz_m if downcomer_section.dz_m != 0.0 else -abs(riser_section.length_m),
+                    **self._section_geometry_fields(downcomer_section),
                     delta_p_hydrostatic_pa=float(downcomer_hydrostatic_pa),
                     delta_p_friction_pa=float(downcomer_friction_pa),
                 ),
@@ -148,7 +162,8 @@ class SteadyLoopSolver:
                     section_kind=riser_section.section_kind,
                     orientation=riser_section.orientation,
                     length_m=riser_section.length_m,
-                    dz_m=float(riser_section.length_m),
+                    dz_m=float(riser_section.dz_m),
+                    **self._section_geometry_fields(riser_section),
                     delta_p_hydrostatic_pa=float(riser_hydrostatic_pa),
                     delta_p_friction_pa=float(riser_friction_pa),
                 ),
@@ -158,6 +173,7 @@ class SteadyLoopSolver:
                     orientation=preboiling_evaporator_section.orientation,
                     length_m=preboiling_evaporator_section.length_m,
                     dz_m=0.0,
+                    **self._section_geometry_fields(preboiling_evaporator_section),
                     delta_p_friction_pa=float(preboiling_evaporator_friction_pa),
                 ),
                 SectionPressureBalance(
@@ -166,6 +182,7 @@ class SteadyLoopSolver:
                     orientation=boiling_evaporator_section.orientation,
                     length_m=boiling_evaporator_section.length_m,
                     dz_m=0.0,
+                    **self._section_geometry_fields(boiling_evaporator_section),
                     delta_p_friction_pa=float(boiling_evaporator_friction_pa),
                     delta_p_acceleration_pa=float(acceleration_pressure_drop_pa),
                 ),
@@ -175,6 +192,7 @@ class SteadyLoopSolver:
                     orientation=condenser_section.orientation,
                     length_m=condenser_section.length_m,
                     dz_m=0.0,
+                    **self._section_geometry_fields(condenser_section),
                     delta_p_friction_pa=float(condenser_friction_pa),
                 ),
             ),
@@ -187,6 +205,19 @@ class SteadyLoopSolver:
         circulation_factor: float,
         ngrid: int = 500,
     ) -> Optional[SteadyPassResult]:
+        if inputs.geometry is not None and inputs.geometry is not self.geometry:
+            inputs.geometry.validate_current_solver_sections()
+            solver = SteadyLoopSolver(
+                geometry=inputs.geometry,
+                properties=self.properties,
+                closure_name=self.closure_name,
+            )
+            return solver.one_pass(
+                inputs=replace(inputs, geometry=None),
+                circulation_factor=circulation_factor,
+                ngrid=ngrid,
+            )
+
         state = self.properties.state_at_temperature(inputs.tcon)
         total_heat_w = inputs.qtr * inputs.Li
 
@@ -619,8 +650,9 @@ class SteadyLoopSolver:
         preboiling_evaporator_friction_pa = (
             inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m
         )
-        downcomer_hydrostatic_pa = -hydrostatic_pressure_pa(state.v_l_m3_per_kg ** -1, riser_section.length_m)
-        riser_hydrostatic_pa = hydrostatic_pressure_pa(outlet_mixture_density_kg_m3, riser_section.length_m)
+        downcomer_dz_m = downcomer_section.dz_m if downcomer_section.dz_m != 0.0 else -abs(riser_section.length_m)
+        downcomer_hydrostatic_pa = hydrostatic_pressure_pa(state.v_l_m3_per_kg ** -1, downcomer_dz_m)
+        riser_hydrostatic_pa = hydrostatic_pressure_pa(outlet_mixture_density_kg_m3, riser_section.dz_m)
         pressure_balance = self._build_pressure_balance(
             downcomer_section=downcomer_section,
             riser_section=riser_section,
@@ -740,6 +772,7 @@ class SteadyLoopSolver:
             friction_model=self.effective_friction_model(inputs),
             pressure_balance=pressure_balance,
             model_mode=inputs.mode,
+            geometry_source=self.geometry.geometry_source,
             section_states=section_states,
             evaporator_profile=evaporator_profile,
             riser_profile=None,
@@ -1424,7 +1457,8 @@ class SteadyLoopSolver:
         preboiling_evaporator_friction_pa = (
             inlet_liquid_pressure_gradient_pa_per_m * preboiling_evaporator_section.length_m
         )
-        downcomer_hydrostatic_pa = -hydrostatic_pressure_pa(reference_liquid_density_kg_m3, riser_section.length_m)
+        downcomer_dz_m = downcomer_section.dz_m if downcomer_section.dz_m != 0.0 else -abs(riser_section.length_m)
+        downcomer_hydrostatic_pa = hydrostatic_pressure_pa(reference_liquid_density_kg_m3, downcomer_dz_m)
         pressure_balance = self._build_pressure_balance(
             downcomer_section=downcomer_section,
             riser_section=riser_section,
@@ -1544,6 +1578,7 @@ class SteadyLoopSolver:
             friction_model=self.effective_friction_model(inputs),
             pressure_balance=pressure_balance,
             model_mode="distributed_steady",
+            geometry_source=self.geometry.geometry_source,
             section_states=section_states,
             evaporator_profile=evaporator_profile,
             riser_profile=riser_profile,
@@ -1706,6 +1741,26 @@ class SteadyLoopSolver:
         return float(sol.root), None
 
     def solve(self, inputs: SteadyLoopInputs) -> SteadyLoopResult:
+        geometry_source = self.geometry_source(inputs)
+        if inputs.geometry is not None:
+            try:
+                inputs.geometry.validate_current_solver_sections()
+            except ValueError as exc:
+                return SteadyLoopResult(
+                    converged=False,
+                    H=inputs.H,
+                    qtr=inputs.qtr,
+                    Li=inputs.Li,
+                    tcon=inputs.tcon,
+                    solver_status="validation_error",
+                    failure_reason=str(exc),
+                    closure_name=self.closure_label(inputs),
+                    property_model_name=self.property_model_name,
+                    **self.property_result_fields(inputs),
+                    model_scientific_status=self.model_scientific_status(inputs),
+                    friction_model=self.effective_friction_model(inputs),
+                    geometry_source=geometry_source,
+                )
         if inputs.H < 0.0:
             return SteadyLoopResult(
                 converged=False,
@@ -1720,6 +1775,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
         if inputs.H == 0.0:
             return SteadyLoopResult(
@@ -1735,6 +1791,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
         try:
             self.properties.state_at_temperature(inputs.tcon)
@@ -1752,6 +1809,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
 
         root_search = self.find_circulation_factor(inputs=inputs)
@@ -1771,6 +1829,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
 
         final_ngrid = 400 if inputs.mode == "distributed_steady" else 1200
@@ -1793,6 +1852,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
         if pass_result is None:
             return SteadyLoopResult(
@@ -1811,6 +1871,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
 
         auxiliary_temperature_c, temperature_failure_reason = self.solve_auxiliary_temperature(
@@ -1835,6 +1896,7 @@ class SteadyLoopSolver:
                 **self.property_result_fields(inputs),
                 model_scientific_status=self.model_scientific_status(inputs),
                 friction_model=self.effective_friction_model(inputs),
+                geometry_source=geometry_source,
             )
 
         state = self.properties.state_at_temperature(inputs.tcon)
@@ -1878,4 +1940,5 @@ class SteadyLoopSolver:
             **self.property_result_fields(inputs),
             model_scientific_status=self.model_scientific_status(inputs),
             friction_model=self.effective_friction_model(inputs),
+            geometry_source=geometry_source,
         )

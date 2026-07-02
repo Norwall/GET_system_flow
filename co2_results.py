@@ -107,6 +107,7 @@ class SteadyPassResult:
     friction_model: str = "mathcad_compat"
     pressure_balance: LoopPressureBalance | None = None
     model_mode: str = "worksheet_compatible"
+    geometry_source: str = "mathcad_default"
     section_states: tuple[LoopSectionState, ...] = ()
     evaporator_profile: EvaporatorProfile | None = None
     riser_profile: RiserProfile | None = None
@@ -115,6 +116,7 @@ class SteadyPassResult:
         data: Dict[str, Any] = {
             "model_mode": self.model_mode,
             "friction_model": self.friction_model,
+            "geometry_source": self.geometry_source,
             "U_W": self.total_heat_w,
             "yn": self.preboiling_length_fraction,
             "preboiling_evaporator_length_m": self.preboiling_evaporator_length_m,
@@ -205,6 +207,7 @@ class SteadyLoopResult:
     near_critical_warning: str = ""
     model_scientific_status: str = ""
     friction_model: str = "mathcad_compat"
+    geometry_source: str = "mathcad_default"
 
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -226,6 +229,7 @@ class SteadyLoopResult:
             "near_critical_warning": self.near_critical_warning,
             "model_scientific_status": self.model_scientific_status,
             "friction_model": self.friction_model,
+            "geometry_source": self.geometry_source,
         }
         if self.circulation_factor is not None:
             data["fff"] = self.circulation_factor

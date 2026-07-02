@@ -391,8 +391,8 @@ Closed-loop pressure balance:
 
 ### Задачи
 
-- [ ] Расширить `LoopGeometry` до списка `FlowSection`.
-- [ ] Каждый `FlowSection` должен иметь:
+- [x] Расширить `LoopGeometry` до списка `FlowSection`.
+- [x] Каждый `FlowSection` должен иметь:
   - `id`;
   - `kind`;
   - `orientation`;
@@ -403,21 +403,21 @@ Closed-loop pressure balance:
   - `relative_roughness`;
   - `area_m2`;
   - `heat_mode`.
-- [ ] Передавать из designer в solver:
+- [x] Передавать из designer в solver:
   - реальные длины;
   - реальные высоты;
   - диаметры;
   - шероховатости;
   - тип участка.
-- [ ] Сохранить `default_mathcad_geometry`.
-- [ ] Добавить `geometry_source`:
+- [x] Сохранить `default_mathcad_geometry`.
+- [x] Добавить `geometry_source`:
   - `mathcad_default`;
   - `designer`;
   - `manual_sections`.
 
 ### Тесты
 
-- [ ] `tests/test_segmented_geometry.py`
+- [x] `tests/test_segmented_geometry.py`
   - изменение диаметра меняет потери давления;
   - изменение шероховатости меняет потери давления;
   - изменение высоты riser меняет hydrostatic contribution;

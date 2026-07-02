@@ -7,6 +7,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from co2_geometry import (
+    CondenserSection,
+    DowncomerSection,
+    EvaporatorSection,
+    FlowSection,
+    LoopGeometry,
+    RiserSection,
+)
+
 
 VALID_SEGMENT_KINDS = {
     "evaporator",
@@ -102,6 +111,12 @@ class DerivedSegment:
     dz_m: float
     length_m: float
     angle_deg: float
+    orientation: str
+    hydraulic_diameter_m: float
+    roughness_m: float
+    area_m2: float
+    relative_roughness: float
+    heat_mode: str
 
 
 @dataclass(frozen=True)
@@ -117,7 +132,39 @@ class DerivedGeometry:
     qtr_W_m: float
     heat_power_W: float
 
-    def to_solver_inputs(self, scenario: GETScenario) -> dict[str, float | str]:
+    def to_loop_geometry(self) -> LoopGeometry:
+        sections: list[FlowSection] = []
+        section_classes = {
+            "evaporator": EvaporatorSection,
+            "riser": RiserSection,
+            "condenser": CondenserSection,
+            "downcomer": DowncomerSection,
+        }
+        for segment in self.segments:
+            if segment.kind not in section_classes:
+                raise ScenarioValidationError(
+                    f"Segment kind {segment.kind!r} cannot be used by the current CO2 solver."
+                )
+            section_class = section_classes[segment.kind]
+            sections.append(
+                section_class(
+                    id=segment.id,
+                    kind=segment.kind,
+                    orientation=segment.orientation,
+                    length_m=segment.length_m,
+                    dz_m=segment.dz_m,
+                    hydraulic_diameter_m=segment.hydraulic_diameter_m,
+                    roughness_m=segment.roughness_m,
+                    area_m2=segment.area_m2,
+                    heat_mode=segment.heat_mode,
+                )
+            )
+        try:
+            return LoopGeometry.from_sections(tuple(sections), geometry_source="designer")
+        except ValueError as exc:
+            raise ScenarioValidationError(str(exc)) from exc
+
+    def to_solver_inputs(self, scenario: GETScenario) -> dict[str, float | str | LoopGeometry]:
         if self.evaporator_length_m <= 0.0:
             raise ScenarioValidationError("Scenario must include at least one evaporator segment.")
         if self.H_m <= 0.0:
@@ -131,6 +178,7 @@ class DerivedGeometry:
             "tcon": scenario.solver.tcon_C,
             "mode": scenario.solver.mode,
             "closure_model": scenario.solver.closure_model,
+            "geometry": self.to_loop_geometry(),
         }
 
 
@@ -231,6 +279,12 @@ def derived_geometry_to_dict(geometry: DerivedGeometry) -> dict[str, Any]:
                 "dz_m": segment.dz_m,
                 "length_m": segment.length_m,
                 "angle_deg": segment.angle_deg,
+                "orientation": segment.orientation,
+                "hydraulic_diameter_m": segment.hydraulic_diameter_m,
+                "roughness_m": segment.roughness_m,
+                "area_m2": segment.area_m2,
+                "relative_roughness": segment.relative_roughness,
+                "heat_mode": segment.heat_mode,
             }
             for segment in geometry.segments
         ],
@@ -292,6 +346,7 @@ def validate_scenario(scenario: GETScenario) -> None:
 
 def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
     validate_scenario(scenario)
+    default_geometry = LoopGeometry()
     nodes_by_id = {node.id: node for node in scenario.nodes}
     derived_segments: list[DerivedSegment] = []
     total_length_m = 0.0
@@ -308,6 +363,18 @@ def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
         if length_m <= 0.0:
             raise ScenarioValidationError(f"Segment {segment.id!r} has zero length.")
         angle_deg = math.degrees(math.atan2(dz_m, dx_m))
+        hydraulic_diameter_m = (
+            segment.diameter_m
+            if segment.diameter_m is not None
+            else default_geometry.hydraulic_diameter_m
+        )
+        roughness_m = (
+            segment.roughness_m
+            if segment.roughness_m is not None
+            else default_geometry.wall_roughness_m
+        )
+        area_m2 = math.pi * (0.5 * hydraulic_diameter_m) ** 2
+        orientation = _segment_orientation(segment.kind, dx_m, dz_m)
         derived_segments.append(
             DerivedSegment(
                 id=segment.id,
@@ -318,6 +385,12 @@ def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
                 dz_m=dz_m,
                 length_m=length_m,
                 angle_deg=angle_deg,
+                orientation=orientation,
+                hydraulic_diameter_m=hydraulic_diameter_m,
+                roughness_m=roughness_m,
+                area_m2=area_m2,
+                relative_roughness=roughness_m / hydraulic_diameter_m,
+                heat_mode=_heat_mode_for_kind(segment.kind),
             )
         )
         total_length_m += length_m
@@ -349,7 +422,27 @@ def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
     )
 
 
-def solver_inputs_from_scenario(scenario: GETScenario) -> dict[str, float | str]:
+def _segment_orientation(kind: str, dx_m: float, dz_m: float) -> str:
+    if kind == "riser":
+        return "vertical_up"
+    if kind == "downcomer":
+        return "return_line"
+    if abs(dz_m) <= 1e-9:
+        return "horizontal"
+    if dz_m > 0.0:
+        return "inclined_up"
+    return "inclined_down"
+
+
+def _heat_mode_for_kind(kind: str) -> str:
+    if kind == "evaporator":
+        return "prescribed_qtr"
+    if kind == "condenser":
+        return "saturation_boundary"
+    return "adiabatic"
+
+
+def solver_inputs_from_scenario(scenario: GETScenario) -> dict[str, float | str | LoopGeometry]:
     return derive_geometry(scenario).to_solver_inputs(scenario)
 
 

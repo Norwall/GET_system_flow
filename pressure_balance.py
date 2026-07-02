@@ -29,6 +29,11 @@ class SectionPressureBalance:
     orientation: str
     length_m: float
     dz_m: float
+    hydraulic_diameter_m: float = 0.0
+    roughness_m: float = 0.0
+    relative_roughness: float = 0.0
+    area_m2: float = 0.0
+    heat_mode: str = ""
     delta_p_hydrostatic_pa: float = 0.0
     delta_p_friction_pa: float = 0.0
     delta_p_acceleration_pa: float = 0.0
@@ -78,6 +83,11 @@ class SectionPressureBalance:
             "orientation": self.orientation,
             "length_m": self.length_m,
             "dz_m": self.dz_m,
+            "hydraulic_diameter_m": self.hydraulic_diameter_m,
+            "roughness_m": self.roughness_m,
+            "relative_roughness": self.relative_roughness,
+            "area_m2": self.area_m2,
+            "heat_mode": self.heat_mode,
             "delta_p_hydrostatic_pa": self.delta_p_hydrostatic_pa,
             "delta_p_friction_pa": self.delta_p_friction_pa,
             "delta_p_acceleration_pa": self.delta_p_acceleration_pa,
@@ -152,4 +162,3 @@ class LoopPressureBalance:
 
 def hydrostatic_pressure_pa(density_kg_m3: float, dz_m: float, gravity_m_s2: float = 9.81) -> float:
     return float(density_kg_m3) * float(gravity_m_s2) * float(dz_m)
-
