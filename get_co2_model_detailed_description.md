@@ -47,6 +47,9 @@
 - `mode` — `worksheet_compatible` или `distributed_steady`
 - `closure_model` — модель пустотности и двухфазного замыкания
 - `friction_model` — модель коэффициента трения Дарси
+- `heat_transfer_model` — уровень тепловой постановки: сейчас реализован
+  `prescribed_heat_input`; `wall_coupled` зарезервирован для следующей модели
+  wall/soil boundary и возвращает validation error без граничных условий
 
 Внутри модели также зашиты геометрические параметры:
 
@@ -270,6 +273,17 @@ CO₂ Mathcad-compatible ветка получает свойства из ис�
   испарителя
 - `riser_flow_regime_source_summary` — источники диагностических режимов riser
 - `riser_flow_regime_status_summary` — статусы диагностических режимов riser
+- `heat_transfer_model` — фактически выбранный тепловой diagnostic mode
+- `boiling_heat_flux_w_m2` — средний тепловой поток на смоченный периметр
+  испарителя, \(q''=qtr/P_h\)
+- `boiling_heat_transfer_status` — статус heat-transfer диагностики
+- `boiling_heat_transfer_limit` — `not_evaluated_source_required` до
+  published HTC-корреляции
+- `dryout_limit` — `not_evaluated_source_required` до published dryout/CHF
+  корреляции
+- `hydrodynamic_limit`, `property_limit`, `numerical_failure`,
+  `failure_class`, `warnings` — раздельная классификация отказов и
+  предупреждений, не подменяющая solver convergence
 
 ## 7. Полный workflow расчета в `get_co2_model.py`
 
@@ -435,6 +449,20 @@ CO₂ Mathcad-compatible ветка получает свойства из ис�
 - температуры;
 - нормированные индикаторы.
 
+### Шаг 9. Boiling/dryout diagnostic scaffold
+
+После формирования гидравлического результата solver добавляет
+diagnostic-only тепловой слой. Для `heat_transfer_model="prescribed_heat_input"`
+он пересчитывает заданную линейную нагрузку в средний тепловой поток:
+
+`boiling_heat_flux_w_m2 = qtr / (4 * area / hydraulic_diameter)`
+
+Эта величина не является коэффициентом теплоотдачи и не определяет dryout/CHF.
+Поля `boiling_heat_transfer_limit` и `dryout_limit` поэтому получают статус
+`not_evaluated_source_required`. Если гидравлический solver не сошелся, dryout
+не объявляется причиной отказа: `failure_class` остаётся `numerical_failure`,
+`hydrodynamic_limit` или `property_limit` в зависимости от фактического статуса.
+
 ## 8. Что делает `run_get_co2_demo-1.py`
 
 Файл [run_get_co2_demo-1.py](run_get_co2_demo-1.py) — это демонстрационный сценарий.
@@ -510,6 +538,11 @@ CO₂ Mathcad-compatible ветка получает свойства из ис�
 
 Код хорошо решает рабочий режим, но не реализует в полном виде внешний алгоритм поиска всех предельных режимов из диссертации.
 
+После Checkpoint 7 добавлен только safe diagnostic scaffold: средний heat flux
+вычисляется из `qtr` и гидравлического периметра, а published heat-transfer,
+dryout и CHF-корреляции явно помечены как `source_required`. Kandlikar, Shah и
+Gungor-Winterton не подключены до сверки первоисточников и областей применимости.
+
 ### 9.7. Published-слой ограничен подтвержденными формулами
 
 Source-strict часть Checkpoint 5 не означает, что все корреляции из обзора уже
@@ -534,7 +567,7 @@ CoolProp-свойства. Это означает, что баланс масс
 
 - валидацию против экспериментальных рядов аммиачной ГЕТ;
 - опубликованные режимные карты для NH₃;
-- отдельные boiling/dryout/qcrit diagnostics;
+- published boiling/dryout prediction и qcrit-модель;
 - перенос параметра перегрева из экспериментальной статьи.
 
 ## 10. Как правильно понимать результаты модели
@@ -566,6 +599,7 @@ CoolProp-свойства. Это означает, что баланс масс
 - source-strict published-замыкания HEM, Zivi и Lockhart-Martinelli/Chisholm;
 - experimental-замыкания для исследовательского regime-aware режима;
 - source-tagged диагностические режимы течения без заявления published-карты.
+- diagnostic-only boiling/dryout scaffold без published HTC/CHF-корреляции.
 
 Полный workflow модели выглядит так:
 
@@ -574,7 +608,7 @@ CoolProp-свойства. Это означает, что баланс масс
 3. По пробному `f` считается испарение, расходы и двухфазные потери.
 4. Из сопротивлений и эффективной разности плотностей определяется требуемый напор `Hy`.
 5. Подбирается такое `f`, при котором `Hy = H`.
-6. После этого вычисляются температуры, индикаторы, pressure-balance поля и итоговые выходы.
+6. После этого вычисляются температуры, индикаторы, pressure-balance поля и diagnostic-only boiling fields.
 7. Демонстрационный скрипт агрегирует эти результаты в таблицы, sweep, график и отчет.
 
 С инженерной точки зрения это хорошая базовая рабочая модель, которую можно развивать дальше в сторону:

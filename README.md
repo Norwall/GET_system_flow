@@ -115,6 +115,10 @@ source-strict часть Checkpoint 5:
 - добавлены reference CSV для CoolProp CO2/NH3 в `data/reference_properties/`;
 - результаты содержат `fluid_cas`, `refrigerant_name`, `outlet_mass_quality`,
   `outlet_no_slip_gas_volume_fraction` и `outlet_closure_void_fraction`.
+- добавлен safe scaffold `boiling_heat_transfer.py`: при
+  `heat_transfer_model="prescribed_heat_input"` результат содержит средний
+  `boiling_heat_flux_w_m2`, а `boiling_heat_transfer_limit` и `dryout_limit`
+  явно остаются `not_evaluated_source_required` до published-корреляций.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -192,10 +196,13 @@ pytest -q -m slow
   worksheet, а не на универсальный расчет любых CO2-контуров.
 - Критические тепловые нагрузки и предельные режимы из диссертации не реализованы
   как полный внешний алгоритм поиска границ.
+- Boiling/dryout diagnostics пока не являются прогнозом heat-transfer crisis:
+  Kandlikar, Shah, Gungor-Winterton, dryout и CHF-корреляции не подключены без
+  сверки первоисточника.
 - Свойства CO2 заданы таблично и интерполируются; расчеты вне области исходных
   таблиц нужно трактовать осторожно.
-- NH3 через CoolProp доступен в общем loop solver, но режимные карты, boiling
-  diagnostics и qcrit для него еще не доведены до published-физики.
+- NH3 через CoolProp доступен в общем loop solver, но режимные карты,
+  boiling/dryout prediction и qcrit для него еще не доведены до published-физики.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
 - Геометрический конструктор передает основные расчетные участки, но пока не

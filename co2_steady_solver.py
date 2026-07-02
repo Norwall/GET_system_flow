@@ -6,6 +6,12 @@ from typing import Optional
 import numpy as np
 from scipy.optimize import root_scalar
 
+from boiling_heat_transfer import (
+    WALL_COUPLED,
+    diagnose_prescribed_heat_input,
+    diagnostics_for_solver_status,
+    normalize_heat_transfer_model,
+)
 from co2_geometry import LoopGeometry
 from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, SteadyLoopResult, SteadyPassResult
 from pressure_balance import LoopPressureBalance, SectionPressureBalance, hydrostatic_pressure_pa
@@ -67,6 +73,7 @@ class SteadyLoopInputs:
     closure_model: str = "worksheet_compatible"
     friction_model: str = "mathcad_compat"
     geometry: LoopGeometry | None = None
+    heat_transfer_model: str = "prescribed_heat_input"
 
 
 @dataclass(frozen=True)
@@ -1931,28 +1938,54 @@ class SteadyLoopSolver:
             return None, "Решатель Brent не сошелся для вспомогательной температуры."
         return float(sol.root), None
 
+    def _active_geometry(self, inputs: SteadyLoopInputs) -> LoopGeometry:
+        return inputs.geometry if inputs.geometry is not None else self.geometry
+
+    def _result_common_fields(
+        self,
+        *,
+        inputs: SteadyLoopInputs,
+        geometry_source: str,
+        heat_transfer_model: str,
+        solver_status: str,
+        failure_reason: str | None = None,
+        pass_result: SteadyPassResult | None = None,
+    ) -> dict:
+        property_fields = self.property_result_fields(inputs)
+        near_critical_warning = property_fields.get("near_critical_warning", "")
+        if solver_status == "converged" and pass_result is not None:
+            evaporator_section = self._active_geometry(inputs).evaporator_section(length_m=inputs.Li)
+            boiling_diagnostics = diagnose_prescribed_heat_input(
+                qtr_w_per_m=inputs.qtr,
+                evaporator_area_m2=evaporator_section.area_m2,
+                evaporator_hydraulic_diameter_m=evaporator_section.hydraulic_diameter_m,
+                boiling_length_m=pass_result.boiling_length_m,
+                near_critical_warning=near_critical_warning,
+            )
+        else:
+            boiling_diagnostics = diagnostics_for_solver_status(
+                heat_transfer_model=heat_transfer_model,
+                solver_status=solver_status,
+                near_critical_warning=near_critical_warning,
+                failure_reason=failure_reason,
+            )
+        return {
+            "closure_name": self.closure_label(inputs),
+            "property_model_name": self.property_model_name,
+            **property_fields,
+            "model_scientific_status": self.model_scientific_status(inputs),
+            "friction_model": self.effective_friction_model(inputs),
+            "geometry_source": geometry_source,
+            **boiling_diagnostics.to_result_fields(),
+        }
+
     def solve(self, inputs: SteadyLoopInputs) -> SteadyLoopResult:
         geometry_source = self.geometry_source(inputs)
-        if inputs.geometry is not None:
-            try:
-                inputs.geometry.validate_current_solver_sections()
-            except ValueError as exc:
-                return SteadyLoopResult(
-                    converged=False,
-                    H=inputs.H,
-                    qtr=inputs.qtr,
-                    Li=inputs.Li,
-                    tcon=inputs.tcon,
-                    solver_status="validation_error",
-                    failure_reason=str(exc),
-                    closure_name=self.closure_label(inputs),
-                    property_model_name=self.property_model_name,
-                    **self.property_result_fields(inputs),
-                    model_scientific_status=self.model_scientific_status(inputs),
-                    friction_model=self.effective_friction_model(inputs),
-                    geometry_source=geometry_source,
-                )
-        if inputs.H < 0.0:
+        try:
+            heat_transfer_model = normalize_heat_transfer_model(inputs.heat_transfer_model)
+        except ValueError as exc:
+            heat_transfer_model = inputs.heat_transfer_model
+            failure_reason = str(exc)
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,
@@ -1960,15 +1993,74 @@ class SteadyLoopSolver:
                 Li=inputs.Li,
                 tcon=inputs.tcon,
                 solver_status="validation_error",
-                failure_reason="H must be non-negative.",
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="validation_error",
+                    failure_reason=failure_reason,
+                ),
+            )
+        if heat_transfer_model == WALL_COUPLED:
+            failure_reason = "heat_transfer_model='wall_coupled' requires wall/soil boundary conditions."
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                solver_status="validation_error",
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="validation_error",
+                    failure_reason=failure_reason,
+                ),
+            )
+        if inputs.geometry is not None:
+            try:
+                inputs.geometry.validate_current_solver_sections()
+            except ValueError as exc:
+                failure_reason = str(exc)
+                return SteadyLoopResult(
+                    converged=False,
+                    H=inputs.H,
+                    qtr=inputs.qtr,
+                    Li=inputs.Li,
+                    tcon=inputs.tcon,
+                    solver_status="validation_error",
+                    failure_reason=failure_reason,
+                    **self._result_common_fields(
+                        inputs=inputs,
+                        geometry_source=geometry_source,
+                        heat_transfer_model=heat_transfer_model,
+                        solver_status="validation_error",
+                        failure_reason=failure_reason,
+                    ),
+                )
+        if inputs.H < 0.0:
+            failure_reason = "H must be non-negative."
+            return SteadyLoopResult(
+                converged=False,
+                H=inputs.H,
+                qtr=inputs.qtr,
+                Li=inputs.Li,
+                tcon=inputs.tcon,
+                solver_status="validation_error",
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="validation_error",
+                    failure_reason=failure_reason,
+                ),
             )
         if inputs.H == 0.0:
+            failure_reason = "H=0 gives no hydrostatic driving head for natural circulation."
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,
@@ -1976,17 +2068,19 @@ class SteadyLoopSolver:
                 Li=inputs.Li,
                 tcon=inputs.tcon,
                 solver_status="no_driving_head",
-                failure_reason="H=0 gives no hydrostatic driving head for natural circulation.",
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="no_driving_head",
+                    failure_reason=failure_reason,
+                ),
             )
         try:
             self.properties.state_at_temperature(inputs.tcon)
         except PropertyRangeError as exc:
+            failure_reason = str(exc)
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,
@@ -1994,13 +2088,14 @@ class SteadyLoopSolver:
                 Li=inputs.Li,
                 tcon=inputs.tcon,
                 solver_status="property_out_of_range",
-                failure_reason=str(exc),
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="property_out_of_range",
+                    failure_reason=failure_reason,
+                ),
             )
 
         root_search = self.find_circulation_factor(inputs=inputs)
@@ -2015,18 +2110,20 @@ class SteadyLoopSolver:
                 n_sign_changes=root_search.n_sign_changes,
                 solver_status=root_search.solver_status,
                 failure_reason=root_search.failure_reason,
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status=root_search.solver_status,
+                    failure_reason=root_search.failure_reason,
+                ),
             )
 
         final_ngrid = 400 if inputs.mode == "distributed_steady" else 1200
         try:
             pass_result = self.one_pass(inputs=inputs, circulation_factor=root_search.circulation_factor, ngrid=final_ngrid)
         except PropertyRangeError as exc:
+            failure_reason = str(exc)
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,
@@ -2037,15 +2134,17 @@ class SteadyLoopSolver:
                 root_bracket=root_search.root_bracket,
                 n_sign_changes=root_search.n_sign_changes,
                 solver_status="property_out_of_range",
-                failure_reason=str(exc),
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="property_out_of_range",
+                    failure_reason=failure_reason,
+                ),
             )
         if pass_result is None:
+            failure_reason = "После поиска корня не удалось восстановить стационарный проход."
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,
@@ -2056,13 +2155,14 @@ class SteadyLoopSolver:
                 root_bracket=root_search.root_bracket,
                 n_sign_changes=root_search.n_sign_changes,
                 solver_status="internal_pass_failed",
-                failure_reason="После поиска корня не удалось восстановить стационарный проход.",
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                failure_reason=failure_reason,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="internal_pass_failed",
+                    failure_reason=failure_reason,
+                ),
             )
 
         auxiliary_temperature_c, temperature_failure_reason = self.solve_auxiliary_temperature(
@@ -2082,12 +2182,14 @@ class SteadyLoopSolver:
                 n_sign_changes=root_search.n_sign_changes,
                 solver_status="aux_temperature_failed",
                 failure_reason=temperature_failure_reason,
-                closure_name=self.closure_label(inputs),
-                property_model_name=self.property_model_name,
-                **self.property_result_fields(inputs),
-                model_scientific_status=self.model_scientific_status(inputs),
-                friction_model=self.effective_friction_model(inputs),
-                geometry_source=geometry_source,
+                **self._result_common_fields(
+                    inputs=inputs,
+                    geometry_source=geometry_source,
+                    heat_transfer_model=heat_transfer_model,
+                    solver_status="aux_temperature_failed",
+                    failure_reason=temperature_failure_reason,
+                    pass_result=pass_result,
+                ),
             )
 
         state = self.properties.state_at_temperature(inputs.tcon)
@@ -2126,10 +2228,11 @@ class SteadyLoopSolver:
             n_sign_changes=root_search.n_sign_changes,
             solver_status="converged",
             failure_reason=None,
-            closure_name=self.closure_label(inputs),
-            property_model_name=self.property_model_name,
-            **self.property_result_fields(inputs),
-            model_scientific_status=self.model_scientific_status(inputs),
-            friction_model=self.effective_friction_model(inputs),
-            geometry_source=geometry_source,
+            **self._result_common_fields(
+                inputs=inputs,
+                geometry_source=geometry_source,
+                heat_transfer_model=heat_transfer_model,
+                solver_status="converged",
+                pass_result=pass_result,
+            ),
         )

@@ -20,6 +20,8 @@ def test_refrigerant_loop_model_runs_co2_coolprop_with_published_defaults() -> N
     assert data["property_model_name"] == "CoolPropSaturationProperties"
     assert data["model_scientific_status"] == "published"
     assert data["friction_model"] == "colebrook_white"
+    assert data["heat_transfer_model"] == "prescribed_heat_input"
+    assert data["boiling_heat_transfer_status"] == "diagnostic_only_source_required"
     assert "zivi" in data["closure_name"]
     assert data["fff"] == pytest.approx(0.61331227093134, rel=1e-9)
 

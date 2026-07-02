@@ -527,20 +527,26 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 Цель: отделить гидродинамическую сходимость от тепловых ограничений кипения.
 
+Статус: выполнен безопасный diagnostic scaffold. Добавлен `boiling_heat_transfer.py`,
+поле `heat_transfer_model`, диагностический пересчёт заданной линейной тепловой
+нагрузки в средний тепловой поток и явные статусы `source_required` для
+published heat-transfer/dryout корреляций. Полноценные Kandlikar/Shah/
+Gungor–Winterton и dryout/CHF модели не реализованы до сверки первоисточника.
+
 ### Задачи
 
-- [ ] Создать `boiling_heat_transfer.py`.
+- [x] Создать `boiling_heat_transfer.py`.
 - [ ] Поддержать два уровня постановки:
-  - prescribed heat input — текущая задача;
-  - wall/soil coupled heat transfer — следующая физическая задача.
-- [ ] Добавить диагностический расчёт saturated flow boiling heat transfer.
+  - [x] prescribed heat input — текущая задача;
+  - [ ] wall/soil coupled heat transfer — следующая физическая задача.
+- [x] Добавить diagnostic-only расчёт среднего heat flux для saturated flow boiling без published HTC-корреляции.
 - [ ] Выбрать опубликованную корреляцию после сверки первоисточника:
   - Kandlikar;
   - Shah;
   - Gungor–Winterton.
-- [ ] Не смешивать nucleate boiling и flow boiling без явной постановки wall superheat.
-- [ ] Добавить dryout/critical heat flux diagnostics отдельно от hydrodynamic qcrit.
-- [ ] В результатах разделить:
+- [x] Не смешивать nucleate boiling и flow boiling без явной постановки wall superheat.
+- [x] Добавить dryout/critical heat flux diagnostics как явный `source_required` статус отдельно от hydrodynamic qcrit.
+- [x] В результатах разделить:
   - `hydrodynamic_limit`;
   - `boiling_heat_transfer_limit`;
   - `dryout_limit`;
@@ -549,7 +555,7 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 ### Тесты
 
-- [ ] `tests/test_boiling_diagnostics.py`
+- [x] `tests/test_boiling_diagnostics.py`
   - prescribed heat input не требует wall temperature;
   - wall heat-transfer mode требует wall/soil boundary;
   - dryout diagnostic не подменяет solver convergence;
@@ -557,7 +563,9 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 ### Критерий готовности
 
-Критическая нагрузка не выводится только из факта несходимости численного solver.
+Частично выполнено: критическая нагрузка не выводится только из факта
+несходимости численного solver, но published boiling/dryout prediction ещё
+не реализован.
 
 ## 12. Checkpoint 8 — ветка NH₃ / R717
 

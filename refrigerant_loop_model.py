@@ -49,6 +49,7 @@ class RefrigerantLoopModel:
         closure_model: str,
         friction_model: str,
         geometry: LoopGeometry | None,
+        heat_transfer_model: str,
     ) -> SteadyLoopInputs:
         return SteadyLoopInputs(
             H=H,
@@ -59,6 +60,7 @@ class RefrigerantLoopModel:
             closure_model=closure_model,
             friction_model=friction_model,
             geometry=geometry,
+            heat_transfer_model=heat_transfer_model,
         )
 
     def run_result(
@@ -71,6 +73,7 @@ class RefrigerantLoopModel:
         closure_model: str = "zivi",
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
     ) -> SteadyLoopResult:
         """Return a structured result for the configured refrigerant."""
 
@@ -84,6 +87,7 @@ class RefrigerantLoopModel:
                 closure_model=closure_model,
                 friction_model=friction_model,
                 geometry=geometry,
+                heat_transfer_model=heat_transfer_model,
             )
         )
 
@@ -97,6 +101,7 @@ class RefrigerantLoopModel:
         closure_model: str = "zivi",
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
     ) -> dict[str, Any]:
         """Return a dictionary result for compatibility with reporting code."""
 
@@ -109,6 +114,7 @@ class RefrigerantLoopModel:
             closure_model=closure_model,
             friction_model=friction_model,
             geometry=geometry,
+            heat_transfer_model=heat_transfer_model,
         ).to_dict()
 
     def solve_f(
@@ -124,6 +130,7 @@ class RefrigerantLoopModel:
         closure_model: str = "zivi",
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
     ) -> float | None:
         """Return the circulation factor if the head-balance root is bracketed."""
 
@@ -137,6 +144,7 @@ class RefrigerantLoopModel:
                 closure_model=closure_model,
                 friction_model=friction_model,
                 geometry=geometry,
+                heat_transfer_model=heat_transfer_model,
             ),
             fmin=fmin,
             fmax=fmax,

@@ -27,6 +27,11 @@ def test_run_exposes_structured_diagnostics_and_alias_fields(co2_model: CO2Mathc
     assert "CO2.xmcd" in result["property_source"]
     assert "Mathcad CO2 table backend" in result["property_warning"]
     assert result["near_critical_warning"] == ""
+    assert result["heat_transfer_model"] == "prescribed_heat_input"
+    assert result["boiling_heat_transfer_status"] == "diagnostic_only_source_required"
+    assert result["boiling_heat_flux_w_m2"] > 0.0
+    assert result["dryout_limit"] == "not_evaluated_source_required"
+    assert result["failure_class"] == "none"
 
     assert result["GG0_liq_equiv_lph"] == pytest.approx(result["GG0_lph"], rel=0.0, abs=0.0)
     assert result["GG0_gas_lph"] > result["GG0_liq_equiv_lph"]

@@ -27,6 +27,7 @@ web = [
 
 [tool.setuptools]
 py-modules = [
+    "boiling_heat_transfer",
     "co2_geometry",
     "co2_function_matrix",
     "co2_properties",

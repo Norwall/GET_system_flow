@@ -252,6 +252,16 @@ class SteadyLoopResult:
     model_scientific_status: str = ""
     friction_model: str = "mathcad_compat"
     geometry_source: str = "mathcad_default"
+    heat_transfer_model: str = "prescribed_heat_input"
+    boiling_heat_transfer_status: str = "not_evaluated"
+    boiling_heat_flux_w_m2: float | None = None
+    boiling_heat_transfer_limit: str = "not_evaluated_source_required"
+    dryout_limit: str = "not_evaluated_source_required"
+    hydrodynamic_limit: str = "not_active"
+    property_limit: str = "not_active"
+    numerical_failure: str = "not_active"
+    failure_class: str = "none"
+    warnings: tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -276,6 +286,16 @@ class SteadyLoopResult:
             "model_scientific_status": self.model_scientific_status,
             "friction_model": self.friction_model,
             "geometry_source": self.geometry_source,
+            "heat_transfer_model": self.heat_transfer_model,
+            "boiling_heat_transfer_status": self.boiling_heat_transfer_status,
+            "boiling_heat_flux_w_m2": self.boiling_heat_flux_w_m2,
+            "boiling_heat_transfer_limit": self.boiling_heat_transfer_limit,
+            "dryout_limit": self.dryout_limit,
+            "hydrodynamic_limit": self.hydrodynamic_limit,
+            "property_limit": self.property_limit,
+            "numerical_failure": self.numerical_failure,
+            "failure_class": self.failure_class,
+            "warnings": list(self.warnings),
         }
         if self.circulation_factor is not None:
             data["fff"] = self.circulation_factor

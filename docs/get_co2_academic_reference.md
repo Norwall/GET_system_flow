@@ -8,7 +8,7 @@ toc-title: "Содержание"
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6 и NH₃-ветки Checkpoint 8: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и guarded-заготовки `published_regimes.py`, а также универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics и CoolProp reference CSV для CO₂/NH₃.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, NH₃-ветки Checkpoint 8 и безопасного scaffold Checkpoint 7: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и guarded-заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, а также diagnostic-only слой `boiling_heat_transfer.py`. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout статусов.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -31,6 +31,8 @@ toc-title: "Содержание"
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
 Для CO₂ доступны две ветки свойств: Mathcad-compatible таблицы из `CO2.xmcd` и CoolProp HEOS. Для NH₃ доступна CoolProp/REFPROP-ориентированная ветка через `RefrigerantSaturationProperties`; перенос CO₂-табличных коэффициентов на аммиак запрещён. NH₃-результаты являются расчётом тем же стационарным гидравлическим solver, но не являются экспериментальной валидацией аммиачной установки из [5] и не добавляют published режимных карт или qcrit-модели.
+
+После Checkpoint 7 введён параметр `heat_transfer_model`. Реализованный вариант `prescribed_heat_input` не добавляет эмпирическую корреляцию теплоотдачи: он только переводит заданную линейную тепловую нагрузку \(q_\ell\) в средний тепловой поток \(q''\) через гидравлический периметр испарителя. Корреляции saturated flow boiling heat transfer, dryout и CHF не подключены; соответствующие поля результата явно получают статусы `not_evaluated_source_required`. Поэтому новый слой следует считать защитной диагностикой и интерфейсной подготовкой к published-моделям, а не прогнозом кризиса теплообмена.
 
 Документ содержит:
 
@@ -66,6 +68,7 @@ toc-title: "Содержание"
 | — | mode | алгоритм расчёта профиля | строка |
 | — | closure_model | замыкание двухфазной модели | строка |
 | — | friction_model | модель коэффициента трения Дарси | строка |
+| — | heat_transfer_model | постановка тепловой диагностики | строка |
 
 Главные выходы:
 
@@ -79,6 +82,7 @@ toc-title: "Содержание"
 - требуемый напор \(H_y\);
 - распределения температуры, давления и гидравлических параметров;
 - диагностические режимы течения;
+- heat-transfer/dryout diagnostic status без published HTC/CHF-прогноза;
 - статус сходимости и причина отказа.
 
 ## 1.3. Что программа не вычисляет
@@ -93,6 +97,7 @@ toc-title: "Содержание"
 - явная модель сепарации капель;
 - расчёт заправочной массы и уровня хладагента;
 - опубликованные режимные карты Wojtan–Ursenbacher–Thome и Taitel–Barnea–Dukler;
+- published saturated flow boiling heat-transfer, dryout и CHF-корреляции;
 - полный диссертационный алгоритм поиска нижней и верхней критических нагрузок с шагом \(0{,}01\) Вт/м и специальным пределом \(f=0\);
 - экспериментальную валидацию NH₃-ветки против стенда из [5];
 - оценка неопределённости и доверительных интервалов.
@@ -109,7 +114,7 @@ toc-title: "Содержание"
     derive_geometry
             |
             v
-    H, qtr, Li, tcon, fluid, property_backend, mode, closure_model, friction_model
+    H, qtr, Li, tcon, fluid, property_backend, mode, closure_model, friction_model, heat_transfer_model
             |
             v
     CO2MathcadModel / RefrigerantLoopModel / SteadyLoopSolver
@@ -123,6 +128,7 @@ toc-title: "Содержание"
             |       +--> published_friction
             |       +--> published_void_fraction
             +--> two_phase_regimes
+            +--> boiling_heat_transfer
             |
             v
     SteadyLoopResult
@@ -148,6 +154,7 @@ toc-title: "Содержание"
 | experimental_regimes.py | эвристическая классификация локальных режимов |
 | two_phase_regimes.py | compatibility wrappers и summary helpers для старого API |
 | published_regimes.py | guarded-заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
+| boiling_heat_transfer.py | diagnostic-only пересчёт \(q_\ell\to q''\), статусы heat-transfer/dryout limits и failure_class |
 | co2_results.py | типизированные результаты, профили и имена совместимости |
 | co2_function_matrix.py | расчёт матрицы функционирования и приближённых границ сходимости |
 | co2_visualization.py | графики профилей, замыканий и режимов |
@@ -175,6 +182,8 @@ toc-title: "Содержание"
 |---|---|---|
 | \(A\) | площадь живого сечения трубы | м² |
 | \(D_h\) | гидравлический диаметр | м |
+| \(P_h\) | гидравлический периметр, \(4A/D_h\) | м |
+| \(q''\) | средний тепловой поток на смоченный периметр | Вт/м² |
 | \(\varepsilon_r\) | относительная шероховатость | 1 |
 | \(U\) | полная тепловая мощность испарителя | Вт |
 | \(\dot m\) | полный массовый расход | кг/с |
@@ -214,10 +223,11 @@ toc-title: "Содержание"
 6. В распределённом режиме локальная температура кипящей зоны восстанавливается по локальному давлению насыщения.
 7. Линейная тепловая нагрузка \(q_\ell\) постоянна вдоль испарителя.
 8. Всё тепло \(U=q_\ell L_i\) в итоге связано с испарением и конденсацией хладагента; явные теплопотери соединительных труб не учитываются.
-9. Температура конденсатора задаётся, а не вычисляется из теплообмена с атмосферой.
-10. Массовый расход пара между выходом испарителя и конденсаторной частью не меняется.
-11. Локальные сопротивления арматуры, поворотов и сужений отдельно не заданы.
-12. Ускорение свободного падения постоянно и равно \(g=9{,}81\) м/с².
+9. Средний тепловой поток \(q''\) является диагностическим пересчётом заданного \(q_\ell\), а не результатом wall superheat, nucleate boiling или flow-boiling HTC модели.
+10. Температура конденсатора задаётся, а не вычисляется из теплообмена с атмосферой.
+11. Массовый расход пара между выходом испарителя и конденсаторной частью не меняется.
+12. Локальные сопротивления арматуры, поворотов и сужений отдельно не заданы.
+13. Ускорение свободного падения постоянно и равно \(g=9{,}81\) м/с².
 
 Допущения 1–4 и 7–10 соответствуют общей постановке главы 2 диссертации [1, с. 41–58]. Однако программный код реализует сокращённую инженерную систему, а не полные интегральные уравнения массы, импульса, энергии и энтропии (2.1)–(2.27) диссертации.
 
@@ -424,6 +434,17 @@ U=q_\ell L_i.
 \]
 
 Это дискретная форма баланса энергии при пренебрежении теплопотерями соединительных участков. В диссертации соответствующие соотношения приведены в уравнениях (2.38)–(2.53) [1].
+
+После Checkpoint 7 к результату добавлен diagnostic-only пересчёт линейной тепловой нагрузки в средний тепловой поток через гидравлический периметр:
+
+\[
+P_h=\frac{4A}{D_h},
+\qquad
+q''=\frac{q_\ell}{P_h}.
+\tag{6.1a}
+\]
+
+Эта формула является определением поверхностной плотности теплового потока для заданного \(q_\ell\) и геометрии канала. Она не содержит коэффициента теплоотдачи, wall superheat, boiling number, dryout criterion или CHF-корреляции. Поэтому поля `boiling_heat_transfer_limit` и `dryout_limit` в текущей реализации имеют статус `not_evaluated_source_required`, если не реализована отдельная published-модель.
 
 ## 6.2. Параметр циркуляции
 
@@ -1534,6 +1555,19 @@ Q_{l,{\rm out}}\le1\ {\rm л/ч}.
 
 Эти пороги являются программными критериями диагностики. Максимальная сошедшаяся точка сетки не равна физически доказанной критической нагрузке. Особенно нельзя интерпретировать более высокий предел experimental_regime_aware как повышение реальной пропускной способности системы: он является следствием выбранных эвристических замыканий.
 
+## 13.7. Boiling/dryout diagnostic scaffold
+
+Текущий параметр `heat_transfer_model` поддерживает два явно различных уровня постановки:
+
+| heat_transfer_model | Статус | Поведение |
+|---|---|---|
+| prescribed_heat_input | реализован | заданный \(q_\ell\) переводится в средний \(q''\), без HTC/dryout корреляции |
+| wall_coupled | reserved | возвращает `validation_error`, пока нет wall/soil boundary model |
+
+Для `prescribed_heat_input` поле `boiling_heat_transfer_status` равно `diagnostic_only_source_required` при сошедшемся расчёте. Это означает, что solver может сообщить величину \(q''\), но не оценивает коэффициент теплоотдачи, температуру стенки, wall superheat, dryout или CHF.
+
+Если гидравлический расчёт не сошёлся, dryout не объявляется автоматически. Например, `no_root_bracket` классифицируется как `numerical_failure`, а `dryout_limit` остаётся `not_evaluated_source_required`. Near-critical предупреждение от property backend переносится в `property_limit`, чтобы не маскировать область свойств под кризис кипения.
+
 # 14. Результаты, интерфейсы и визуализация
 
 ## 14.1. Структурированный результат
@@ -1594,6 +1628,16 @@ SteadyPassResult содержит интегральные расходы, пу�
 | pressure_balance_total_local_pa | сумма местных вкладов |
 | pressure_balance_total_resistance_pa | сумма сопротивлений без гидростатики |
 | pressure_balance_residual_pa | невязка явного замкнутого баланса |
+| heat_transfer_model | выбранный уровень тепловой постановки |
+| boiling_heat_flux_w_m2 | средний \(q''=q_\ell/P_h\), диагностический пересчёт |
+| boiling_heat_transfer_status | статус диагностики теплообмена |
+| boiling_heat_transfer_limit | статус ограничения теплоотдачи, сейчас source-required |
+| dryout_limit | статус dryout/CHF ограничения, сейчас source-required |
+| hydrodynamic_limit | физико-гидравлический класс ограничения, если выявлен |
+| property_limit | ограничение по свойствам или near-critical warning |
+| numerical_failure | численный отказ, например отсутствие корневого интервала |
+| failure_class | агрегированный класс: none, validation_error, hydrodynamic_limit, property_limit или numerical_failure |
+| warnings | список предупреждений diagnostic/property слоёв |
 
 Поля GG0_lph и GG0_liq_equiv_lph являются полными алиасами.
 
@@ -1683,11 +1727,11 @@ SteadyPassResult содержит интегральные расходы, пу�
 После Checkpoint 4 designer передаёт в solver не только скалярные режимные параметры, но и объект `LoopGeometry`:
 
 \[
-\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm geometry}\}.
+\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm heat\_transfer\_model},\ {\rm geometry}\}.
 \tag{15.1}
 \]
 
-`geometry` содержит четыре расчётных участка `FlowSection`: evaporator, riser, condenser и downcomer. Для каждого участка сохраняются идентификатор, тип, ориентация, длина, перепад отметки, гидравлический диаметр, абсолютная и относительная шероховатость, площадь и `heat_mode`. Python-фасад также допускает ручную геометрию с `geometry_source="manual_sections"`. Параметр `friction_model` доступен через Python-фасад `CO2MathcadModel`, но ещё не выведен в сценарии конструктора.
+`geometry` содержит четыре расчётных участка `FlowSection`: evaporator, riser, condenser и downcomer. Для каждого участка сохраняются идентификатор, тип, ориентация, длина, перепад отметки, гидравлический диаметр, абсолютная и относительная шероховатость, площадь и `heat_mode`. Python-фасад также допускает ручную геометрию с `geometry_source="manual_sections"`. Параметры `friction_model` и `heat_transfer_model` доступны через Python-фасады `CO2MathcadModel` и `RefrigerantLoopModel`; в сценарии конструктора тепловой режим пока соответствует `prescribed_qtr` / `prescribed_heat_input`.
 
 ## 15.4. Параметры грунта
 
@@ -1776,14 +1820,20 @@ React-интерфейс позволяет:
 - dispatch моделей `mathcad_compat`, `colebrook_white`, `churchill_explicit`, `laminar_only`, `zero_friction`;
 - корректную сериализацию результатов.
 
-## 16.5. Полный автоматизированный набор
+## 16.5. Автоматизированный набор
 
-После Checkpoint 8 выполнены проверки:
+После Checkpoint 8 выполнялись проверки:
 
 - `pytest tests/test_formula_registry.py tests/test_co2_result_fields.py tests/test_refrigerant_properties.py tests/test_nh3_properties.py tests/test_refrigerant_loop_model.py tests/test_nh3_loop_solver.py -q` — 111 passed;
 - `pytest -q` — 165 passed.
 
-Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel` и NH₃ loop scenarios. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
+После добавления Checkpoint 7 scaffold дополнительно выполнены targeted-проверки:
+
+- `pytest tests/test_boiling_diagnostics.py tests/test_formula_registry.py tests/test_refrigerant_loop_model.py tests/test_co2_result_fields.py -q -m "not slow and not distributed"` — 91 passed, 3 deselected;
+- `pytest tests/test_pressure_balance.py tests/test_void_fraction_models.py tests/test_two_phase_pressure_drop.py tests/test_regime_maps.py -q` — 20 passed;
+- `pytest tests/test_nh3_properties.py tests/test_nh3_loop_solver.py -q -m "not slow and not distributed"` — 9 passed, 1 deselected.
+
+Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel`, NH₃ loop scenarios и защиту boiling/dryout diagnostics от подмены численной несходимости. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
 
 ## 16.6. Экспериментальные данные
 
@@ -1804,6 +1854,7 @@ React-интерфейс позволяет:
 | Элемент | Реализация | Источник | Статус |
 |---|---|---|---|
 | \(U=q_\ell L_i\) | solver и designer | баланс энергии, [1] | DISSERTATION |
+| \(q''=q_\ell/P_h\) | boiling_heat_transfer | определение среднего теплового потока | DEFINITIONAL |
 | расходы (6.3)–(6.5) | solver | [1], (2.75) | DISSERTATION |
 | \(y_n\), (6.7) | solver | [1], (2.77) | DISSERTATION |
 | общий интерфейс свойств | refrigerant_properties | API-инвариант проекта | ENGINEERING |
@@ -1829,6 +1880,8 @@ React-интерфейс позволяет:
 | режимные градиенты | closures | источник не установлен | HEURISTIC |
 | горизонтальная опубликованная карта | не реализована | Wojtan et al. [11] | NOT IMPLEMENTED |
 | вертикальная опубликованная карта | не реализована | Taitel et al. [10] | NOT IMPLEMENTED |
+| saturated flow boiling HTC | не реализована | Kandlikar/Shah/Gungor-Winterton требуют сверки | SOURCE REQUIRED |
+| dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | не реализован | [15], [16] | SOURCE REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
@@ -1883,6 +1936,8 @@ Python использует натуральный логарифм вместо
 
 Матрица текущего кода является картой сходимости на конечной сетке. Она не реализует диссертационный предел \(f=0\), не уточняет границы и не проверяет устойчивость.
 
+Checkpoint 7 уменьшил риск неверной интерпретации, но не решил задачу qcrit: dryout/CHF не выводится из факта несходимости solver, а явно остаётся `not_evaluated_source_required`. Поле `failure_class` помогает разделить `numerical_failure`, `property_limit` и `hydrodynamic_limit`, но не является физическим алгоритмом критической нагрузки.
+
 Рекомендация: создать отдельный алгоритм qcrit с различением:
 
 - физического исчезновения двухфазной зоны;
@@ -1914,6 +1969,7 @@ Python использует натуральный логарифм вместо
 - универсальную модель произвольной геометрии;
 - доказательство устойчивости;
 - точный прогноз кризиса кипения;
+- published-прогноз коэффициента теплоотдачи, dryout или CHF;
 - связанную модель грунт–испаритель–конденсатор–атмосфера;
 - подтверждённую опубликованную режимную модель;
 - замену REFPROP в расширенном диапазоне температур.
@@ -1927,6 +1983,8 @@ Python использует натуральный логарифм вместо
 \]
 
 при условии отдельной проверки legacy-логарифма коэффициента трения. Для сравнительных расчетов с опубликованными двухфазными замыканиями доступны `homogeneous_equilibrium` и `zivi`; их пустотность и фрикционная база отделены от experimental-слоя. Новый `RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")` использует тот же гидравлический solver и published fallback closure, но не закрывает валидацию аммиачной ГЕТ. `experimental_regime_aware` следует считать исследовательским режимом.
+
+Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки.
 
 # 20. Заключение
 
@@ -1944,6 +2002,7 @@ Python использует натуральный логарифм вместо
 - геометрический интерфейс и локальный API;
 - общий property backend для CO₂/NH₃;
 - CoolProp reference CSV и тесты NH₃ loop solver.
+- diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена.
 
 Научные ограничения:
 
@@ -1951,7 +2010,7 @@ Python использует натуральный логарифм вместо
 - эвристическая режимная модель;
 - отсутствие прямой CO₂/NH₃-валидации текущего кода;
 - отсутствие полной модели критических нагрузок;
-- отсутствие published режимных карт и boiling/qcrit diagnostics для NH₃;
+- отсутствие published режимных карт, boiling/dryout prediction и qcrit-модели для NH₃;
 - неподключённая физика грунта и произвольной геометрии;
 - обнаруженные вопросы к legacy-логарифму трения и неподключённой произвольной геометрии конструктора.
 
@@ -2054,6 +2113,21 @@ Python использует натуральный логарифм вместо
 | exception | исключение в пакетном расчёте |
 
 Статус no_root_bracket не доказывает физическое отсутствие режима: причиной могут быть диапазон \(f\), дискретность сканирования, разрыв замыкания или численная невалидность прохода.
+
+## Б.2. Классы отказов и тепловые diagnostic limits
+
+| Поле | Допустимые/типовые значения | Значение |
+|---|---|---|
+| failure_class | none | расчёт сошёлся без классифицированного ограничения |
+| failure_class | validation_error | входная постановка отвергнута до физического расчёта |
+| failure_class | hydrodynamic_limit | гидравлическое ограничение, например отсутствие движущего напора |
+| failure_class | property_limit | выход за диапазон свойств или near-critical warning |
+| failure_class | numerical_failure | численный отказ, например no_root_bracket |
+| boiling_heat_transfer_limit | not_evaluated_source_required | published HTC-корреляция не подключена |
+| dryout_limit | not_evaluated_source_required | published dryout/CHF-корреляция не подключена |
+| numerical_failure | no_root_bracket, root_solver_failed, aux_temperature_failed | численная причина, не равная dryout |
+
+Эти поля являются классификацией текущего программного результата. Они не заменяют отдельный физический алгоритм `critical_loads.py` и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\).
 
 # Приложение В. Список литературы
 

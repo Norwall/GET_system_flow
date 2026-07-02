@@ -144,6 +144,7 @@ class CO2MathcadModel:
         closure_model: str = "worksheet_compatible",
         friction_model: str = "mathcad_compat",
         geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
     ) -> Optional[Dict[str, float]]:
         """Совместимый фасад над отдельным steady-state solver."""
         pass_result = self.steady_solver.one_pass(
@@ -156,6 +157,7 @@ class CO2MathcadModel:
                 closure_model=closure_model,
                 friction_model=friction_model,
                 geometry=geometry,
+                heat_transfer_model=heat_transfer_model,
             ),
             circulation_factor=f,
             ngrid=ngrid,
@@ -164,38 +166,38 @@ class CO2MathcadModel:
             return None
         return pass_result.to_dict()
 
-    def hy_minus_H(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None) -> float:
+    def hy_minus_H(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input") -> float:
         """Невязка главного циркуляционного баланса для пробного значения ``f``."""
         return self.steady_solver.head_residual(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model),
             circulation_factor=f,
         )
 
-    def solve_f(self, H: float, qtr: float, Li: float, tcon: float, fmin: float = 1e-6, fmax: float = 200.0, nsamp: int = 220, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None) -> Optional[float]:
+    def solve_f(self, H: float, qtr: float, Li: float, tcon: float, fmin: float = 1e-6, fmax: float = 200.0, nsamp: int = 220, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input") -> Optional[float]:
         """Подбирает параметр циркуляции ``f`` из условия Hy(f) = H."""
         root_search = self.steady_solver.find_circulation_factor(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model),
             fmin=fmin,
             fmax=fmax,
             nsamp=nsamp,
         )
         return root_search.circulation_factor
 
-    def solve_tmm(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None) -> Optional[float]:
+    def solve_tmm(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input") -> Optional[float]:
         """Восстанавливает вспомогательную температуру насыщения из рабочего листа."""
         auxiliary_temperature_c, _ = self.steady_solver.solve_auxiliary_temperature(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model),
             circulation_factor=f,
         )
         return auxiliary_temperature_c
 
-    def run_result(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None) -> SteadyLoopResult:
+    def run_result(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input") -> SteadyLoopResult:
         """Возвращает структурированный результат расчета с диагностикой решателя."""
         return self.steady_solver.solve(
-            SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry)
+            SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model)
         )
 
-    def run(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None) -> Dict[str, float | bool | str | tuple[float, float] | None]:
+    def run(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input") -> Dict[str, float | bool | str | tuple[float, float] | None]:
         """Совместимый пользовательский API поверх нового результата-датакласса."""
         return self.run_result(
             H=H,
@@ -206,6 +208,7 @@ class CO2MathcadModel:
             closure_model=closure_model,
             friction_model=friction_model,
             geometry=geometry,
+            heat_transfer_model=heat_transfer_model,
         ).to_dict()
 
     def cached_checks(self) -> Dict[str, Dict[str, float]]:

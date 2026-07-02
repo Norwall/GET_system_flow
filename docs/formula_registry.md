@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-5-source-strict`.
+Версия реестра: `checkpoint-7-boiling-diagnostics-scaffold`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -20,6 +20,7 @@
 | `PROP-COOLPROP-NH3-HEOS` | PUBLISHED | `CoolPropSaturationProperties(fluid="NH3")` |
 | `PROP-REFPROP-ADAPTER` | OPTIONAL_ADAPTER | `RefpropSaturationProperties` |
 | `BAL-HEAT-INPUT` | DISSERTATION | `SteadyLoopSolver.one_pass` |
+| `HEAT-LINEAR-TO-WALL-FLUX` | DEFINITIONAL | `boiling_heat_transfer.diagnose_prescribed_heat_input` |
 | `BAL-VAPOR-GENERATION` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `FRIC-REYNOLDS` | PUBLISHED | `co2_steady_solver`, `two_phase_closures` |
@@ -134,6 +135,23 @@ SaturationState(
 - Источник: `CO2.xmcd`; диссертационная постановка теплового баланса; `docs/get_co2_academic_reference.md`.
 - Код: `co2_steady_solver.SteadyLoopSolver.one_pass`; `get_co2_model.CO2MathcadModel.run`.
 - Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_model_regression.py`.
+
+## HEAT-LINEAR-TO-WALL-FLUX
+
+- Статус: DEFINITIONAL.
+- Математическая запись:
+
+```math
+q'' = \frac{q_l}{P_h},
+\qquad
+P_h = \frac{4A}{D_h}
+```
+
+- Переменные и размерности: `q''`, Вт/м2; `q_l`/`qtr`, Вт/м; `P_h`, м; `A`, м2; `D_h`, м.
+- Область применимости: диагностический пересчёт заданной линейной тепловой нагрузки в средний тепловой поток на смоченный периметр испарителя. Не является корреляцией теплоотдачи, dryout или CHF.
+- Источник: определение гидравлического диаметра и теплового потока через площадь поверхности; без эмпирических коэффициентов.
+- Код: `boiling_heat_transfer.hydraulic_perimeter_m`; `boiling_heat_transfer.diagnose_prescribed_heat_input`; `co2_steady_solver.SteadyLoopSolver._result_common_fields`.
+- Тесты: `tests/test_boiling_diagnostics.py`; `tests/test_co2_result_fields.py`.
 
 ## BAL-VAPOR-GENERATION
 
