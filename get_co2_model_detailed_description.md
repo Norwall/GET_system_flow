@@ -157,8 +157,15 @@
 - `two_phase_regimes.py` оставлен как compatibility-слой для старых импортов и
   summary helpers;
 - `published_regimes.py` пока содержит только защитные заготовки
-  `unknown_or_out_of_range` / `not_implemented`; опубликованные карты
+  `unknown_or_out_of_range` / `source_required`; опубликованные карты
   Wojtan-Ursenbacher-Thome и Taitel-Barnea-Dukler в расчёт не подключены.
+
+После source-gate обновления Checkpoint 5-6 режимная диагностика отделена от
+двухфазных замыканий отдельным входом `regime_model`. Старый
+`CO2MathcadModel` по умолчанию сохраняет `experimental_regime_aware`, чтобы не
+ломать baseline и прежние отчёты. Новый `RefrigerantLoopModel` по умолчанию
+использует `published_regime_map`; это не включает неподтверждённые формулы, а
+возвращает source-gated metadata `source_required`.
 
 ### 4.6. Ускорительные потери
 
@@ -578,8 +585,11 @@ Darcy/Fanning,
 Checkpoint 6 split не добавляет новых published-карт. Он только делает
 академическую границу явной: legacy `flow_regime` остаётся диагностическим
 полем, а новые поля профилей показывают, что текущие переходы получены из
-`experimental_regimes.py` и имеют статус `experimental`. Published-заготовки
-не возвращают физический режим, пока первоисточник не сверен.
+`experimental_regimes.py` и имеют статус `experimental`, если выбран
+`regime_model="experimental_regime_aware"`. При
+`regime_model="published_regime_map"` published-заготовки не возвращают
+физический режим, а явно сообщают `source_required`, пока первоисточник не
+сверен.
 
 ### 9.8. NH₃-ветка не является новой валидацией
 

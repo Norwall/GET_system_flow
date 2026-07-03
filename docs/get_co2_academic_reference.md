@@ -8,7 +8,7 @@ toc-title: "Содержание"
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10 и source-gate аудита MSH/Friedel: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10 и source-gate аудита Checkpoint 5-6: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -26,7 +26,7 @@ toc-title: "Содержание"
 
 Первые три варианта имеют понятную физическую интерпретацию и прослеживаются до исходного Mathcad или опубликованных моделей. Вариант experimental_regime_aware использует режимно-зависимое переключение замыканий, однако его пороги и часть коэффициентов введены как авторские инженерные эвристики. Поэтому результаты этого варианта нельзя представлять как расчёт по опубликованной режимной карте без дополнительной оговорки.
 
-После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После source-gate аудита Müller-Steinhagen-Heck и Friedel добавлены не расчётные корреляции, а защищённые функции-заглушки, выбрасывающие `SourceRequiredCorrelationError`: доступный библиографический уровень и предварительная страница статьи подтверждают публикации, но не фиксируют полную формулу, соглашение по жидкостным/газовым опорным градиентам, полному массовому потоку и выбору коэффициента трения Darcy/Fanning. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
+После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После source-gate аудита Müller-Steinhagen-Heck и Friedel добавлены не расчётные корреляции, а защищённые функции-заглушки, выбрасывающие `SourceRequiredCorrelationError`: доступный библиографический уровень и предварительная страница статьи подтверждают публикации, но не фиксируют полную формулу, соглашение по жидкостным/газовым опорным градиентам, полному массовому потоку и выбору коэффициента трения Darcy/Fanning. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты и возвращает source-gated статус `source_required`. Отдельный вход `regime_model` отделяет режимную диагностику от `closure_model`: старый CO₂-фасад сохраняет experimental default, а универсальный фасад по умолчанию показывает source-required published metadata. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
 
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
@@ -159,7 +159,7 @@ toc-title: "Содержание"
 | two_phase_closures.py | совместимый фасад двухфазных замыканий, worksheet-логика и experimental regime-aware эвристики |
 | experimental_regimes.py | эвристическая классификация локальных режимов |
 | two_phase_regimes.py | compatibility wrappers и summary helpers для старого API |
-| published_regimes.py | защитные заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
+| published_regimes.py | защитные source-gate заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
 | boiling_heat_transfer.py | diagnostic-only пересчёт \(q_\ell\to q''\), статусы heat-transfer/dryout limits и failure_class |
 | critical_loads.py | source-traceable поиск нижней/верхней гидродинамической critical load текущего solver, bracket/refinement и отдельное условие \(f=0\) |
 | scenario_matrix.py | быстрый набор контрольных CO₂/NH₃ сценариев, root-scan статусы и регрессионная матрица покрытия |
@@ -925,7 +925,27 @@ S=\frac{u_g}{u_l}.
 Классификаторы вынесены в `experimental_regimes.py` и возвращают не только имя
 режима, но и source/status metadata. `two_phase_regimes.py` оставлен как
 compatibility-слой, а `published_regimes.py` пока содержит только
-`unknown_or_out_of_range` / `not_implemented` заготовки.
+`unknown_or_out_of_range` / `source_required` заготовки.
+
+## 9.0. `regime_model` как независимый слой диагностики
+
+После source-gate обновления Checkpoint 5-6 режимная диагностика отделена от
+двухфазного гидравлического замыкания. Параметр `closure_model` выбирает
+пустотность и friction response, а параметр `regime_model` выбирает только
+источник имени режима, source/status metadata и summary по длине участка.
+
+Текущие значения:
+
+| regime_model | Что возвращает | Научный статус |
+|---|---|---|
+| `experimental_regime_aware` | старые эвристические пороги из `experimental_regimes.py` | EXPERIMENTAL / NO PRIMARY SOURCE |
+| `published_regime_map` | `unknown_or_out_of_range` с DOI/source metadata и `source_required` | SOURCE_REQUIRED |
+
+Старый фасад `CO2MathcadModel` по умолчанию оставляет
+`regime_model="experimental_regime_aware"`, чтобы сохранить прежний baseline и
+отчёты. Новый универсальный `RefrigerantLoopModel` по умолчанию использует
+`regime_model="published_regime_map"`, чтобы не выдавать эвристические пороги
+за published-карту.
 
 ## 9.1. Общая схема
 
@@ -1490,7 +1510,19 @@ RV1=
 
 Checkpoint 5 не вводит отдельного пользовательского режима `published_two_phase`: текущими published-замыканиями остаются `homogeneous_equilibrium` и `zivi`, а базовый фрикционный слой для них — Lockhart–Martinelli/Chisholm. Новые имена корреляций будут добавляться только после записи в `docs/formula_registry.md` и отдельного теста области применимости.
 
-## 13.3. Фазовые состояния профиля
+## 13.3. Режимная диагностика
+
+| regime_model | Источник flow_regime | Статус |
+|---|---|---|
+| experimental_regime_aware | `experimental_regimes.py` | experimental |
+| published_regime_map | `published_regimes.py` source-gate для WUT/TBD | source_required |
+
+`regime_model` не меняет рассчитанную пустотность, массовый расход или
+фрикционный градиент сам по себе; эти величины остаются ответственностью
+`closure_model` и `friction_model`. Его задача — не смешивать режимные
+диагностики разного научного статуса в одном имени результата.
+
+## 13.4. Фазовые состояния профиля
 
 В испарителе всегда используются укрупнённые фазовые метки:
 
@@ -1501,7 +1533,7 @@ Checkpoint 5 не вводит отдельного пользовательск
 
 В профиле riser применяются bubbly, slug, churn, annular, annular_mist. В объекте section_states режим riser равен доминирующему по длине.
 
-## 13.4. Доминирующий режим
+## 13.5. Доминирующий режим
 
 Доля режима:
 
@@ -1917,8 +1949,8 @@ React-интерфейс позволяет:
 | annular_core | closures | источник не установлен | HEURISTIC |
 | режимные пороги | regimes | источник не установлен | HEURISTIC |
 | режимные градиенты | closures | источник не установлен | HEURISTIC |
-| горизонтальная опубликованная карта | не реализована | Wojtan et al. [11] | NOT IMPLEMENTED |
-| вертикальная опубликованная карта | не реализована | Taitel et al. [10] | NOT IMPLEMENTED |
+| горизонтальная опубликованная карта | source-gate, не расчётная модель | Wojtan et al. [11] | SOURCE_REQUIRED |
+| вертикальная опубликованная карта | source-gate, не расчётная модель | Taitel et al. [10] | SOURCE_REQUIRED |
 | saturated flow boiling HTC | не реализована | Kandlikar/Shah/Gungor-Winterton требуют сверки | SOURCE REQUIRED |
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
@@ -1952,7 +1984,7 @@ Python использует натуральный логарифм вместо
 
 Фиксированные пороги и коэффициенты не имеют опубликованной области применимости и не калиброваны на CO₂-данных текущей геометрии.
 
-Статус Checkpoint 0–6 split: режим переименован в `experimental_regime_aware`, старое имя `regime_aware` оставлено как alias, все связанные эвристики внесены в `docs/formula_registry.md` со статусом `EXPERIMENTAL / NO PRIMARY SOURCE`, а подтвержденные published-замыкания вынесены в отдельные модули. Режимные эвристики вынесены в `experimental_regimes.py`; `published_regimes.py` пока не реализует опубликованные карты и явно возвращает статус `not_implemented`. Опубликованный режим следует реализовать отдельным вариантом на основе [9–11, 15, 16] только после проверки точных формул.
+Статус Checkpoint 0–6 split: режим переименован в `experimental_regime_aware`, старое имя `regime_aware` оставлено как alias, все связанные эвристики внесены в `docs/formula_registry.md` со статусом `EXPERIMENTAL / NO PRIMARY SOURCE`, а подтвержденные published-замыкания вынесены в отдельные модули. Режимные эвристики вынесены в `experimental_regimes.py`; `published_regimes.py` пока не реализует опубликованные карты и явно возвращает статус `source_required`. Опубликованный режим следует реализовать отдельным вариантом на основе [9–11, 15, 16] только после проверки точных формул.
 
 ## 18.4. Свойства, backend и экстраполяция
 
@@ -2204,6 +2236,8 @@ Boiling/dryout поля результата допустимо использо
 | dryout_limit | not_evaluated_source_required | published dryout/CHF-корреляция не подключена |
 | qcrit_status | not_evaluated, evaluated, failed | статус отдельного qcrit-отчёта; steady-run сам его не запускает |
 | qcrit_model | not_evaluated, dissertation_scan_plus_f_zero | выбранный алгоритм qcrit-отчёта |
+| regime_model | experimental_regime_aware, published_regime_map | выбранный источник режимной диагностики |
+| regime_model_source_status | experimental_no_primary_source, source_required | статус источника режимной диагностики |
 | numerical_failure | no_root_bracket, root_solver_failed, aux_temperature_failed | численная причина, не равная dryout |
 
 Эти поля являются классификацией текущего программного результата одного steady-run. Они не являются самим `critical_loads`-отчётом и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) без отдельного bracket/refinement расчёта.

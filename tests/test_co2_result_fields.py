@@ -27,6 +27,9 @@ def test_run_exposes_structured_diagnostics_and_alias_fields(co2_model: CO2Mathc
     assert "CO2.xmcd" in result["property_source"]
     assert "Mathcad CO2 table backend" in result["property_warning"]
     assert result["near_critical_warning"] == ""
+    assert result["regime_model"] == "experimental_regime_aware"
+    assert result["regime_model_scientific_status"] == "experimental"
+    assert result["regime_model_source_status"] == "experimental_no_primary_source"
     assert result["heat_transfer_model"] == "prescribed_heat_input"
     assert result["boiling_heat_transfer_status"] == "diagnostic_only_source_required"
     assert result["boiling_heat_flux_w_m2"] > 0.0

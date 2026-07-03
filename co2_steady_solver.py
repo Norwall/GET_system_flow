@@ -15,14 +15,23 @@ from boiling_heat_transfer import (
 from co2_geometry import LoopGeometry
 from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, SteadyLoopResult, SteadyPassResult
 from pressure_balance import LoopPressureBalance, SectionPressureBalance, hydrostatic_pressure_pa
+from published_regimes import (
+    classify_horizontal_evaporator_regime_result as classify_published_horizontal_regime_result,
+    classify_vertical_riser_regime_result as classify_published_vertical_regime_result,
+    normalize_regime_model,
+    regime_model_scientific_status,
+    regime_model_source_status,
+)
 from refrigerant_properties import PropertyRangeError, RefrigerantSaturationProperties
-from two_phase_regimes import (
+from experimental_regimes import (
     FlowRegimeClassification,
-    classify_horizontal_evaporator_regime_result,
-    classify_vertical_riser_regime_result,
+    classify_horizontal_evaporator_regime_result as classify_experimental_horizontal_regime_result,
+    classify_vertical_riser_regime_result as classify_experimental_vertical_regime_result,
+    single_liquid_heating_classification,
+)
+from two_phase_regimes import (
     dominant_regime,
     format_regime_summary,
-    single_liquid_heating_classification,
     summarize_regime_fractions,
 )
 from two_phase_closures import (
@@ -71,6 +80,7 @@ class SteadyLoopInputs:
     tcon: float
     mode: str = "worksheet_compatible"
     closure_model: str = "worksheet_compatible"
+    regime_model: str = "experimental_regime_aware"
     friction_model: str = "mathcad_compat"
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
@@ -131,6 +141,61 @@ class SteadyLoopSolver:
 
     def model_scientific_status(self, inputs: SteadyLoopInputs) -> str:
         return closure_model_scientific_status(inputs.closure_model)
+
+    def effective_regime_model(self, inputs: SteadyLoopInputs) -> str:
+        return normalize_regime_model(inputs.regime_model)
+
+    def regime_model_scientific_status(self, inputs: SteadyLoopInputs) -> str:
+        return regime_model_scientific_status(inputs.regime_model)
+
+    def regime_model_source_status(self, inputs: SteadyLoopInputs) -> str:
+        return regime_model_source_status(inputs.regime_model)
+
+    def _uses_experimental_regime_metadata(self, inputs: SteadyLoopInputs) -> bool:
+        return self.effective_regime_model(inputs) == "experimental_regime_aware"
+
+    def _classify_horizontal_regime(
+        self,
+        inputs: SteadyLoopInputs,
+        *,
+        mass_quality: float,
+        gas_volume_fraction: float,
+        gas_superficial_velocity_m_s: float,
+        liquid_superficial_velocity_m_s: float,
+        slip_ratio: float,
+    ) -> FlowRegimeClassification:
+        if self._uses_experimental_regime_metadata(inputs):
+            return classify_experimental_horizontal_regime_result(
+                mass_quality=mass_quality,
+                gas_volume_fraction=gas_volume_fraction,
+                gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+                liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+                slip_ratio=slip_ratio,
+            )
+        return classify_published_horizontal_regime_result(
+            mass_quality=mass_quality,
+            gas_volume_fraction=gas_volume_fraction,
+            gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+            liquid_superficial_velocity_m_s=liquid_superficial_velocity_m_s,
+            slip_ratio=slip_ratio,
+        )
+
+    def _classify_vertical_regime(
+        self,
+        inputs: SteadyLoopInputs,
+        *,
+        gas_volume_fraction: float,
+        gas_superficial_velocity_m_s: float,
+    ) -> FlowRegimeClassification:
+        if self._uses_experimental_regime_metadata(inputs):
+            return classify_experimental_vertical_regime_result(
+                gas_volume_fraction=gas_volume_fraction,
+                gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+            )
+        return classify_published_vertical_regime_result(
+            gas_volume_fraction=gas_volume_fraction,
+            gas_superficial_velocity_m_s=gas_superficial_velocity_m_s,
+        )
 
     def closure_label(self, inputs: SteadyLoopInputs) -> str:
         effective_closure_model = self.effective_closure_model(inputs)
@@ -630,7 +695,10 @@ class SteadyLoopSolver:
             flow_regime_confidence_full,
         ) = _regime_metadata_arrays(ngrid, single_liquid_regime)
         if np.any(boiling_mask):
-            if self.effective_closure_model(inputs) == "experimental_regime_aware":
+            if (
+                self.effective_closure_model(inputs) == "experimental_regime_aware"
+                and self._uses_experimental_regime_metadata(inputs)
+            ):
                 boiling_regime_profile = [closure_state.diagnostic_regime or "boiling_two_phase" for closure_state in boiling_closure_states]
                 boiling_regime_source_profile = [
                     closure_state.diagnostic_regime_source or "experimental_regime_aware heuristic thresholds; no primary source"
@@ -672,7 +740,8 @@ class SteadyLoopSolver:
                 )
             else:
                 for point_index in np.where(boiling_mask)[0]:
-                    regime_classification = classify_horizontal_evaporator_regime_result(
+                    regime_classification = self._classify_horizontal_regime(
+                        inputs,
                         mass_quality=float(vapor_mass_flow_profile_full_kg_s[point_index] / max(total_mass_flow_kg_s, 1e-12)),
                         gas_volume_fraction=float(gas_volume_fraction_full[point_index]),
                         gas_superficial_velocity_m_s=float(gas_superficial_velocity_full_m_s[point_index]),
@@ -1355,7 +1424,10 @@ class SteadyLoopSolver:
         riser_pressure_gradient_bottom_to_top_pa_per_m = riser_pressure_gradient_top_pa_per_m[::-1]
         riser_density_difference_bottom_to_top = density_difference_top[::-1]
         riser_cell_heights_bottom_to_top_m = riser_cell_heights_m[::-1]
-        if self.effective_closure_model(inputs) == "experimental_regime_aware":
+        if (
+            self.effective_closure_model(inputs) == "experimental_regime_aware"
+            and self._uses_experimental_regime_metadata(inputs)
+        ):
             riser_flow_regime_bottom_to_top = tuple(
                 str(value) if str(value) else "two_phase_riser"
                 for value in riser_diagnostic_regime_top[::-1]
@@ -1378,7 +1450,8 @@ class SteadyLoopSolver:
             )
         else:
             riser_classifications = tuple(
-                classify_vertical_riser_regime_result(
+                self._classify_vertical_regime(
+                    inputs,
                     gas_volume_fraction=float(gas_volume_fraction),
                     gas_superficial_velocity_m_s=float(gas_superficial_velocity_m_s),
                 )
@@ -1548,7 +1621,10 @@ class SteadyLoopSolver:
             flow_regime_confidence_full,
         ) = _regime_metadata_arrays(ngrid, single_liquid_regime)
         if np.any(boiling_mask):
-            if self.effective_closure_model(inputs) == "experimental_regime_aware":
+            if (
+                self.effective_closure_model(inputs) == "experimental_regime_aware"
+                and self._uses_experimental_regime_metadata(inputs)
+            ):
                 boiling_regime_profile = [str(value) if str(value) else "boiling_two_phase" for value in final_diagnostic_regime.tolist()]
                 boiling_regime_source_profile = [
                     str(value) if str(value) else "experimental_regime_aware heuristic thresholds; no primary source"
@@ -1590,7 +1666,8 @@ class SteadyLoopSolver:
                 )
             else:
                 for point_index in np.where(boiling_mask)[0]:
-                    regime_classification = classify_horizontal_evaporator_regime_result(
+                    regime_classification = self._classify_horizontal_regime(
+                        inputs,
                         mass_quality=float(vapor_mass_flow_profile_full_kg_s[point_index] / max(total_mass_flow_kg_s, 1e-12)),
                         gas_volume_fraction=float(gas_volume_fraction_full[point_index]),
                         gas_superficial_velocity_m_s=float(gas_superficial_velocity_full_m_s[point_index]),
@@ -1974,6 +2051,9 @@ class SteadyLoopSolver:
             "property_model_name": self.property_model_name,
             **property_fields,
             "model_scientific_status": self.model_scientific_status(inputs),
+            "regime_model": self.effective_regime_model(inputs),
+            "regime_model_scientific_status": self.regime_model_scientific_status(inputs),
+            "regime_model_source_status": self.regime_model_source_status(inputs),
             "friction_model": self.effective_friction_model(inputs),
             "geometry_source": geometry_source,
             **boiling_diagnostics.to_result_fields(),

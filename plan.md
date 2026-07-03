@@ -439,6 +439,13 @@ Lockhart–Martinelli/Chisholm вынесен в `published_void_fraction.py` и
 Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не реализованными
 до сверки точных формул по полному первоисточнику.
 
+Статус source-audit update: добавлен `docs/source_audit_checkpoint_5_6.md`.
+Crossref-записи для MSH, Zuber–Findlay, Taitel–Barnea–Dukler и
+Wojtan–Ursenbacher–Thome подтверждены библиографически, но прямой доступ к
+полным publisher/PDF endpoint без авторизованного контекста не получен.
+Friedel 1979 остаётся без найденной первичной DOI-записи. Поэтому эти модели
+сохранены как `SOURCE_REQUIRED`, без переноса формул в расчёт.
+
 ### Задачи
 
 - [x] Разделить closure models на:
@@ -478,8 +485,13 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 Статус: выполнен безопасный structural split. Текущие эвристики вынесены в
 `experimental_regimes.py` и снабжены source/status metadata. `published_regimes.py`
-создан только как guarded-заготовка и возвращает `unknown_or_out_of_range` /
-`not_implemented`, пока полные первоисточники не сверены.
+создан как guarded-заготовка и возвращает `unknown_or_out_of_range` /
+`source_required`, пока полные первоисточники не сверены.
+
+Статус API update: добавлен отдельный вход `regime_model`. Старый
+`CO2MathcadModel` по умолчанию сохраняет `experimental_regime_aware`, а новый
+`RefrigerantLoopModel` по умолчанию использует `published_regime_map`, который
+публикует source-gated metadata без подключения неподтверждённых режимных карт.
 
 ### Задачи
 
@@ -515,13 +527,13 @@ Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются не �
 
 - [x] `tests/test_regime_maps.py`
   - старые пороги доступны только через `experimental_*`;
-  - published-заготовка возвращает source-tagged `not_implemented`;
+  - published-заготовка возвращает source-tagged `source_required`;
   - out-of-range сценарий не маскируется под физический режим;
   - summary по длине участка суммируется к 100%.
 
 ### Критерий готовности
 
-`published_regime_model` не использует текущие фиксированные пороги пустотности как физические границы.
+`published_regime_map` не использует текущие фиксированные пороги пустотности как физические границы.
 
 ## 11. Checkpoint 7 — кипение, теплообмен и dryout
 

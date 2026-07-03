@@ -250,6 +250,9 @@ class SteadyLoopResult:
     property_warning: str = ""
     near_critical_warning: str = ""
     model_scientific_status: str = ""
+    regime_model: str = "experimental_regime_aware"
+    regime_model_scientific_status: str = ""
+    regime_model_source_status: str = ""
     friction_model: str = "mathcad_compat"
     geometry_source: str = "mathcad_default"
     heat_transfer_model: str = "prescribed_heat_input"
@@ -286,6 +289,9 @@ class SteadyLoopResult:
             "property_warning": self.property_warning,
             "near_critical_warning": self.near_critical_warning,
             "model_scientific_status": self.model_scientific_status,
+            "regime_model": self.regime_model,
+            "regime_model_scientific_status": self.regime_model_scientific_status,
+            "regime_model_source_status": self.regime_model_source_status,
             "friction_model": self.friction_model,
             "geometry_source": self.geometry_source,
             "heat_transfer_model": self.heat_transfer_model,

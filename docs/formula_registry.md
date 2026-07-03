@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-10-scenario-matrix`.
+Версия реестра: `checkpoint-10-source-gated-regime-model`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -51,6 +51,9 @@
 | `PRESS-DISTRIBUTED-RISER-GRADIENT` | ENGINEERING / REQUIRES_AUDIT | `SteadyLoopSolver._one_pass_distributed` |
 | `PRESS-HYDROSTATIC-SECTION` | PUBLISHED / DEFINITIONAL | `pressure_balance.hydrostatic_pressure_pa` |
 | `PRESS-LOOP-BALANCE` | PUBLISHED / DEFINITIONAL | `LoopPressureBalance` |
+| `VOID-ZUBER-FINDLAY-1965-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.py`, future drift-flux adapter |
+| `REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.classify_horizontal_evaporator_regime_result` |
+| `REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.classify_vertical_riser_regime_result` |
 | `EXP-REGIME-AWARE-CLASSIFIERS` | EXPERIMENTAL / NO PRIMARY SOURCE | `experimental_regimes.py` |
 | `EXP-DRIFT-FLUX-LIKE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `drift_flux_void_fraction` |
 | `EXP-ANNULAR-CORE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `annular_core_void_fraction` |
@@ -660,6 +663,44 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 - Код: `pressure_balance.LoopPressureBalance`; `co2_steady_solver.SteadyLoopSolver._build_pressure_balance`.
 - Тесты: `tests/test_pressure_balance.py`; `tests/test_co2_result_fields.py`.
 
+## VOID-ZUBER-FINDLAY-1965-SOURCE-GATE
+
+- Статус: SOURCE_REQUIRED.
+- Математическая запись: не реализована как расчетная published-модель. Общая drift-flux структура
+
+```math
+\alpha=\frac{j_g}{C_0j+V_{gj}}
+```
+
+зафиксирована библиографически, но значения `C0`, `Vgj`, соглашения по средним
+величинам и область применимости должны быть сверены по полному первоисточнику
+до подключения.
+- Переменные и размерности: `alpha` безразмерна; `j_g`, `j`, `V_gj`, м/с; `C0` безразмерен.
+- Область применимости: будущая published drift-flux диагностика/замыкание для двухфазного riser; не используется solver в published-режиме.
+- Источник: Zuber N., Findlay J. A. Average Volumetric Concentration in Two-Phase Flow Systems. Journal of Heat Transfer, 1965, 87(4), 453-468, DOI `10.1115/1.3689137`; `docs/source_audit_checkpoint_5_6.md`.
+- Код: source-gate запись; текущая похожая форма `two_phase_closures.drift_flux_void_fraction` остается `EXP-DRIFT-FLUX-LIKE-VOID`.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_regime_maps.py`.
+
+## REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE
+
+- Статус: SOURCE_REQUIRED.
+- Математическая запись: опубликованная горизонтальная diabatic flow-boiling map не реализована. Transition criteria, dryout boundaries, dimensionless groups и область применимости должны быть перенесены только после проверки полного первоисточника.
+- Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость, массовый поток, heat flux, диаметр, свойства фаз, поверхностное натяжение и безразмерные комплексы карты.
+- Область применимости: будущая published regime map для горизонтального испарителя; текущий `published_regime_map` возвращает `unknown_or_out_of_range` со статусом `source_required`.
+- Источник: Wojtan L., Ursenbacher T., Thome J. R. Investigation of flow boiling in horizontal tubes: Part I - A new diabatic two-phase flow pattern map. International Journal of Heat and Mass Transfer, 2005, 48, 2955-2969, DOI `10.1016/j.ijheatmasstransfer.2004.12.012`; `docs/source_audit_checkpoint_5_6.md`.
+- Код: `published_regimes.classify_horizontal_evaporator_regime_result` — защитная source-gate классификация без физического режима.
+- Тесты: `tests/test_regime_maps.py`; `tests/test_formula_registry.py`; `tests/test_refrigerant_loop_model.py`.
+
+## REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE
+
+- Статус: SOURCE_REQUIRED.
+- Математическая запись: опубликованная vertical upflow flow-pattern map не реализована. Transition equations и все коэффициенты должны быть перенесены только после проверки полного первоисточника.
+- Переменные и размерности: ожидаемые величины для будущей сверки — superficial velocities, диаметр, плотности, вязкости, поверхностное натяжение и безразмерные переходные критерии.
+- Область применимости: будущая published regime map для вертикального подъемного участка; текущий `published_regime_map` возвращает `unknown_or_out_of_range` со статусом `source_required`.
+- Источник: Taitel Y., Barnea D., Dukler A. E. Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes. AIChE Journal, 1980, 26(3), 345-354, DOI `10.1002/aic.690260304`; `docs/source_audit_checkpoint_5_6.md`.
+- Код: `published_regimes.classify_vertical_riser_regime_result` — защитная source-gate классификация без физического режима.
+- Тесты: `tests/test_regime_maps.py`; `tests/test_formula_registry.py`.
+
 ## EXP-REGIME-AWARE-CLASSIFIERS
 
 - Статус: EXPERIMENTAL / NO PRIMARY SOURCE.
@@ -744,5 +785,5 @@ Hy(f)-H=0
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
-- `published_regimes.py` содержит только защитные заготовки, возвращающие `unknown_or_out_of_range` / `not_implemented`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
+- `published_regimes.py` содержит только защитные source-gate заготовки, возвращающие `unknown_or_out_of_range` / `source_required`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
 - Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome не подключаются как расчетные `published`-модели, пока точные формулы и области применимости не сверены с полным первоисточником.

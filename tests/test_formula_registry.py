@@ -52,6 +52,9 @@ EXPECTED_REGISTRY_IDS = (
     "PRESS-DISTRIBUTED-RISER-GRADIENT",
     "PRESS-HYDROSTATIC-SECTION",
     "PRESS-LOOP-BALANCE",
+    "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
+    "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
+    "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
     "EXP-REGIME-AWARE-CLASSIFIERS",
     "EXP-DRIFT-FLUX-LIKE-VOID",
     "EXP-ANNULAR-CORE-VOID",
@@ -78,6 +81,9 @@ EXPERIMENTAL_IDS = (
 SOURCE_REQUIRED_IDS = (
     "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
     "TP-FRIEDEL-1979-SOURCE-GATE",
+    "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
+    "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
+    "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
 )
 
 CLOSURE_MODELS = (
@@ -168,7 +174,7 @@ def test_regime_classifier_registry_points_to_experimental_layer(
 
     assert "experimental_regimes.classify_horizontal_evaporator_regime_result" in section
     assert "compatibility wrappers in `two_phase_regimes.py`" in section
-    assert "published_regimes.py` содержит только защитные заготовки" in REGISTRY_TEXT
+    assert "published_regimes.py` содержит только защитные source-gate заготовки" in REGISTRY_TEXT
 
 
 def test_current_rough_friction_blend_is_not_claimed_as_colebrook_white(

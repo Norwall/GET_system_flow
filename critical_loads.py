@@ -37,6 +37,7 @@ class CriticalLoadConfig:
     tcon: float
     mode: str = "worksheet_compatible"
     closure_model: str = "worksheet_compatible"
+    regime_model: str = "experimental_regime_aware"
     friction_model: str = "mathcad_compat"
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
@@ -88,6 +89,7 @@ class CriticalLoadConfig:
             tcon=self.tcon,
             mode=self.mode,
             closure_model=self.closure_model,
+            regime_model=self.regime_model,
             friction_model=self.friction_model,
             geometry=self.geometry,
             heat_transfer_model=self.heat_transfer_model,
@@ -503,6 +505,7 @@ def solve_critical_loads(
     tcon: float,
     mode: str = "worksheet_compatible",
     closure_model: str = "worksheet_compatible",
+    regime_model: str = "experimental_regime_aware",
     friction_model: str = "mathcad_compat",
     geometry: LoopGeometry | None = None,
     heat_transfer_model: str = "prescribed_heat_input",
@@ -521,6 +524,7 @@ def solve_critical_loads(
         tcon=tcon,
         mode=mode,
         closure_model=closure_model,
+        regime_model=regime_model,
         friction_model=friction_model,
         geometry=geometry,
         heat_transfer_model=heat_transfer_model,

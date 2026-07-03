@@ -46,6 +46,7 @@ class ScenarioCase:
     tags: tuple[str, ...] = ()
     mode: str = "worksheet_compatible"
     closure_model: str = "zivi"
+    regime_model: str = "published_regime_map"
     friction_model: str = "colebrook_white"
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
@@ -62,6 +63,7 @@ class ScenarioCase:
             "tcon": self.tcon,
             "mode": self.mode,
             "closure_model": self.closure_model,
+            "regime_model": self.regime_model,
             "friction_model": self.friction_model,
             "geometry_source": self.geometry.geometry_source if self.geometry is not None else "mathcad_default",
             "heat_transfer_model": self.heat_transfer_model,
@@ -226,6 +228,7 @@ def run_scenario_case(
         tcon=case.tcon,
         mode=case.mode,
         closure_model=case.closure_model,
+        regime_model=case.regime_model,
         friction_model=case.friction_model,
         geometry=case.geometry,
         heat_transfer_model=case.heat_transfer_model,

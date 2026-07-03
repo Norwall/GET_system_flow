@@ -94,8 +94,18 @@ worksheet/experimental-логику, но published-функции больше 
   `EXPERIMENTAL / NO PRIMARY SOURCE`;
 - `two_phase_regimes.py` — compatibility wrappers и summary helpers;
 - `published_regimes.py` — защитные заготовки published-карт, которые пока
-  возвращают `unknown_or_out_of_range` / `not_implemented`, а не физический
+  возвращают `unknown_or_out_of_range` / `source_required`, а не физический
   режим.
+
+После source-gate обновления Checkpoint 5-6 в публичном API появился отдельный
+параметр `regime_model`. Он не меняет выбранное замыкание пустотности/трения
+(`closure_model`), а управляет только режимной диагностикой и её научным
+статусом:
+
+- `experimental_regime_aware` — старые эвристические пороги со статусом
+  `experimental`;
+- `published_regime_map` — source-gated published-заготовка со статусом
+  `source_required`.
 
 То есть режимы:
 
@@ -237,12 +247,12 @@ Muller-Steinhagen-Heck доступная библиографическая и�
 
 - текущий `regime_aware` сохранён только как alias на
   `experimental_regime_aware`;
+- режимная диагностика отделена от `closure_model` параметром `regime_model`;
 - published closures вынесены в `published_friction.py` и
   `published_void_fraction.py`;
 - режимные эвристики вынесены в `experimental_regimes.py`;
-- новый научно корректный режим нужно вводить отдельно, например:
-  - `literature_regime_model`
-  - или `published_regime_model`.
+- новый научно корректный режим должен развиваться из
+  `published_regime_map` только после проверки полных первоисточников.
 
 ### Шаг 2. Вынести режимные карты в отдельный published layer
 
@@ -335,5 +345,5 @@ published-карт должен выполняться только после �
 - NH₃ поддержан на уровне свойств и общего solver, но не на уровне published
   regime map;
 - `published_friction.py` и `published_void_fraction.py` — единственные места для новых published closure-функций;
-- `published_regimes.py` — только заготовка с `not_implemented`, не published-карта;
+- `published_regimes.py` — только source-gate заготовка с `source_required`, не published-карта;
 - текущий `regime_aware` / `experimental_regime_aware` — исследовательский режим, а не окончательная научная модель.

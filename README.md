@@ -128,6 +128,10 @@ print(result["fluid"], result["property_backend"], result["converged"])
   шероховатости, near-critical область, нулевые/отрицательные входы и
   недоступный backend через структурированные статусы без запуска дорогого
   `qcrit`-sweep по умолчанию.
+- добавлен отдельный вход `regime_model`: старый `CO2MathcadModel` по умолчанию
+  сохраняет `experimental_regime_aware`, а `RefrigerantLoopModel` по умолчанию
+  использует `published_regime_map`, который пока возвращает source-gated
+  `source_required` metadata вместо неподтвержденных режимных границ.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -145,9 +149,10 @@ print(result["fluid"], result["property_backend"], result["converged"])
 Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и
 Wojtan-Ursenbacher-Thome пока не подключаются как расчетные `published`-модели:
 для них требуется сверка точных формул и областей применимости по полному
-первоисточнику. Для Müller-Steinhagen-Heck и Friedel добавлены защитные
-source-gate функции в `published_friction.py`; они выбрасывают
-`SourceRequiredCorrelationError`, пока первоисточник не сверен.
+первоисточнику. Source-audit текущего состояния записан в
+`docs/source_audit_checkpoint_5_6.md`. Для Müller-Steinhagen-Heck и Friedel
+добавлены защитные source-gate функции в `published_friction.py`; они
+выбрасывают `SourceRequiredCorrelationError`, пока первоисточник не сверен.
 
 Checkpoint 6 split:
 
@@ -156,7 +161,7 @@ Checkpoint 6 split:
 - `two_phase_regimes.py` оставлен как compatibility-слой для старых imports и
   summary helpers;
 - `published_regimes.py` пока содержит только защитные заготовки с
-  `unknown_or_out_of_range` / `not_implemented`, без опубликованных режимных
+  `unknown_or_out_of_range` / `source_required`, без опубликованных режимных
   карт.
 
 ## Сценарная матрица

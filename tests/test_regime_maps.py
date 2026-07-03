@@ -62,10 +62,14 @@ def test_published_regime_placeholders_do_not_claim_physical_classification() ->
 
     assert horizontal.name == "unknown_or_out_of_range"
     assert vertical.name == "unknown_or_out_of_range"
-    assert horizontal.status == "not_implemented"
-    assert vertical.status == "not_implemented"
-    assert "not implemented" in horizontal.transition_criteria
-    assert "not implemented" in vertical.transition_criteria
+    assert horizontal.status == "source_required"
+    assert vertical.status == "source_required"
+    assert "Wojtan" in horizontal.source
+    assert "Taitel" in vertical.source
+    assert "source gate" in horizontal.transition_criteria
+    assert "source gate" in vertical.transition_criteria
+    assert horizontal.confidence == "not_evaluated"
+    assert vertical.confidence == "not_evaluated"
 
 
 def test_regime_summary_fractions_sum_to_one() -> None:
