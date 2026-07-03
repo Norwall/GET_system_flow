@@ -622,14 +622,20 @@ NH₃/R717/Ammonia считается через CoolProp backend и общий 
 
 Цель: реализовать физический `qcrit`, а не карту численной сходимости.
 
+Статус: выполнен отдельный source-traceable слой `critical_loads.py`. Алгоритм
+ищет нижнюю/верхнюю границы существования стационарного решения по `qtr`,
+отдельно вычисляет верхний диссертационный предел `f = 0` и возвращает
+структурированный отчёт с причинами отказа. Обычный `run()` не запускает
+дорогой qcrit-sweep и помечает `qcrit_status="not_evaluated"`.
+
 ### Задачи
 
-- [ ] Создать `critical_loads.py`.
-- [ ] Реализовать поиск:
-  - нижней критической нагрузки;
-  - верхней критической нагрузки;
-  - special limit `f -> 0`, если он требуется постановкой диссертации.
-- [ ] Разделить причины отказа:
+- [x] Создать `critical_loads.py`.
+- [x] Реализовать поиск:
+  - [x] нижней критической нагрузки;
+  - [x] верхней критической нагрузки;
+  - [x] special limit `f -> 0`, если он требуется постановкой диссертации.
+- [x] Разделить причины отказа:
   - `no_boiling`;
   - `no_root`;
   - `multiple_roots`;
@@ -638,26 +644,26 @@ NH₃/R717/Ammonia считается через CoolProp backend и общий 
   - `property_out_of_range`;
   - `near_critical_region`;
   - `numerical_failure`.
-- [ ] Добавить continuation по:
+- [x] Добавить continuation по:
   - `qtr`;
   - `H`;
   - `Li`;
   - `tcon`;
   - `fluid`.
-- [ ] Не использовать “максимальную сошедшуюся точку сетки” как физический `qcrit`.
+- [x] Не использовать “максимальную сошедшуюся точку сетки” как физический `qcrit`.
 
 ### Тесты
 
-- [ ] `tests/test_qcrit_solver.py`
-  - low heat load;
-  - nominal heat load;
-  - high heat load;
-  - no boiling;
-  - no root;
-  - multiple roots;
-  - `f -> 0`;
-  - near-critical rejection;
-  - out-of-range rejection.
+- [x] `tests/test_qcrit_solver.py`
+  - [x] low heat load;
+  - [x] nominal heat load;
+  - [x] high heat load;
+  - [x] no boiling;
+  - [x] no root;
+  - [x] multiple roots;
+  - [x] `f -> 0`;
+  - [x] near-critical rejection;
+  - [x] out-of-range rejection.
 
 ### Критерий готовности
 

@@ -83,8 +83,8 @@ print(result["fluid"], result["property_backend"], result["converged"])
 
 ## Статус физической доработки
 
-В текущей версии закрыты Checkpoint 0-4 аудита модели и выполнена
-source-strict часть Checkpoint 5:
+В текущей версии закрыты Checkpoint 0-9 из `plan.md` в реализованной части
+аудита модели:
 
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
@@ -119,6 +119,10 @@ source-strict часть Checkpoint 5:
   `heat_transfer_model="prescribed_heat_input"` результат содержит средний
   `boiling_heat_flux_w_m2`, а `boiling_heat_transfer_limit` и `dryout_limit`
   явно остаются `not_evaluated_source_required` до published-корреляций.
+- добавлен отдельный `critical_loads.py`: методы `critical_loads(...)` фасадов
+  строят отчёт по нижней/верхней гидродинамической границе текущего steady
+  solver и отдельно проверяют диссертационный предел `f=0`; одиночный
+  `run(...)` по-прежнему возвращает `qcrit_status="not_evaluated"`.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -130,8 +134,8 @@ source-strict часть Checkpoint 5:
 записей и эвристик. Все эвристики без первоисточника помечены как
 `EXPERIMENTAL / NO PRIMARY SOURCE`. Результаты `run(...)` и `run_result(...)`
 дополнительно содержат `friction_model`, `pressure_balance_terms`,
-`pressure_balance_sections`, суммарные pressure-balance вклады и
-`pressure_balance_residual_pa`.
+`pressure_balance_sections`, суммарные pressure-balance вклады,
+`pressure_balance_residual_pa`, `qcrit_status` и `qcrit_model`.
 
 Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и
 Wojtan-Ursenbacher-Thome пока не подключаются как расчетные `published`-модели:
@@ -196,15 +200,18 @@ pytest -q -m slow
 
 - Модель ориентирована на воспроизведение рабочего стационарного режима MathCAD
   worksheet, а не на универсальный расчет любых CO2-контуров.
-- Критические тепловые нагрузки и предельные режимы из диссертации не реализованы
-  как полный внешний алгоритм поиска границ.
+- Критические тепловые нагрузки доступны через `critical_loads.py` и методы
+  `critical_loads(...)` фасадов. Это границы текущего steady solver с отдельным
+  пределом `f=0`, а не экспериментальная валидация и не подгонка к таблицам
+  диссертации.
 - Boiling/dryout diagnostics пока не являются прогнозом heat-transfer crisis:
   Kandlikar, Shah, Gungor-Winterton, dryout и CHF-корреляции не подключены без
   сверки первоисточника.
 - Свойства CO2 заданы таблично и интерполируются; расчеты вне области исходных
   таблиц нужно трактовать осторожно.
-- NH3 через CoolProp доступен в общем loop solver, но режимные карты,
-  boiling/dryout prediction и qcrit для него еще не доведены до published-физики.
+- NH3 через CoolProp доступен в общем loop solver; qcrit для него считается тем
+  же алгоритмом границ solver, но режимные карты и boiling/dryout prediction еще
+  не доведены до published-физики.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
 - Геометрический конструктор передает основные расчетные участки, но пока не

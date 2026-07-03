@@ -262,6 +262,8 @@ class SteadyLoopResult:
     numerical_failure: str = "not_active"
     failure_class: str = "none"
     warnings: tuple[str, ...] = ()
+    qcrit_status: str = "not_evaluated"
+    qcrit_model: str = "not_evaluated"
 
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -296,6 +298,8 @@ class SteadyLoopResult:
             "numerical_failure": self.numerical_failure,
             "failure_class": self.failure_class,
             "warnings": list(self.warnings),
+            "qcrit_status": self.qcrit_status,
+            "qcrit_model": self.qcrit_model,
         }
         if self.circulation_factor is not None:
             data["fff"] = self.circulation_factor

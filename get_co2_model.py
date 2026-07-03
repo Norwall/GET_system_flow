@@ -22,6 +22,7 @@ from co2_geometry import LoopGeometry
 from co2_properties import CO2SaturationProperties
 from co2_results import SteadyLoopResult
 from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver
+from critical_loads import CriticalLoadReport, solve_critical_loads
 from two_phase_closures import darcy_friction_factor
 
 
@@ -210,6 +211,47 @@ class CO2MathcadModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
         ).to_dict()
+
+    def critical_loads(
+        self,
+        H: float,
+        Li: float,
+        tcon: float,
+        mode: str = "worksheet_compatible",
+        closure_model: str = "worksheet_compatible",
+        friction_model: str = "mathcad_compat",
+        geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
+        qtr_min_w_m: float = 0.0,
+        qtr_max_w_m: float = 150.0,
+        qtr_step_w_m: float = 1.0,
+        boundary_tolerance_w_m: float = 0.01,
+        fmin: float = 1.0e-8,
+        fmax: float = 1.0e5,
+        nsamp: int = 220,
+        ngrid: int = 240,
+    ) -> CriticalLoadReport:
+        """Return a critical-load report without making ordinary run() expensive."""
+
+        return solve_critical_loads(
+            self.steady_solver,
+            H=H,
+            Li=Li,
+            tcon=tcon,
+            mode=mode,
+            closure_model=closure_model,
+            friction_model=friction_model,
+            geometry=geometry,
+            heat_transfer_model=heat_transfer_model,
+            qtr_min_w_m=qtr_min_w_m,
+            qtr_max_w_m=qtr_max_w_m,
+            qtr_step_w_m=qtr_step_w_m,
+            boundary_tolerance_w_m=boundary_tolerance_w_m,
+            fmin=fmin,
+            fmax=fmax,
+            nsamp=nsamp,
+            ngrid=ngrid,
+        )
 
     def cached_checks(self) -> Dict[str, Dict[str, float]]:
         """Возвращает несколько точных или почти точных контрольных точек."""

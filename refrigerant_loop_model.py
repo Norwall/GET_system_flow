@@ -5,6 +5,7 @@ from typing import Any
 from co2_geometry import LoopGeometry
 from co2_results import SteadyLoopResult
 from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver
+from critical_loads import CriticalLoadReport, solve_critical_loads
 from refrigerant_properties import RefrigerantSaturationProperties, create_saturation_properties
 
 
@@ -151,6 +152,47 @@ class RefrigerantLoopModel:
             nsamp=nsamp,
         )
         return root_search.circulation_factor
+
+    def critical_loads(
+        self,
+        H: float,
+        Li: float,
+        tcon: float,
+        mode: str = "worksheet_compatible",
+        closure_model: str = "zivi",
+        friction_model: str = "colebrook_white",
+        geometry: LoopGeometry | None = None,
+        heat_transfer_model: str = "prescribed_heat_input",
+        qtr_min_w_m: float = 0.0,
+        qtr_max_w_m: float = 150.0,
+        qtr_step_w_m: float = 1.0,
+        boundary_tolerance_w_m: float = 0.01,
+        fmin: float = 1.0e-8,
+        fmax: float = 1.0e5,
+        nsamp: int = 220,
+        ngrid: int = 240,
+    ) -> CriticalLoadReport:
+        """Return a separate critical-load report for the configured refrigerant."""
+
+        return solve_critical_loads(
+            self.steady_solver,
+            H=H,
+            Li=Li,
+            tcon=tcon,
+            mode=mode,
+            closure_model=closure_model,
+            friction_model=friction_model,
+            geometry=geometry,
+            heat_transfer_model=heat_transfer_model,
+            qtr_min_w_m=qtr_min_w_m,
+            qtr_max_w_m=qtr_max_w_m,
+            qtr_step_w_m=qtr_step_w_m,
+            boundary_tolerance_w_m=boundary_tolerance_w_m,
+            fmin=fmin,
+            fmax=fmax,
+            nsamp=nsamp,
+            ngrid=ngrid,
+        )
 
 
 __all__ = ["RefrigerantLoopModel"]

@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-5-published-pressure-drop-source-gate`.
+Версия реестра: `checkpoint-9-critical-loads`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -23,6 +23,8 @@
 | `HEAT-LINEAR-TO-WALL-FLUX` | DEFINITIONAL | `boiling_heat_transfer.diagnose_prescribed_heat_input` |
 | `BAL-VAPOR-GENERATION` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
+| `QCRIT-DISSERTATION-SCAN` | DISSERTATION / NUMERICAL_SEARCH | `critical_loads.find_critical_loads` |
+| `QCRIT-DISSERTATION-F-ZERO` | DISSERTATION | `critical_loads.CriticalLoadSolver.f_zero_residual` |
 | `FRIC-REYNOLDS` | PUBLISHED | `co2_steady_solver`, `two_phase_closures` |
 | `FRIC-DARCY-MASS-FLUX` | PUBLISHED | `published_friction.single_phase_pressure_gradient_pa_per_m` |
 | `FRIC-LAMINAR-DARCY` | PUBLISHED | `darcy_friction_factor` |
@@ -186,6 +188,39 @@ y_n =
 - Источник: `CO2.xmcd`; уравнения диссертации; `docs/get_co2_academic_reference.md`.
 - Код: `co2_steady_solver.SteadyLoopSolver.one_pass`.
 - Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_model_regression.py`.
+
+## QCRIT-DISSERTATION-SCAN
+
+- Статус: DISSERTATION / NUMERICAL_SEARCH.
+- Математическая запись:
+
+```math
+q_{\rm cr}^{\min}<q_l<q_{\rm cr}^{\max}
+```
+
+Границы определяются как нижняя и верхняя граница интервала тепловых нагрузок, для которых существует стационарное решение текущей системы уравнений. В реализации конечная сетка используется только для bracket-поиска, после чего граница уточняется бисекцией; последняя сошедшаяся точка сетки сама по себе не объявляется физическим `qcrit`.
+
+- Переменные и размерности: `q_l`/`qtr`, Вт/м; `H`, м; `L_i`, м; `tcon`, град C; `f`, безразмерный параметр циркуляции.
+- Область применимости: стационарная модель ГЕТ с заданной линейной тепловой нагрузкой и выбранными свойствами/closure-моделью. Результат относится к текущей реализации solver и не является экспериментальной валидацией.
+- Источник: диссертация А. А. Ишкова, разделы 2.4 и 4.3; `docs/get_co2_academic_reference.md`.
+- Код: `critical_loads.find_critical_loads`; `critical_loads.CriticalLoadSolver.evaluate_qtr`; фасады `CO2MathcadModel.critical_loads` и `RefrigerantLoopModel.critical_loads`.
+- Тесты: `tests/test_qcrit_solver.py`.
+
+## QCRIT-DISSERTATION-F-ZERO
+
+- Статус: DISSERTATION.
+- Математическая запись:
+
+```math
+f=0,\qquad x_{\rm out}=1,\qquad \alpha_{\rm out}=1,
+\qquad Hy(q_l,f=0)-H=0
+```
+
+- Переменные и размерности: `f`, безразмерный параметр циркуляции; `x_out`, массовая сухость на выходе; `alpha_out`, паросодержание на выходе; `Hy`, м; `H`, м; `q_l`, Вт/м.
+- Область применимости: верхняя гидродинамическая критическая нагрузка по предельной постановке диссертации. Не является dryout/CHF/HTC-корреляцией.
+- Источник: диссертация А. А. Ишкова, раздел 2.4; `docs/get_co2_academic_reference.md`.
+- Код: `critical_loads.CriticalLoadSolver.f_zero_residual`; `critical_loads.find_critical_loads`.
+- Тесты: `tests/test_qcrit_solver.py`.
 
 ## FRIC-REYNOLDS
 

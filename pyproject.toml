@@ -34,6 +34,7 @@ py-modules = [
     "co2_results",
     "co2_steady_solver",
     "co2_visualization",
+    "critical_loads",
     "experimental_regimes",
     "get_designer_api",
     "get_designer_geometry",
