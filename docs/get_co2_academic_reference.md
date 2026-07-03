@@ -2,13 +2,13 @@
 title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
-date: "2 июля 2026 г."
+date: "3 июля 2026 г."
 toc-title: "Содержание"
 ---
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, NH₃-ветки Checkpoint 8 и безопасного scaffold Checkpoint 7: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и guarded-заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, а также diagnostic-only слой `boiling_heat_transfer.py`. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, NH₃-ветки Checkpoint 8, безопасного scaffold Checkpoint 7 и source-gate аудита MSH/Friedel: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, а также diagnostic-only слой `boiling_heat_transfer.py`. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout статусов.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -26,7 +26,7 @@ toc-title: "Содержание"
 
 Первые три варианта имеют понятную физическую интерпретацию и прослеживаются до исходного Mathcad или опубликованных моделей. Вариант experimental_regime_aware использует режимно-зависимое переключение замыканий, однако его пороги и часть коэффициентов введены как авторские инженерные эвристики. Поэтому результаты этого варианта нельзя представлять как расчёт по опубликованной режимной карте без дополнительной оговорки.
 
-После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
+После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После source-gate аудита Müller-Steinhagen-Heck и Friedel добавлены не расчётные корреляции, а защищённые функции-заглушки, выбрасывающие `SourceRequiredCorrelationError`: доступный библиографический уровень и предварительная страница статьи подтверждают публикации, но не фиксируют полную формулу, соглашение по жидкостным/газовым опорным градиентам, полному массовому потоку и выбору коэффициента трения Darcy/Fanning. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
 
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
@@ -148,12 +148,12 @@ toc-title: "Содержание"
 | co2_properties.py | compatibility alias для табличных свойств насыщенного CO₂ |
 | co2_geometry.py | базовая геометрия и типы участков контура |
 | pressure_balance.py | раздельный баланс гидростатики, трения, ускорительных и местных потерь |
-| published_friction.py | опубликованные/definitional фрикционные формулы: Darcy mass-flux, Lockhart–Martinelli, Chisholm |
+| published_friction.py | опубликованные/definitional фрикционные формулы: Darcy mass-flux, Lockhart–Martinelli, Chisholm; защитные source-gate функции MSH/Friedel |
 | published_void_fraction.py | опубликованные/definitional формулы массовой сухости, пустотности, HEM и Zivi |
 | two_phase_closures.py | совместимый фасад двухфазных замыканий, worksheet-логика и experimental regime-aware эвристики |
 | experimental_regimes.py | эвристическая классификация локальных режимов |
 | two_phase_regimes.py | compatibility wrappers и summary helpers для старого API |
-| published_regimes.py | guarded-заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
+| published_regimes.py | защитные заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
 | boiling_heat_transfer.py | diagnostic-only пересчёт \(q_\ell\to q''\), статусы heat-transfer/dryout limits и failure_class |
 | co2_results.py | типизированные результаты, профили и имена совместимости |
 | co2_function_matrix.py | расчёт матрицы функционирования и приближённых границ сходимости |
@@ -173,6 +173,7 @@ toc-title: "Содержание"
 | MATHCAD | выражение или константа непосредственно перенесены из CO2.xmcd |
 | NUMERICAL | численный способ реализации, не являющийся физическим законом |
 | HEURISTIC | инженерная эвристика без установленного первоисточника |
+| SOURCE_REQUIRED | публикация библиографически определена, но расчётная формула и соглашения о величинах ещё не сверены по полному первоисточнику |
 | PLACEHOLDER | структура данных присутствует, но физически не подключена |
 | REQUIRES AUDIT | обнаружено расхождение или требуется независимая проверка |
 
@@ -767,6 +768,13 @@ X^2=
 Это основное замыкание worksheet_compatible, homogeneous_equilibrium и zivi для трения. В experimental_regime_aware оно служит базой, но может заменяться эвристическим режимным градиентом.
 
 Для published-замыканий Checkpoint 5 действует дополнительное правило: модель со статусом `published` не должна ссылаться на записи реестра `EXP-*` и не должна использовать режимно-зависимые веса без первоисточника. Это контролируется тестом `tests/test_formula_registry.py`.
+
+Для Müller-Steinhagen-Heck 1986 и Friedel 1979 в `published_friction.py` заведены только source-gate функции:
+
+- `muller_steinhagen_heck_1986_pressure_gradient_pa_per_m`;
+- `friedel_1979_pressure_gradient_pa_per_m`.
+
+Обе функции выбрасывают `SourceRequiredCorrelationError` и не вызываются solver. Такой статус означает, что публикация и предполагаемая роль корреляции в архитектуре зафиксированы, но расчётная формула не переносится в код до проверки полного первоисточника. В частности, для MSH должны быть явно сверены формула, два подгоночных параметра, определения жидкостного и газового опорных градиентов давления, соглашение по полному массовому потоку и соглашение по коэффициенту трения Darcy/Fanning. Для Friedel дополнительно должны быть сверены используемые безразмерные комплексы и область применимости горизонтального/вертикального течения.
 
 ## 7.7. Выбор модели коэффициента трения
 
@@ -1882,7 +1890,7 @@ React-интерфейс позволяет:
 | вертикальная опубликованная карта | не реализована | Taitel et al. [10] | NOT IMPLEMENTED |
 | saturated flow boiling HTC | не реализована | Kandlikar/Shah/Gungor-Winterton требуют сверки | SOURCE REQUIRED |
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
-| MSH/Friedel pressure-drop fallback | не реализован | [15], [16] | SOURCE REQUIRED |
+| MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |

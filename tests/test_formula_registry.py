@@ -35,6 +35,8 @@ EXPECTED_REGISTRY_IDS = (
     "TP-LOCKHART-MARTINELLI",
     "TP-CHISHOLM-CONSTANT",
     "TP-CHISHOLM-MULTIPLIER",
+    "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
+    "TP-FRIEDEL-1979-SOURCE-GATE",
     "FLOW-MASS-QUALITY",
     "VOID-GENERIC-SLIP",
     "VOID-WORKSHEET-PHI2L",
@@ -69,6 +71,11 @@ EXPERIMENTAL_IDS = (
     "EXP-DRIFT-FLUX-LIKE-VOID",
     "EXP-ANNULAR-CORE-VOID",
     "EXP-REGIME-FRICTION-GRADIENTS",
+)
+
+SOURCE_REQUIRED_IDS = (
+    "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
+    "TP-FRIEDEL-1979-SOURCE-GATE",
 )
 
 CLOSURE_MODELS = (
@@ -144,6 +151,14 @@ def test_experimental_heuristics_are_marked_without_primary_source(
     assert "- Статус: EXPERIMENTAL / NO PRIMARY SOURCE." in registry_sections[entry_id]
 
 
+@pytest.mark.parametrize("entry_id", SOURCE_REQUIRED_IDS)
+def test_pending_published_correlations_are_marked_source_required(
+    entry_id: str,
+    registry_sections: dict[str, str],
+) -> None:
+    assert "- Статус: SOURCE_REQUIRED." in registry_sections[entry_id]
+
+
 def test_regime_classifier_registry_points_to_experimental_layer(
     registry_sections: dict[str, str],
 ) -> None:
@@ -151,7 +166,7 @@ def test_regime_classifier_registry_points_to_experimental_layer(
 
     assert "experimental_regimes.classify_horizontal_evaporator_regime_result" in section
     assert "compatibility wrappers in `two_phase_regimes.py`" in section
-    assert "published_regimes.py` содержит только guarded-заготовки" in REGISTRY_TEXT
+    assert "published_regimes.py` содержит только защитные заготовки" in REGISTRY_TEXT
 
 
 def test_current_rough_friction_blend_is_not_claimed_as_colebrook_white(

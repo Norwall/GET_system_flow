@@ -5,6 +5,29 @@ from typing import Any
 import numpy as np
 
 
+class SourceRequiredCorrelationError(NotImplementedError):
+    """Raised when a published correlation is cited but not source-audited."""
+
+
+def muller_steinhagen_heck_1986_pressure_gradient_pa_per_m(*args: Any, **kwargs: Any) -> Any:
+    """Guard for the MSH 1986 pressure-drop correlation until source audit is complete."""
+
+    raise SourceRequiredCorrelationError(
+        "Muller-Steinhagen-Heck 1986 is not implemented: the current source audit "
+        "has not verified the full primary-source formula, total-mass-flux convention, "
+        "and Darcy/Fanning friction-factor convention from DOI 10.1016/0255-2701(86)80008-3."
+    )
+
+
+def friedel_1979_pressure_gradient_pa_per_m(*args: Any, **kwargs: Any) -> Any:
+    """Guard for the Friedel 1979 pressure-drop correlation until source audit is complete."""
+
+    raise SourceRequiredCorrelationError(
+        "Friedel 1979 is not implemented: the full primary conference paper and "
+        "formula conventions are not available in the current source audit."
+    )
+
+
 def martinelli_parameter(
     liquid_mass_flow_kg_s: float | np.ndarray,
     vapor_mass_flow_kg_s: float | np.ndarray,
@@ -71,3 +94,15 @@ def lockhart_martinelli_chisholm_pressure_gradient_pa_per_m(
         martinelli_x=martinelli_x,
         chisholm_c=chisholm_c,
     )
+
+
+__all__ = [
+    "SourceRequiredCorrelationError",
+    "chisholm_constant",
+    "friedel_1979_pressure_gradient_pa_per_m",
+    "lockhart_martinelli_chisholm_pressure_gradient_pa_per_m",
+    "martinelli_parameter",
+    "muller_steinhagen_heck_1986_pressure_gradient_pa_per_m",
+    "single_phase_pressure_gradient_pa_per_m",
+    "two_phase_multiplier_liquid_reference",
+]

@@ -136,7 +136,9 @@ source-strict часть Checkpoint 5:
 Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и
 Wojtan-Ursenbacher-Thome пока не подключаются как расчетные `published`-модели:
 для них требуется сверка точных формул и областей применимости по полному
-первоисточнику.
+первоисточнику. Для Müller-Steinhagen-Heck и Friedel добавлены защитные
+source-gate функции в `published_friction.py`; они выбрасывают
+`SourceRequiredCorrelationError`, пока первоисточник не сверен.
 
 Checkpoint 6 split:
 
@@ -144,7 +146,7 @@ Checkpoint 6 split:
   `experimental_regimes.py`;
 - `two_phase_regimes.py` оставлен как compatibility-слой для старых imports и
   summary helpers;
-- `published_regimes.py` пока содержит только guarded-заготовки с
+- `published_regimes.py` пока содержит только защитные заготовки с
   `unknown_or_out_of_range` / `not_implemented`, без опубликованных режимных
   карт.
 

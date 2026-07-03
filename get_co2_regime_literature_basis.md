@@ -92,7 +92,7 @@ worksheet/experimental-логику, но published-функции больше 
 - `experimental_regimes.py` — текущие эвристические пороги, явно помеченные как
   `EXPERIMENTAL / NO PRIMARY SOURCE`;
 - `two_phase_regimes.py` — compatibility wrappers и summary helpers;
-- `published_regimes.py` — guarded-заготовки published-карт, которые пока
+- `published_regimes.py` — защитные заготовки published-карт, которые пока
   возвращают `unknown_or_out_of_range` / `not_implemented`, а не физический
   режим.
 
@@ -179,6 +179,14 @@ worksheet/experimental-логику, но published-функции больше 
 если на первом шаге не удастся сразу реализовать полноценную
 flow-pattern-based pressure-drop model из специализированных статей по испарению.
 
+Текущий source-gate аудит не подтвердил полный перенос формул в код: для
+Muller-Steinhagen-Heck доступная библиографическая информация и предварительная страница статьи
+подтверждает статью, DOI, область pressure-drop correlation и наличие двух
+подгоночных параметров, но не даёт достаточной формульной записи и соглашений о величинах.
+Для Friedel полный первичный текст доклада в текущем окружении также не доступен. Поэтому
+в коде допустимы только защитные функции, которые явно требуют первоисточник и
+не участвуют в расчёте.
+
 ## 6. Научно корректная архитектура следующей версии
 
 ### 6.1. Горизонтальный испаритель
@@ -196,7 +204,7 @@ flow-pattern-based pressure-drop model из специализированных
 
 3. Для frictional pressure drop:
    - временный published fallback: `Lockhart-Martinelli + Chisholm`,
-     либо `Friedel`, либо `Muller-Steinhagen-Heck`;
+     либо после source-аудита `Friedel`/`Muller-Steinhagen-Heck`;
    - следующий уровень: regime-specific pressure-drop model из статьи,
      если будет доступен первоисточник с точной формой корреляции.
 
@@ -241,7 +249,7 @@ flow-pattern-based pressure-drop model из специализированных
 
 - текущая эвристическая карта находится в `experimental_regimes.py`;
 - `two_phase_regimes.py` оставлен как слой совместимости;
-- `published_regimes.py` содержит только guarded-заготовки.
+- `published_regimes.py` содержит только защитные заготовки.
 
 Остаётся реализовать новые published-карты для:
 
@@ -262,8 +270,11 @@ flow-pattern-based pressure-drop model из специализированных
 Не реализованы без полного первоисточника:
 
 - `zuber_findlay_1965_void_fraction(...)`;
-- `friedel_1979_pressure_gradient(...)`;
-- `muller_steinhagen_heck_1986_pressure_gradient(...)`.
+- `friedel_1979_pressure_gradient(...)` — в коде есть только защитная
+  source-gate функция `friedel_1979_pressure_gradient_pa_per_m(...)`;
+- `muller_steinhagen_heck_1986_pressure_gradient(...)` — в коде есть только
+  защитная source-gate функция
+  `muller_steinhagen_heck_1986_pressure_gradient_pa_per_m(...)`.
 
 ### Шаг 4. Перевести solver на published mode
 

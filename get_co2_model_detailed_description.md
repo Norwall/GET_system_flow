@@ -156,7 +156,7 @@
   имя режима вместе с source/status/criteria/confidence metadata;
 - `two_phase_regimes.py` оставлен как compatibility-слой для старых импортов и
   summary helpers;
-- `published_regimes.py` пока содержит только guarded-заготовки
+- `published_regimes.py` пока содержит только защитные заготовки
   `unknown_or_out_of_range` / `not_implemented`; опубликованные карты
   Wojtan-Ursenbacher-Thome и Taitel-Barnea-Dukler в расчёт не подключены.
 
@@ -550,6 +550,16 @@ Source-strict часть Checkpoint 5 не означает, что все ко�
 Lockhart-Martinelli/Chisholm. Müller-Steinhagen-Heck, Friedel,
 Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome пока остаются
 задачами следующих этапов до сверки точных формул по полному первоисточнику.
+
+После source-gate прохода для Müller-Steinhagen-Heck 1986 и Friedel 1979 в
+`published_friction.py` добавлены только защитные функции:
+`muller_steinhagen_heck_1986_pressure_gradient_pa_per_m(...)` и
+`friedel_1979_pressure_gradient_pa_per_m(...)`. Они выбрасывают
+`SourceRequiredCorrelationError` и не подключены к `closure_model`. Это
+преднамеренная защита: пока не сверены полная формула, определения опорных
+однофазных градиентов, соглашение по массовому потоку и коэффициенту трения
+Darcy/Fanning,
+такая корреляция не может называться расчётной published-моделью проекта.
 
 Checkpoint 6 split не добавляет новых published-карт. Он только делает
 академическую границу явной: legacy `flow_regime` остаётся диагностическим

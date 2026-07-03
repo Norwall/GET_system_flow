@@ -4,9 +4,12 @@ import numpy as np
 import pytest
 
 from published_friction import (
+    SourceRequiredCorrelationError,
     chisholm_constant,
+    friedel_1979_pressure_gradient_pa_per_m,
     lockhart_martinelli_chisholm_pressure_gradient_pa_per_m,
     martinelli_parameter,
+    muller_steinhagen_heck_1986_pressure_gradient_pa_per_m,
     single_phase_pressure_gradient_pa_per_m,
     two_phase_multiplier_liquid_reference,
 )
@@ -91,3 +94,13 @@ def test_published_closure_pressure_gradient_uses_lockhart_martinelli_chisholm()
     assert state.friction_pressure_gradient_pa_per_m is not None
     assert state.friction_pressure_gradient_pa_per_m > 0.0
     assert friction_factor_from_model(1.0e5, 1e-4 / 0.0265, "colebrook_white") > 0.0
+
+
+def test_muller_steinhagen_heck_guard_requires_primary_source_audit() -> None:
+    with pytest.raises(SourceRequiredCorrelationError, match="Muller-Steinhagen-Heck 1986"):
+        muller_steinhagen_heck_1986_pressure_gradient_pa_per_m()
+
+
+def test_friedel_guard_requires_primary_source_audit() -> None:
+    with pytest.raises(SourceRequiredCorrelationError, match="Friedel 1979"):
+        friedel_1979_pressure_gradient_pa_per_m()

@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-7-boiling-diagnostics-scaffold`.
+Версия реестра: `checkpoint-5-published-pressure-drop-source-gate`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -34,6 +34,8 @@
 | `TP-LOCKHART-MARTINELLI` | PUBLISHED | `published_friction.martinelli_parameter` |
 | `TP-CHISHOLM-CONSTANT` | PUBLISHED | `published_friction.chisholm_constant` |
 | `TP-CHISHOLM-MULTIPLIER` | PUBLISHED | `published_friction.two_phase_multiplier_liquid_reference` |
+| `TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE` | SOURCE_REQUIRED | `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` |
+| `TP-FRIEDEL-1979-SOURCE-GATE` | SOURCE_REQUIRED | `published_friction.friedel_1979_pressure_gradient_pa_per_m` |
 | `FLOW-MASS-QUALITY` | PUBLISHED / DEFINITIONAL | `published_void_fraction.mass_quality_from_mass_flows` |
 | `VOID-GENERIC-SLIP` | PUBLISHED / DEFINITIONAL | `published_void_fraction.void_fraction_from_quality` |
 | `VOID-WORKSHEET-PHI2L` | MATHCAD_COMPATIBLE / DISSERTATION | `worksheet_void_fraction_from_phi2l` |
@@ -372,6 +374,26 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Код: `published_friction.two_phase_multiplier_liquid_reference`; compatibility re-export `two_phase_closures.two_phase_multiplier_liquid_reference`.
 - Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_baseline_compatibility.py`; `tests/test_co2_result_fields.py`.
 
+## TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE
+
+- Статус: SOURCE_REQUIRED.
+- Математическая запись: не реализована в расчёте. Полная формула, определения жидкостного и газового опорных градиентов давления, соглашение по полному массовому потоку и соглашение по коэффициенту трения Darcy/Fanning должны быть переписаны только после проверки полного первоисточника.
+- Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; гидравлический диаметр, м; friction factor безразмерен.
+- Область применимости: ожидаемая резервная published pressure-drop корреляция для двухфазного течения в трубах; не подключена к `closure_model` и не участвует в solver.
+- Источник: Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308, DOI `10.1016/0255-2701(86)80008-3`. Доступная предварительная страница статьи подтверждает статью, abstract и наличие двух подгоночных параметров, но не даёт полной формулы и соглашений о величинах.
+- Код: `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
+- Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
+
+## TP-FRIEDEL-1979-SOURCE-GATE
+
+- Статус: SOURCE_REQUIRED.
+- Математическая запись: не реализована в расчёте. Формула Friedel, коэффициенты, безразмерные комплексы и области применимости должны быть внесены только после проверки полного первичного текста доклада.
+- Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; поверхностное натяжение, Н/м; гидравлический диаметр, м; безразмерные комплексы.
+- Область применимости: ожидаемая резервная published pressure-drop корреляция для горизонтального и вертикального двухфазного течения; не подключена к `closure_model` и не участвует в solver.
+- Источник: Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, Italy, paper E2, 1979. В текущем source-аудите полный первичный текст доклада не доступен.
+- Код: `published_friction.friedel_1979_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
+- Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
+
 ## FLOW-MASS-QUALITY
 
 - Статус: PUBLISHED / DEFINITIONAL.
@@ -669,5 +691,5 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
-- `published_regimes.py` содержит только guarded-заготовки, возвращающие `unknown_or_out_of_range` / `not_implemented`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
+- `published_regimes.py` содержит только защитные заготовки, возвращающие `unknown_or_out_of_range` / `not_implemented`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
 - Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome не подключаются как расчетные `published`-модели, пока точные формулы и области применимости не сверены с полным первоисточником.
