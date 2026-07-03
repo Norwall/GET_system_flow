@@ -83,7 +83,7 @@ print(result["fluid"], result["property_backend"], result["converged"])
 
 ## Статус физической доработки
 
-В текущей версии закрыты Checkpoint 0-9 из `plan.md` в реализованной части
+В текущей версии закрыты Checkpoint 0-10 из `plan.md` в реализованной части
 аудита модели:
 
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
@@ -123,6 +123,11 @@ print(result["fluid"], result["property_backend"], result["converged"])
   строят отчёт по нижней/верхней гидродинамической границе текущего steady
   solver и отдельно проверяют диссертационный предел `f=0`; одиночный
   `run(...)` по-прежнему возвращает `qcrit_status="not_evaluated"`.
+- добавлен быстрый слой сценарной матрицы `scenario_matrix.py`: он проверяет
+  CO2/NH3 температурные сетки, вариации `qtr`, `H`, `Li`, диаметра,
+  шероховатости, near-critical область, нулевые/отрицательные входы и
+  недоступный backend через структурированные статусы без запуска дорогого
+  `qcrit`-sweep по умолчанию.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -153,6 +158,25 @@ Checkpoint 6 split:
 - `published_regimes.py` пока содержит только защитные заготовки с
   `unknown_or_out_of_range` / `not_implemented`, без опубликованных режимных
   карт.
+
+## Сценарная матрица
+
+Для быстрой проверки физического и численного статуса набора точек используйте
+`scenario_matrix.py`:
+
+```python
+from scenario_matrix import run_scenario_matrix
+
+report = run_scenario_matrix()
+print(report.status_counts)
+print(report.failure_class_counts)
+```
+
+Матрица использует быстрый root scan текущего steady solver и возвращает
+`working`, `no_root`, `no_driving_head`, `near_critical_region`,
+`property_out_of_range`, `validation_error`, `backend_unavailable` или
+`numerical_failure`. Это smoke-диагностика покрытия режимов, а не новая
+физическая модель и не расчёт `critical_loads`.
 
 ## Демонстрационный отчет
 
@@ -190,6 +214,12 @@ $tmp = (Resolve-Path '.pytest-tmp').Path; $env:TMP = $tmp; $env:TEMP = $tmp; pyt
 pytest -q -m "not slow"
 ```
 
+Сценарная матрица:
+
+```powershell
+pytest tests/test_scenario_matrix.py -q
+```
+
 Только тяжелые тесты:
 
 ```powershell
@@ -214,6 +244,8 @@ pytest -q -m slow
   не доведены до published-физики.
 - Режим `distributed_steady` дает более подробные профили и диагностику, но он
   заметно тяжелее базового `worksheet_compatible`.
+- Сценарная матрица является smoke-проверкой статусов на выбранных точках; она
+  не уточняет физические критические нагрузки и не заменяет `critical_loads.py`.
 - Геометрический конструктор передает основные расчетные участки, но пока не
   поддерживает произвольное число однотипных участков, connector-сегменты и
   местные сопротивления на переходах диаметра.

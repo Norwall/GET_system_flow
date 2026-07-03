@@ -8,7 +8,7 @@ toc-title: "Содержание"
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, а после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9 и source-gate аудита MSH/Friedel: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, а также source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\). Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10 и source-gate аудита MSH/Friedel: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -35,6 +35,8 @@ toc-title: "Содержание"
 После Checkpoint 7 введён параметр `heat_transfer_model`. Реализованный вариант `prescribed_heat_input` не добавляет эмпирическую корреляцию теплоотдачи: он только переводит заданную линейную тепловую нагрузку \(q_\ell\) в средний тепловой поток \(q''\) через гидравлический периметр испарителя. Корреляции saturated flow boiling heat transfer, dryout и CHF не подключены; соответствующие поля результата явно получают статусы `not_evaluated_source_required`. Поэтому новый слой следует считать защитной диагностикой и интерфейсной подготовкой к published-моделям, а не прогнозом кризиса теплообмена.
 
 После Checkpoint 9 критические тепловые нагрузки вынесены в отдельный отчёт `critical_loads.py`. Он использует текущий стационарный solver как физическую систему уравнений, уточняет нижнюю и верхнюю границы существования решения после bracket-поиска и отдельно решает диссертационное условие \(Hy(q_\ell,f=0)-H=0\). Этот отчёт нельзя смешивать с dryout/CHF: кризис теплообмена по-прежнему требует опубликованной heat-transfer корреляции.
+
+После Checkpoint 10 добавлен `scenario_matrix.py`. Он не вводит новых уравнений, коэффициентов или published-корреляций: слой только выбирает набор контрольных точек CO₂/NH₃, выполняет быстрый поиск корня \(Hy(f)-H=0\) с укороченной сеткой и классифицирует результат как `working`, `no_root`, `no_driving_head`, `near_critical_region`, `property_out_of_range`, `validation_error`, `backend_unavailable` или `numerical_failure`. Сценарная матрица является регрессионной и диагностической проверкой покрытия режимов; она не является расчётом \(q_{\rm cr}\), не заменяет `critical_loads.py` и не добавляет научную валидацию модели.
 
 Документ содержит:
 
@@ -101,6 +103,7 @@ toc-title: "Содержание"
 - опубликованные режимные карты Wojtan–Ursenbacher–Thome и Taitel–Barnea–Dukler;
 - published saturated flow boiling heat-transfer, dryout и CHF-корреляции;
 - экспериментально валидированное воспроизведение всех табличных критических нагрузок диссертации с шагом \(0{,}01\) Вт/м; текущий `critical_loads.py` реализует source-traceable поиск границ solver и отдельное условие \(f=0\), но не подгоняет результат к таблицам приложений;
+- сценарная матрица не является доказательством устойчивости и не уточняет критические тепловые нагрузки; она фиксирует программный статус выбранных точек текущего solver;
 - экспериментальную валидацию NH₃-ветки против стенда из [5];
 - оценка неопределённости и доверительных интервалов.
 
@@ -138,6 +141,7 @@ toc-title: "Содержание"
             +--> словарь совместимости
             +--> REST API
             +--> CSV, Markdown и графики
+            +--> scenario_matrix status report
 
 ## 2.2. Назначение модулей
 
@@ -158,6 +162,7 @@ toc-title: "Содержание"
 | published_regimes.py | защитные заготовки опубликованных режимных карт; расчётные published-карты пока не реализованы |
 | boiling_heat_transfer.py | diagnostic-only пересчёт \(q_\ell\to q''\), статусы heat-transfer/dryout limits и failure_class |
 | critical_loads.py | source-traceable поиск нижней/верхней гидродинамической critical load текущего solver, bracket/refinement и отдельное условие \(f=0\) |
+| scenario_matrix.py | быстрый набор контрольных CO₂/NH₃ сценариев, root-scan статусы и регрессионная матрица покрытия |
 | co2_results.py | типизированные результаты, профили и имена совместимости |
 | co2_function_matrix.py | расчёт матрицы функционирования и приближённых границ сходимости |
 | co2_visualization.py | графики профилей, замыканий и режимов |
@@ -1853,19 +1858,26 @@ React-интерфейс позволяет:
 - `pytest tests/test_baseline_compatibility.py tests/test_boiling_diagnostics.py tests/test_pressure_balance.py -q` — 18 passed;
 - `pytest tests/test_nh3_loop_solver.py tests/test_nh3_properties.py -q` — 10 passed.
 
+После Checkpoint 10 для сценарной матрицы выполнены проверки:
+
+- `pytest tests/test_scenario_matrix.py -q` — 18 passed;
+- `pytest tests/test_refrigerant_loop_model.py tests/test_segmented_geometry.py tests/test_qcrit_solver.py tests/test_scenario_matrix.py -q` — 31 passed.
+
+Полный `pytest -q` в текущем окружении был запущен, но не завершился за 360 с; до таймаута падений не было. Поэтому для Checkpoint 10 acceptance-контуром считается targeted-набор выше.
+
 После добавления Checkpoint 7 scaffold дополнительно выполнены targeted-проверки:
 
 - `pytest tests/test_boiling_diagnostics.py tests/test_formula_registry.py tests/test_refrigerant_loop_model.py tests/test_co2_result_fields.py -q -m "not slow and not distributed"` — 91 passed, 3 deselected;
 - `pytest tests/test_pressure_balance.py tests/test_void_fraction_models.py tests/test_two_phase_pressure_drop.py tests/test_regime_maps.py -q` — 20 passed;
 - `pytest tests/test_nh3_properties.py tests/test_nh3_loop_solver.py -q -m "not slow and not distributed"` — 9 passed, 1 deselected.
 
-Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel`, NH₃ loop scenarios, qcrit bracket/f-zero solver и защиту boiling/dryout diagnostics от подмены численной несходимости. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
+Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel`, NH₃ loop scenarios, qcrit bracket/f-zero solver, сценарную матрицу Checkpoint 10 и защиту boiling/dryout diagnostics от подмены численной несходимости. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
 
 ## 16.6. Экспериментальные данные
 
 Работа [5] сообщает высокую связь расчётной и экспериментальной средней температуры аммиачного испарителя; до введения перегрева коэффициент детерминации составил \(R^2=96{,}12\%\), а расчёт систематически занижал температуру примерно на 2,52 °C. Для согласования был введён параметр перегрева.
 
-Ограничения переноса этого вывода на текущий код после Checkpoint 9:
+Ограничения переноса этого вывода на текущий код после Checkpoint 10:
 
 1. экспериментальный хладагент — аммиак, но новая NH₃-ветка пока проверена программно через CoolProp, а не по экспериментальным рядам;
 2. параметр перегрева в Python отсутствует;
@@ -1889,6 +1901,7 @@ React-интерфейс позволяет:
 | NH₃ CoolProp HEOS | CoolPropSaturationProperties(NH3) | CoolProp [24], Gao-Wu-Bell-Lemmon [26] | PUBLISHED BACKEND |
 | REFPROP adapter | RefpropSaturationProperties | NIST REFPROP [14] | OPTIONAL |
 | RefrigerantLoopModel | refrigerant_loop_model | общий facade над тем же solver | ENGINEERING |
+| сценарная матрица | scenario_matrix.py | регрессионный root-scan набор текущего solver | ENGINEERING / REGRESSION |
 | \(Re\) | closures | классическая гидравлика, [12] | PUBLISHED |
 | \(64/Re\) | closures | Hagen–Poiseuille | PUBLISHED |
 | \(0{,}3164/Re^{0,25}\) | closures | Blasius | PUBLISHED |
@@ -1974,7 +1987,36 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 
 Ограничение остаётся: это границы текущей стационарной модели, а не экспериментальная валидация и не гарантия совпадения со всеми строками диссертационных таблиц.
 
-## 18.7. Отсутствие оценки неопределённости
+## 18.7. Сценарная матрица Checkpoint 10
+
+`scenario_matrix.py` вводит набор именованных контрольных сценариев, а не новую физическую модель. В default-набор входят:
+
+- CO₂ при \(t_k=-20,-10,0,10,20^\circ{\rm C}\);
+- NH₃ на той же температурной сетке в допустимой области CoolProp;
+- малые, номинальные и высокие значения \(q_\ell\);
+- малый, номинальный и высокий \(H\);
+- короткий, номинальный и длинный испаритель;
+- малый, номинальный и большой гидравлический диаметр;
+- гладкая, номинальная и грубая труба;
+- горизонтальный контур без riser;
+- near-critical CO₂;
+- нулевые/отрицательные входы;
+- недоступный REFPROP/backend probe.
+
+Для рабочих точек матрица использует быстрый `find_circulation_factor(nsamp=24)`. Это намеренно дешевле полного `run()` и не строит профили, `tmm`, `critical_loads` или `qcrit`-отчёт. Поэтому результат матрицы следует трактовать как регрессионный статус текущего solver:
+
+- `working` — найден корневой интервал и параметр циркуляции;
+- `no_root` — на выбранной сетке \(f\) не найден bracket;
+- `no_driving_head` — \(H=0\);
+- `near_critical_region` — backend сообщает близость к критической области;
+- `property_out_of_range` — запрос свойств вне допустимого диапазона;
+- `validation_error` — некорректная постановка до расчёта;
+- `backend_unavailable` — optional backend недоступен;
+- `numerical_failure` — другой численный отказ.
+
+Матрица полезна как smoke-проверка покрытия режимов и статусов, но не доказывает устойчивость, не уточняет критические нагрузки и не является экспериментальной валидацией.
+
+## 18.8. Отсутствие оценки неопределённости
 
 Нет вариации свойств, шероховатости, геометрии, тепловой нагрузки и параметров замыканий.
 
@@ -1990,6 +2032,7 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 - программных экспериментов с замыканиями;
 - построения профилей и предварительной карты сходимости;
 - предварительной оценки гидродинамических границ `critical_loads(...)` текущего steady solver с отдельным условием \(f=0\);
+- smoke-проверки сценарной матрицы `scenario_matrix.py` на структурированные статусы текущего solver;
 - подготовки следующей версии физической модели.
 
 Без дополнительной валидации результаты нельзя использовать как:
@@ -1999,6 +2042,7 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 - доказательство устойчивости;
 - экспериментально подтверждённые критические тепловые нагрузки;
 - точный прогноз кризиса кипения;
+- источник физически уточнённых \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) только по статусу сценарной матрицы;
 - published-прогноз коэффициента теплоотдачи, dryout или CHF;
 - связанную модель грунт–испаритель–конденсатор–атмосфера;
 - подтверждённую опубликованную режимную модель;
@@ -2033,7 +2077,8 @@ Boiling/dryout поля результата допустимо использо
 - общий property backend для CO₂/NH₃;
 - CoolProp reference CSV и тесты NH₃ loop solver;
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
-- отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\).
+- отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
+- быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы.
 
 Научные ограничения:
 
@@ -2042,6 +2087,7 @@ Boiling/dryout поля результата допустимо использо
 - отсутствие прямой CO₂/NH₃-валидации текущего кода;
 - отсутствие экспериментальной валидации и табличной калибровки qcrit-отчёта;
 - отсутствие published режимных карт и boiling/dryout prediction; NH₃ qcrit остаётся переносом общего solver без отдельной аммиачной валидации;
+- сценарная матрица остаётся регрессионной диагностикой и не является физической режимной картой или qcrit-моделью;
 - неподключённая физика грунта и произвольной геометрии;
 - обнаруженные вопросы к legacy-логарифму трения и неподключённой произвольной геометрии конструктора.
 
@@ -2161,6 +2207,21 @@ Boiling/dryout поля результата допустимо использо
 | numerical_failure | no_root_bracket, root_solver_failed, aux_temperature_failed | численная причина, не равная dryout |
 
 Эти поля являются классификацией текущего программного результата одного steady-run. Они не являются самим `critical_loads`-отчётом и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) без отдельного bracket/refinement расчёта.
+
+## Б.3. Статусы сценарной матрицы
+
+| scenario status | Значение |
+|---|---|
+| working | быстрый root scan нашёл параметр циркуляции текущего steady solver |
+| no_root | на выбранной сетке \(f\) нет bracket-интервала |
+| no_driving_head | \(H=0\), гидростатический движущий напор отсутствует |
+| near_critical_region | точка находится в near-critical области backend |
+| property_out_of_range | свойства вне допустимого диапазона backend |
+| validation_error | входная постановка отвергнута до расчёта |
+| backend_unavailable | optional backend, например REFPROP, недоступен |
+| numerical_failure | прочий численный отказ root scan |
+
+`scenario_matrix.py` всегда оставляет `qcrit_status="not_evaluated"`: матрица статусов не запускает `critical_loads` и не уточняет критические нагрузки.
 
 # Приложение В. Список литературы
 

@@ -1,6 +1,6 @@
 # Реестр формул и свойств
 
-Версия реестра: `checkpoint-9-critical-loads`.
+Версия реестра: `checkpoint-10-scenario-matrix`.
 
 Этот документ связывает реализованный код, формулы, источник, область применимости и
 тесты. Статус `PUBLISHED` допустим только для формул и коэффициентов, которые
@@ -55,6 +55,7 @@
 | `EXP-DRIFT-FLUX-LIKE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `drift_flux_void_fraction` |
 | `EXP-ANNULAR-CORE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `annular_core_void_fraction` |
 | `EXP-REGIME-FRICTION-GRADIENTS` | EXPERIMENTAL / NO PRIMARY SOURCE | `_resolve_two_phase_friction_response` |
+| `SCENARIO-MATRIX-STATUS` | REGRESSION_DIAGNOSTIC | `scenario_matrix.run_scenario_case` |
 
 ## Интерфейс свойств
 
@@ -719,10 +720,27 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 - Код: `two_phase_closures._resolve_two_phase_friction_response`.
 - Тесты: `tests/test_co2_result_fields.py`; `tests/test_baseline_compatibility.py`.
 
+## SCENARIO-MATRIX-STATUS
+
+- Статус: REGRESSION_DIAGNOSTIC.
+- Математическая запись: новых физических формул нет. Для рабочих сценариев используется существующая невязка текущего steady solver:
+
+```math
+Hy(f)-H=0
+```
+
+с укороченным root scan, после чего результат классифицируется дискретным статусом.
+- Переменные и размерности: `H`, м; `qtr`, Вт/м; `Li`, м; `tcon`, град C; `fluid`, строка; `property_backend`, строка; `status` и `failure_class`, перечисления.
+- Область применимости: smoke-регрессия выбранных CO2/NH3 сценариев Checkpoint 10. Не является published-корреляцией, режимной картой, qcrit-алгоритмом или экспериментальной валидацией.
+- Источник: проектное требование Checkpoint 10; `docs/get_co2_academic_reference.md`; текущая система уравнений `SteadyLoopSolver`.
+- Код: `scenario_matrix.run_scenario_case`; `scenario_matrix.run_scenario_matrix`; `scenario_matrix.default_scenario_cases`.
+- Тесты: `tests/test_scenario_matrix.py`.
+
 ## Правила сопровождения
 
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
+- Сценарные и регрессионные проверки допускаются со статусом `REGRESSION_DIAGNOSTIC`, если они не добавляют формулу и не объявляются физической моделью.
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
