@@ -168,6 +168,17 @@ primary-source-only: DOI landing page, Crossref metadata, abstract, учебни
 быть подключена только после проверки полного первоисточника и обновления
 `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
 
+Open-web аудит от 2026-07-04 оформлен отдельно в
+`docs/source_audit_open_web_2026-07-04.md`, а машинно-проверяемые решения по
+каждой source-gate записи вынесены в `docs/source_gate_manifest.json`.
+Crossref/Unpaywall/OpenAlex и publisher endpoints подтвердили библиографию для
+части моделей, но не дали открытый полный текст для MSH, Zuber-Findlay,
+Taitel-Barnea-Dukler, Wojtan/Thome, Kandlikar или Gungor-Winterton. EPFL
+landing pages для Wojtan Part I/II не снимают gate, потому что DSpace API не
+показывает `ORIGINAL`/full-text bitstream. Найденный официальный OSTI PDF
+`10.2172/4636495` сохранён как `source_candidate`, но не подключён к runtime:
+его применимость к текущей постановке ещё не аудирована.
+
 Checkpoint 6 split:
 
 - текущие эвристические режимные классификаторы вынесены в
@@ -225,7 +236,9 @@ Markdown-отчет дополнительно выводит source/failure/boi
 pytest -q
 ```
 
-Последний полный прогон в текущем окружении: `225 passed in 510.06s`.
+Полный прогон включает тяжёлые baseline/distributed сценарии и может занимать
+несколько минут. Для проверки академического source-gate контура используйте
+точечный набор ниже.
 
 Если окружение не дает писать во внешний temp-каталог, используйте локальный temp:
 
@@ -243,6 +256,12 @@ pytest -q -m "not slow"
 
 ```powershell
 pytest tests/test_scenario_matrix.py -q
+```
+
+Source-gate документация и академический manifest:
+
+```powershell
+pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q
 ```
 
 Только тяжелые тесты:

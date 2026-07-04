@@ -457,6 +457,15 @@ page, Crossref metadata, abstract, учебник, обзор или перес�
 снимают source-gate. Реестр формул и `docs/source_audit_checkpoint_5_6.md`
 связаны тестами; полный прогон `pytest -q` прошёл: 225 passed.
 
+Статус open-web academic context от 2026-07-04: добавлены
+`docs/source_audit_open_web_2026-07-04.md` и
+`docs/source_gate_manifest.json`. Crossref/Unpaywall/OpenAlex/publisher endpoint
+проверка не дала полного первоисточника для снятия gate по MSH, Friedel,
+Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan–Ursenbacher–Thome, Kandlikar или
+Gungor–Winterton. EPFL landing pages без `ORIGINAL`/full-text bitstream
+считаются `metadata_only`. OSTI `10.2172/4636495` зафиксирован только как
+`source_candidate`, без подключения в расчёт.
+
 ### Задачи
 
 - [x] Разделить closure models на:

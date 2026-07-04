@@ -15,7 +15,10 @@
 primary-source-only: формулы, коэффициенты, transition equations и области
 применимости нельзя переносить в расчет по DOI landing page, abstract, Crossref
 metadata, учебнику, обзору или пересказу. Gate снимается только после проверки
-полного первоисточника, что фиксируется в `docs/source_audit_checkpoint_5_6.md`.
+полного первоисточника, что фиксируется в `docs/source_audit_checkpoint_5_6.md`,
+`docs/source_audit_open_web_2026-07-04.md` и `docs/source_gate_manifest.json`.
+Repository landing page без доступного full-text/`ORIGINAL` bitstream не
+считается полным первоисточником.
 
 ## Сводка реализованных записей
 
@@ -425,7 +428,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Математическая запись: не реализована в расчёте. Полная формула, определения жидкостного и газового опорных градиентов давления, соглашение по полному массовому потоку и соглашение по коэффициенту трения Darcy/Fanning должны быть переписаны только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; гидравлический диаметр, м; friction factor безразмерен.
 - Область применимости: ожидаемая резервная published pressure-drop корреляция для двухфазного течения в трубах; не подключена к `closure_model` и не участвует в solver.
-- Источник: Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308, DOI `10.1016/0255-2701(86)80008-3`; `docs/source_audit_checkpoint_5_6.md`. Доступная предварительная страница статьи подтверждает статью, abstract и наличие двух подгоночных параметров, но не даёт полной формулы и соглашений о величинах.
+- Источник: Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308, DOI `10.1016/0255-2701(86)80008-3`; `docs/source_audit_checkpoint_5_6.md`; `docs/source_audit_open_web_2026-07-04.md`; `docs/source_gate_manifest.json`. Доступная предварительная страница статьи подтверждает статью, abstract и наличие двух подгоночных параметров, но не даёт полной формулы и соглашений о величинах.
 - Код: `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
 - Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
 
@@ -435,7 +438,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Математическая запись: не реализована в расчёте. Формула Friedel, коэффициенты, безразмерные комплексы и области применимости должны быть внесены только после проверки полного первичного текста доклада.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; поверхностное натяжение, Н/м; гидравлический диаметр, м; безразмерные комплексы.
 - Область применимости: ожидаемая резервная published pressure-drop корреляция для горизонтального и вертикального двухфазного течения; не подключена к `closure_model` и не участвует в solver.
-- Источник: Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, Italy, paper E2, 1979; `docs/source_audit_checkpoint_5_6.md`. В текущем source-аудите полный первичный текст доклада не доступен.
+- Источник: Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, Italy, paper E2, 1979; `docs/source_audit_checkpoint_5_6.md`; `docs/source_audit_open_web_2026-07-04.md`; `docs/source_gate_manifest.json`. В текущем source-аудите полный первичный текст доклада не доступен.
 - Код: `published_friction.friedel_1979_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
 - Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
 
@@ -683,7 +686,7 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 до подключения.
 - Переменные и размерности: `alpha` безразмерна; `j_g`, `j`, `V_gj`, м/с; `C0` безразмерен.
 - Область применимости: будущая published drift-flux диагностика/замыкание для двухфазного riser; не используется solver в published-режиме.
-- Источник: Zuber N., Findlay J. A. Average Volumetric Concentration in Two-Phase Flow Systems. Journal of Heat Transfer, 1965, 87(4), 453-468, DOI `10.1115/1.3689137`; `docs/source_audit_checkpoint_5_6.md`.
+- Источник: Zuber N., Findlay J. A. Average Volumetric Concentration in Two-Phase Flow Systems. Journal of Heat Transfer, 1965, 87(4), 453-468, DOI `10.1115/1.3689137`; `docs/source_audit_checkpoint_5_6.md`; `docs/source_audit_open_web_2026-07-04.md`; `docs/source_gate_manifest.json`.
 - Код: source-gate запись; текущая похожая форма `two_phase_closures.drift_flux_void_fraction` остается `EXP-DRIFT-FLUX-LIKE-VOID`.
 - Тесты: `tests/test_formula_registry.py`; `tests/test_regime_maps.py`.
 
@@ -693,7 +696,7 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 - Математическая запись: опубликованная горизонтальная diabatic flow-boiling map не реализована. Transition criteria, dryout boundaries, dimensionless groups и область применимости должны быть перенесены только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость, массовый поток, heat flux, диаметр, свойства фаз, поверхностное натяжение и безразмерные комплексы карты.
 - Область применимости: будущая published regime map для горизонтального испарителя; текущий `published_regime_map` возвращает `unknown_or_out_of_range` со статусом `source_required`.
-- Источник: Wojtan L., Ursenbacher T., Thome J. R. Investigation of flow boiling in horizontal tubes: Part I - A new diabatic two-phase flow pattern map. International Journal of Heat and Mass Transfer, 2005, 48, 2955-2969, DOI `10.1016/j.ijheatmasstransfer.2004.12.012`; `docs/source_audit_checkpoint_5_6.md`.
+- Источник: Wojtan L., Ursenbacher T., Thome J. R. Investigation of flow boiling in horizontal tubes: Part I - A new diabatic two-phase flow pattern map. International Journal of Heat and Mass Transfer, 2005, 48, 2955-2969, DOI `10.1016/j.ijheatmasstransfer.2004.12.012`; `docs/source_audit_checkpoint_5_6.md`; `docs/source_audit_open_web_2026-07-04.md`; `docs/source_gate_manifest.json`. EPFL repository landing page без `ORIGINAL`/full-text bitstream не снимает gate.
 - Код: `published_regimes.classify_horizontal_evaporator_regime_result` — защитная source-gate классификация без физического режима.
 - Тесты: `tests/test_regime_maps.py`; `tests/test_formula_registry.py`; `tests/test_refrigerant_loop_model.py`.
 
@@ -703,7 +706,7 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 - Математическая запись: опубликованная vertical upflow flow-pattern map не реализована. Transition equations и все коэффициенты должны быть перенесены только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — superficial velocities, диаметр, плотности, вязкости, поверхностное натяжение и безразмерные переходные критерии.
 - Область применимости: будущая published regime map для вертикального подъемного участка; текущий `published_regime_map` возвращает `unknown_or_out_of_range` со статусом `source_required`.
-- Источник: Taitel Y., Barnea D., Dukler A. E. Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes. AIChE Journal, 1980, 26(3), 345-354, DOI `10.1002/aic.690260304`; `docs/source_audit_checkpoint_5_6.md`.
+- Источник: Taitel Y., Barnea D., Dukler A. E. Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes. AIChE Journal, 1980, 26(3), 345-354, DOI `10.1002/aic.690260304`; `docs/source_audit_checkpoint_5_6.md`; `docs/source_audit_open_web_2026-07-04.md`; `docs/source_gate_manifest.json`.
 - Код: `published_regimes.classify_vertical_riser_regime_result` — защитная source-gate классификация без физического режима.
 - Тесты: `tests/test_regime_maps.py`; `tests/test_formula_registry.py`.
 
@@ -787,6 +790,7 @@ Hy(f)-H=0
 
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Для снятия `SOURCE_REQUIRED` нужен полный первоисточник; DOI landing page, abstract, Crossref metadata, учебники, обзоры и пересказы формул не являются достаточным основанием для подключения модели как `published`.
+- Repository landing page без доступного full-text/`ORIGINAL` bitstream не считается полным первоисточником; это зафиксировано в `docs/source_audit_open_web_2026-07-04.md`.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
 - Сценарные и регрессионные проверки допускаются со статусом `REGRESSION_DIAGNOSTIC`, если они не добавляют формулу и не объявляются физической моделью.
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.

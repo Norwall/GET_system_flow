@@ -32,6 +32,8 @@ toc-title: "Содержание"
 
 После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
 
+Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
+
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
 Для CO₂ доступны две ветки свойств: Mathcad-compatible таблицы из `CO2.xmcd` и CoolProp HEOS. Для NH₃ доступна CoolProp/REFPROP-ориентированная ветка через `RefrigerantSaturationProperties`; перенос CO₂-табличных коэффициентов на аммиак запрещён. NH₃-результаты являются расчётом тем же стационарным гидравлическим solver, но не являются экспериментальной валидацией аммиачной установки из [5]. Границы `critical_loads(...)` для NH₃ считаются тем же алгоритмом текущего solver; это не published режимная карта и не отдельно валидированная аммиачная qcrit-модель.
@@ -54,6 +56,7 @@ toc-title: "Содержание"
 - результаты программной верификации;
 - разграничение верификации, валидации и регрессионного тестирования;
 - аудит расхождений между Python-кодом, Mathcad, диссертацией и литературой.
+- open-web source-gate аудит и manifest решений по неподключённым published-кандидатам.
 
 # 1. Назначение и предмет моделирования
 
@@ -2015,7 +2018,8 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
-| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md | полный первоисточник обязателен; DOI/abstract/обзор недостаточны | ACADEMIC POLICY |
+| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_gate_manifest.json | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны | ACADEMIC POLICY |
+| OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
 | гидростатика по участку | pressure_balance | \(\rho g \Delta z\) | PUBLISHED / DEFINITIONAL |
@@ -2384,3 +2388,9 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 25. Span R., Wagner W. A New Equation of State for Carbon Dioxide Covering the Fluid Region from the Triple-Point Temperature to 1100 K at Pressures up to 800 MPa // Journal of Physical and Chemical Reference Data. 1996. Vol. 25. P. 1509–1596. DOI: [10.1063/1.555991](https://doi.org/10.1063/1.555991).
 
 26. Gao K., Wu J., Bell I. H., Lemmon E. W. Thermodynamic Properties of Ammonia for Temperatures from the Melting Line to 725 K and Pressures to 1000 MPa // Journal of Physical and Chemical Reference Data. 2020. Указано в документации CoolProp как equation-of-state reference для Ammonia.
+
+27. Open-web аудит source-gate источников. Локальный документ проекта: [docs/source_audit_open_web_2026-07-04.md](source_audit_open_web_2026-07-04.md).
+
+28. Source-gate manifest. Локальный структурированный manifest проекта: [docs/source_gate_manifest.json](source_gate_manifest.json).
+
+29. A correlation for boiling heat transfer to saturated fluids in convective flow. Technical report, 1962. OSTI ID 4636495. DOI: [10.2172/4636495](https://doi.org/10.2172/4636495). Full-text PURL: [https://www.osti.gov/servlets/purl/4636495](https://www.osti.gov/servlets/purl/4636495).

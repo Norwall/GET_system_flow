@@ -590,6 +590,16 @@ primary-source-only: DOI landing page, Crossref metadata, abstract, учебни
 первоисточника, переноса формул и областей применимости в
 `docs/formula_registry.md` и добавления численных тестов.
 
+Open-web аудит от 2026-07-04 оформлен в
+`docs/source_audit_open_web_2026-07-04.md`, а машинно-проверяемые решения
+зафиксированы в `docs/source_gate_manifest.json`. Он подтвердил, что найденные
+Crossref/Unpaywall/OpenAlex records и publisher endpoints пока не дают
+достаточного полного текста для MSH, Zuber-Findlay, Taitel-Barnea-Dukler,
+Wojtan/Thome, Kandlikar или Gungor-Winterton. EPFL landing pages для Wojtan
+Part I/II не снимают gate без `ORIGINAL`/full-text bitstream. OSTI
+`10.2172/4636495` является только source-candidate для возможной будущей
+heat-transfer ветки и не подключён к текущему расчёту.
+
 После source-gate прохода для Müller-Steinhagen-Heck 1986 и Friedel 1979 в
 `published_friction.py` добавлены только защитные функции:
 `muller_steinhagen_heck_1986_pressure_gradient_pa_per_m(...)` и

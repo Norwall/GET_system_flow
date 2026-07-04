@@ -1,0 +1,343 @@
+{
+  "manifest_version": "source-gate-open-web-2026-07-04",
+  "policy": {
+    "primary_source_only": true,
+    "audit_document": "docs/source_audit_open_web_2026-07-04.md",
+    "checkpoint_audit_document": "docs/source_audit_checkpoint_5_6.md",
+    "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
+    "released_requirements": [
+      "evidence_status must be audited",
+      "local_full_text_ref must identify the verified full text",
+      "required_audit_checks must be completed in docs/formula_registry.md",
+      "required_tests_before_release must be implemented and passing"
+    ]
+  },
+  "entries": [
+    {
+      "registry_id": "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
+      "candidate_id": null,
+      "model": "Muller-Steinhagen-Heck 1986 two-phase friction pressure drop",
+      "target_code": "published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m",
+      "primary_citation": "H. Muller-Steinhagen, K. Heck. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308.",
+      "primary_record": {
+        "doi": "10.1016/0255-2701(86)80008-3",
+        "crossref_url": "https://api.crossref.org/works/10.1016%2F0255-2701(86)80008-3",
+        "publisher_resource": "https://linkinghub.elsevier.com/retrieve/pii/0255270186800083",
+        "publisher_full_text_endpoint": "https://api.elsevier.com/content/article/PII:0255270186800083?httpAccept=text/plain"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
+        "unpaywall": "closed; no repository copy",
+        "openalex": "closed",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Full primary article text was not available from open web checks.",
+        "Darcy/Fanning convention, total/phase mass flux convention, and reference pressure-gradient definitions are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Transcribe the exact MSH formula and all coefficients from the full article.",
+        "Record friction-factor convention, mass-flux convention, phase property definitions, and applicability range.",
+        "Map the formula to SI units and current solver variables before any implementation."
+      ],
+      "required_tests_before_release": [
+        "Numerical reference-point test from the article or independently reproduced examples.",
+        "Darcy/Fanning convention regression test.",
+        "Source-gate test proving the guard was removed only after registry update."
+      ]
+    },
+    {
+      "registry_id": "TP-FRIEDEL-1979-SOURCE-GATE",
+      "candidate_id": null,
+      "model": "Friedel 1979 two-phase friction pressure drop",
+      "target_code": "published_friction.friedel_1979_pressure_gradient_pa_per_m",
+      "primary_citation": "L. Friedel. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, paper E2, 1979.",
+      "primary_record": {
+        "doi": "",
+        "crossref_url": "",
+        "publisher_resource": "",
+        "publisher_full_text_endpoint": ""
+      },
+      "evidence_status": "not_available",
+      "access_evidence": {
+        "crossref": "no matching primary DOI record found by title search",
+        "unpaywall": "not applicable without DOI",
+        "openalex": "not checked as a releasable full-text source",
+        "endpoint_check": "no publisher full-text endpoint identified"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Primary conference paper or scan was not found.",
+        "Formula, coefficients, and dimensionless groups cannot be audited from a primary source."
+      ],
+      "required_audit_checks": [
+        "Obtain the full Friedel 1979 paper or an archival scan.",
+        "Verify all dimensionless groups, property evaluation points, orientation limits, and pressure-gradient conventions.",
+        "Record exact applicability limits in docs/formula_registry.md."
+      ],
+      "required_tests_before_release": [
+        "Numerical reference-point test from the paper or a documented hand calculation.",
+        "Input-domain rejection tests for unsupported flow regimes and property ranges.",
+        "Guard-removal test tied to formula registry update."
+      ]
+    },
+    {
+      "registry_id": "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
+      "candidate_id": null,
+      "model": "Zuber-Findlay 1965 drift-flux void fraction",
+      "target_code": "future published drift-flux adapter; current drift_flux_void_fraction remains EXP-DRIFT-FLUX-LIKE-VOID",
+      "primary_citation": "N. Zuber, J. A. Findlay. Average Volumetric Concentration in Two-Phase Flow Systems. Journal of Heat Transfer, 1965, 87(4), 453-468.",
+      "primary_record": {
+        "doi": "10.1115/1.3689137",
+        "crossref_url": "https://api.crossref.org/works/10.1115%2F1.3689137",
+        "publisher_resource": "https://asmedigitalcollection.asme.org/heattransfer/article/87/4/453/429617/Average-Volumetric-Concentration-in-TwoPhase-Flow",
+        "publisher_full_text_endpoint": "http://asmedigitalcollection.asme.org/heattransfer/article-pdf/87/4/453/5908192/453_1.pdf"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
+        "unpaywall": "closed; no repository copy",
+        "openalex": "closed",
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Full primary article text was not available from open web checks.",
+        "C0, weighted drift velocity, averaging convention, and flow-regime applicability are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Transcribe the drift-flux equation and all definitions from the full article.",
+        "Separate general drift-flux structure from regime-specific C0 and Vgj closures.",
+        "Define vertical-riser applicability and unsupported cases explicitly."
+      ],
+      "required_tests_before_release": [
+        "Void-fraction bounds and limiting quality tests.",
+        "Reference-point test for at least one audited regime.",
+        "Test that experimental drift-flux-like coefficients are not reused in published mode."
+      ]
+    },
+    {
+      "registry_id": "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
+      "candidate_id": null,
+      "model": "Wojtan-Ursenbacher-Thome 2005 horizontal diabatic flow-boiling map",
+      "target_code": "published_regimes.classify_horizontal_evaporator_regime_result",
+      "primary_citation": "L. Wojtan, T. Ursenbacher, J. R. Thome. Investigation of flow boiling in horizontal tubes: Part I - A new diabatic two-phase flow pattern map. International Journal of Heat and Mass Transfer, 2005, 48, 2955-2969.",
+      "primary_record": {
+        "doi": "10.1016/j.ijheatmasstransfer.2004.12.012",
+        "crossref_url": "https://api.crossref.org/works/10.1016%2Fj.ijheatmasstransfer.2004.12.012",
+        "publisher_resource": "https://linkinghub.elsevier.com/retrieve/pii/S0017931005000268",
+        "publisher_full_text_endpoint": "https://api.elsevier.com/content/article/PII:S0017931005000268?httpAccept=text/plain",
+        "repository_record": "https://infoscience.epfl.ch/entities/publication/2c579a38-3bc0-4c50-92a5-f9c345cebe77"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
+        "unpaywall": "green landing page at EPFL, no PDF URL",
+        "openalex": "green landing page at EPFL, no PDF URL",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "EPFL repository landing page did not expose an ORIGINAL/full-text bitstream.",
+        "Transition criteria, dryout boundaries, dimensionless groups, and applicability limits are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Obtain the full Part I article text.",
+        "Transcribe all transition criteria and dryout boundaries with variables and units.",
+        "Record the map applicability range and refrigerants used in validation."
+      ],
+      "required_tests_before_release": [
+        "Regime-classification reference points across each implemented boundary.",
+        "Out-of-range classification test returning unknown/source-required or validation status.",
+        "Regression test that published mode no longer returns placeholder only after registry update."
+      ]
+    },
+    {
+      "registry_id": "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
+      "candidate_id": null,
+      "model": "Taitel-Barnea-Dukler 1980 vertical upflow regime map",
+      "target_code": "published_regimes.classify_vertical_riser_regime_result",
+      "primary_citation": "Y. Taitel, D. Barnea, A. E. Dukler. Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes. AIChE Journal, 1980, 26(3), 345-354.",
+      "primary_record": {
+        "doi": "10.1002/aic.690260304",
+        "crossref_url": "https://api.crossref.org/works/10.1002%2Faic.690260304",
+        "publisher_resource": "https://aiche.onlinelibrary.wiley.com/doi/10.1002/aic.690260304",
+        "publisher_full_text_endpoint": "https://aiche.onlinelibrary.wiley.com/doi/pdf/10.1002/aic.690260304"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and Wiley PDF URLs",
+        "unpaywall": "closed; no repository copy",
+        "openalex": "closed",
+        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Full primary article text was not available from open web checks.",
+        "Transition equations, coefficients, and orientation-specific applicability are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Transcribe all vertical upflow transition equations from the full article.",
+        "Record superficial velocity, property, diameter, and surface-tension definitions.",
+        "Define unsupported regimes and out-of-range behavior."
+      ],
+      "required_tests_before_release": [
+        "Reference classification tests for bubbly, slug, churn, annular, and transition boundaries.",
+        "Dimensional consistency tests for transition variables.",
+        "Placeholder-removal test tied to formula registry update."
+      ]
+    },
+    {
+      "registry_id": null,
+      "candidate_id": "HTC-KANDLIKAR-1990-SOURCE-CANDIDATE",
+      "model": "Kandlikar 1990 saturated flow-boiling heat transfer correlation",
+      "target_code": "future boiling_heat_transfer published HTC adapter",
+      "primary_citation": "S. G. Kandlikar. A General Correlation for Saturated Two-Phase Flow Boiling Heat Transfer Inside Horizontal and Vertical Tubes. Journal of Heat Transfer, 1990, 112(1), 219-228.",
+      "primary_record": {
+        "doi": "10.1115/1.2910348",
+        "crossref_url": "https://api.crossref.org/works/10.1115%2F1.2910348",
+        "publisher_resource": "https://asmedigitalcollection.asme.org/heattransfer/article/112/1/219/454100/A-General-Correlation-for-Saturated-TwoPhase-Flow",
+        "publisher_full_text_endpoint": "http://asmedigitalcollection.asme.org/heattransfer/article-pdf/112/1/219/5644274/219_1.pdf"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
+        "unpaywall": "closed; no repository copy",
+        "openalex": "not used as a release source",
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Full primary article text was not available from open web checks.",
+        "Correlation terms, boiling-number definitions, fluid factors, and applicability are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Audit all correlation factors and fluid constants from the full article.",
+        "Decide whether the current prescribed-heat-input formulation provides all required wall/flow inputs.",
+        "Record the implementation scope in docs/formula_registry.md."
+      ],
+      "required_tests_before_release": [
+        "Reference HTC values from the paper or audited examples.",
+        "Validation tests for missing wall/soil boundary data.",
+        "No dryout inference from numerical convergence."
+      ]
+    },
+    {
+      "registry_id": null,
+      "candidate_id": "HTC-GUNGOR-WINTERTON-1986-SOURCE-CANDIDATE",
+      "model": "Gungor-Winterton 1986 flow-boiling heat transfer correlation",
+      "target_code": "future boiling_heat_transfer published HTC adapter",
+      "primary_citation": "K. E. Gungor, R. H. S. Winterton. A general correlation for flow boiling in tubes and annuli. International Journal of Heat and Mass Transfer, 1986, 29(3), 351-358.",
+      "primary_record": {
+        "doi": "10.1016/0017-9310(86)90205-x",
+        "crossref_url": "https://api.crossref.org/works/10.1016%2F0017-9310(86)90205-x",
+        "publisher_resource": "https://linkinghub.elsevier.com/retrieve/pii/001793108690205X",
+        "publisher_full_text_endpoint": "https://api.elsevier.com/content/article/PII:001793108690205X?httpAccept=text/plain"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
+        "unpaywall": "closed; no repository copy",
+        "openalex": "not used as a release source",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text during open-web audit"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "Full primary article text was not available from open web checks.",
+        "Enhancement/suppression factors, nucleate-boiling base equation, and applicability are not source-audited."
+      ],
+      "required_audit_checks": [
+        "Audit all equation terms from the full article.",
+        "Define required thermophysical inputs and wall-boundary assumptions.",
+        "Record limits for tubes and annuli separately if implemented."
+      ],
+      "required_tests_before_release": [
+        "Reference HTC values from the paper or audited examples.",
+        "Tests for saturated and unsupported subcooled cases.",
+        "Source-status aggregation tests for released HTC model."
+      ]
+    },
+    {
+      "registry_id": null,
+      "candidate_id": "HTC-WOJTAN-THOME-2005-PART-II-SOURCE-CANDIDATE",
+      "model": "Wojtan-Ursenbacher-Thome 2005 Part II heat-transfer/dryout model",
+      "target_code": "future boiling_heat_transfer dryout or HTC adapter",
+      "primary_citation": "L. Wojtan, T. Ursenbacher, J. R. Thome. Investigation of flow boiling in horizontal tubes: Part II - Development of a new heat transfer model for stratified-wavy, dryout and mist flow regimes. International Journal of Heat and Mass Transfer, 2005, 48, 2970-2985.",
+      "primary_record": {
+        "doi": "10.1016/j.ijheatmasstransfer.2004.12.013",
+        "crossref_url": "https://api.crossref.org/works/10.1016%2Fj.ijheatmasstransfer.2004.12.013",
+        "publisher_resource": "https://linkinghub.elsevier.com/retrieve/pii/S001793100500027X",
+        "publisher_full_text_endpoint": "https://api.elsevier.com/content/article/PII:S001793100500027X?httpAccept=text/plain",
+        "repository_record": "https://infoscience.epfl.ch/entities/publication/32168752-6a94-480e-a56e-8cfd11bb09c1"
+      },
+      "evidence_status": "metadata_only",
+      "access_evidence": {
+        "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
+        "unpaywall": "green landing page at EPFL, no PDF URL",
+        "openalex": "not used as a release source",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+      },
+      "local_full_text_ref": "",
+      "decision": "source_required",
+      "blocking_reasons": [
+        "EPFL repository landing page did not expose an ORIGINAL/full-text bitstream.",
+        "Heat-transfer and dryout equations are not source-audited from full text."
+      ],
+      "required_audit_checks": [
+        "Obtain the full Part II article text.",
+        "Audit each heat-transfer regime equation, dryout boundary, and coupling to Part I map.",
+        "Define whether implementation requires Part I published regime map release first."
+      ],
+      "required_tests_before_release": [
+        "Reference HTC/dryout test points from the article.",
+        "Tests that Part II model refuses to run without required Part I regime-map inputs.",
+        "Diagnostic separation tests for HTC, dryout, and hydrodynamic qcrit."
+      ]
+    },
+    {
+      "registry_id": null,
+      "candidate_id": "HTC-OSTI-1962-SOURCE-CANDIDATE",
+      "model": "1962 OSTI saturated convective boiling heat-transfer report",
+      "target_code": "future boiling_heat_transfer source-candidate adapter",
+      "primary_citation": "A correlation for boiling heat transfer to saturated fluids in convective flow. Technical report, 1962, OSTI ID 4636495.",
+      "primary_record": {
+        "doi": "10.2172/4636495",
+        "crossref_url": "https://api.crossref.org/works/10.2172%2F4636495",
+        "publisher_resource": "https://www.osti.gov/biblio/4636495",
+        "publisher_full_text_endpoint": "https://www.osti.gov/servlets/purl/4636495"
+      },
+      "evidence_status": "full_text_available",
+      "access_evidence": {
+        "crossref": "confirmed DOI and title via search result",
+        "unpaywall": "green repository full-text PDF",
+        "openalex": "not used as a release source",
+        "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908"
+      },
+      "local_full_text_ref": "https://www.osti.gov/servlets/purl/4636495",
+      "decision": "source_candidate",
+      "blocking_reasons": [
+        "This report is not one of the originally selected Kandlikar/Shah/Gungor-Winterton correlations.",
+        "Applicability to the current refrigerant loop, prescribed heat input, and available wall-boundary data has not been audited."
+      ],
+      "required_audit_checks": [
+        "Read the full report and decide whether the correlation is applicable to saturated flow boiling in the current geometry.",
+        "Transcribe equations, constants, variables, and limitations into docs/formula_registry.md if selected.",
+        "Decide whether it is a diagnostic HTC candidate or an active released model."
+      ],
+      "required_tests_before_release": [
+        "Reference HTC values from the report.",
+        "Boundary-condition validation tests.",
+        "Source-status aggregation tests for any released adapter."
+      ]
+    }
+  ]
+}
