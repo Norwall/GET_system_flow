@@ -66,6 +66,8 @@ def test_published_regime_placeholders_do_not_claim_physical_classification() ->
     assert vertical.status == "source_required"
     assert "Wojtan" in horizontal.source
     assert "Taitel" in vertical.source
+    assert "full primary-source" in horizontal.source
+    assert "full primary-source" in vertical.source
     assert "source gate" in horizontal.transition_criteria
     assert "source gate" in vertical.transition_criteria
     assert horizontal.confidence == "not_evaluated"

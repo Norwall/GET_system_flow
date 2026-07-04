@@ -30,6 +30,8 @@ toc-title: "Содержание"
 
 После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После source-gate аудита Müller-Steinhagen-Heck и Friedel добавлены не расчётные корреляции, а защищённые функции-заглушки, выбрасывающие `SourceRequiredCorrelationError`: доступный библиографический уровень и предварительная страница статьи подтверждают публикации, но не фиксируют полную формулу, соглашение по жидкостным/газовым опорным градиентам, полному массовому потоку и выбору коэффициента трения Darcy/Fanning. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты и возвращает source-gated статус `source_required`. Отдельный вход `regime_model` отделяет режимную диагностику от `closure_model`: старый CO₂-фасад сохраняет experimental default, а универсальный фасад по умолчанию показывает source-required published metadata. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
 
+После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
+
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
 Для CO₂ доступны две ветки свойств: Mathcad-compatible таблицы из `CO2.xmcd` и CoolProp HEOS. Для NH₃ доступна CoolProp/REFPROP-ориентированная ветка через `RefrigerantSaturationProperties`; перенос CO₂-табличных коэффициентов на аммиак запрещён. NH₃-результаты являются расчётом тем же стационарным гидравлическим solver, но не являются экспериментальной валидацией аммиачной установки из [5]. Границы `critical_loads(...)` для NH₃ считаются тем же алгоритмом текущего solver; это не published режимная карта и не отдельно валидированная аммиачная qcrit-модель.
@@ -952,6 +954,12 @@ compatibility-слой, а `published_regimes.py` пока содержит то
 отчёты. Новый универсальный `RefrigerantLoopModel` по умолчанию использует
 `regime_model="published_regime_map"`, чтобы не выдавать эвристические пороги
 за published-карту.
+
+Важно: `published_regime_map` сейчас является source-gated published-заготовкой,
+а не реализацией карт Wojtan–Ursenbacher–Thome или Taitel–Barnea–Dukler. Пока
+полные первоисточники не сверены, корректный академический статус этой ветки —
+`source_required`; вторичные пересказы transition criteria не должны переноситься
+в код как published-модель.
 
 ## 9.1. Общая схема
 
@@ -1932,7 +1940,14 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 - `pytest tests/test_scenario_matrix.py -q` — 18 passed;
 - `pytest tests/test_refrigerant_loop_model.py tests/test_segmented_geometry.py tests/test_qcrit_solver.py tests/test_scenario_matrix.py -q` — 31 passed.
 
-Полный `pytest -q` в текущем окружении был запущен, но не завершился за 360 с; до таймаута падений не было. Поэтому для Checkpoint 10 acceptance-контуром считается targeted-набор выше.
+После source-audit обновления от 2026-07-04 полный набор в текущем окружении
+завершился успешно:
+
+- `pytest -q` — 225 passed за 510.06 s.
+- `pytest tests/test_formula_registry.py tests/test_regime_maps.py tests/test_two_phase_pressure_drop.py tests/test_refrigerant_loop_model.py -q` — 120 passed за 21.65 s.
+
+Этот полный прогон заменяет прежнюю запись о таймауте. Targeted-наборы ниже
+остаются полезными для быстрой локальной проверки отдельных подсистем.
 
 После добавления Checkpoint 7 scaffold дополнительно выполнены targeted-проверки:
 
@@ -2000,6 +2015,7 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
+| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md | полный первоисточник обязателен; DOI/abstract/обзор недостаточны | ACADEMIC POLICY |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
 | гидростатика по участку | pressure_balance | \(\rho g \Delta z\) | PUBLISHED / DEFINITIONAL |
@@ -2136,6 +2152,10 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 при условии отдельной проверки legacy-логарифма коэффициента трения. Для сравнительных расчетов с опубликованными двухфазными замыканиями доступны `homogeneous_equilibrium` и `zivi`; их пустотность и фрикционная база отделены от experimental-слоя. Новый `RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")` использует тот же гидравлический solver и published fallback closure, но не закрывает валидацию аммиачной ГЕТ. `experimental_regime_aware` следует считать исследовательским режимом.
 
 Поле `model_scientific_status` относится к выбранному closure-слою и не означает, что вся цепочка результата уже является завершённой published-моделью. Для этого добавлены агрегированные поля `model_source_status` и `source_gate_reasons`. Если `RefrigerantLoopModel` использует published fallback closures вместе с `published_regime_map`, то результат может иметь `model_scientific_status="published"` и одновременно `model_source_status="source_required"`, потому что режимные карты, boiling HTC и dryout/CHF пока оставлены за source-gate. Для legacy `experimental_regime_aware` корректный агрегированный статус — `experimental_no_primary_source`.
+
+Формула, найденная в обзоре, учебнике или чужой реализации, не должна менять
+`model_source_status` на `source_complete`. Для этого требуется полный
+первоисточник, запись в реестре формул и тесты численных контрольных точек.
 
 Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки.
 

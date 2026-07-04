@@ -11,6 +11,12 @@
 Для каждой реализованной записи обязательны поля: статус, математическая запись,
 переменные и размерности, область применимости, источник, код и тесты.
 
+Для записей со статусом `SOURCE_REQUIRED` действует политика
+primary-source-only: формулы, коэффициенты, transition equations и области
+применимости нельзя переносить в расчет по DOI landing page, abstract, Crossref
+metadata, учебнику, обзору или пересказу. Gate снимается только после проверки
+полного первоисточника, что фиксируется в `docs/source_audit_checkpoint_5_6.md`.
+
 ## Сводка реализованных записей
 
 | ID | Статус | Код |
@@ -419,7 +425,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Математическая запись: не реализована в расчёте. Полная формула, определения жидкостного и газового опорных градиентов давления, соглашение по полному массовому потоку и соглашение по коэффициенту трения Darcy/Fanning должны быть переписаны только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; гидравлический диаметр, м; friction factor безразмерен.
 - Область применимости: ожидаемая резервная published pressure-drop корреляция для двухфазного течения в трубах; не подключена к `closure_model` и не участвует в solver.
-- Источник: Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308, DOI `10.1016/0255-2701(86)80008-3`. Доступная предварительная страница статьи подтверждает статью, abstract и наличие двух подгоночных параметров, но не даёт полной формулы и соглашений о величинах.
+- Источник: Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes. Chemical Engineering and Processing, 1986, 20(6), 297-308, DOI `10.1016/0255-2701(86)80008-3`; `docs/source_audit_checkpoint_5_6.md`. Доступная предварительная страница статьи подтверждает статью, abstract и наличие двух подгоночных параметров, но не даёт полной формулы и соглашений о величинах.
 - Код: `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
 - Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
 
@@ -429,7 +435,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 - Математическая запись: не реализована в расчёте. Формула Friedel, коэффициенты, безразмерные комплексы и области применимости должны быть внесены только после проверки полного первичного текста доклада.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; поверхностное натяжение, Н/м; гидравлический диаметр, м; безразмерные комплексы.
 - Область применимости: ожидаемая резервная published pressure-drop корреляция для горизонтального и вертикального двухфазного течения; не подключена к `closure_model` и не участвует в solver.
-- Источник: Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, Italy, paper E2, 1979. В текущем source-аудите полный первичный текст доклада не доступен.
+- Источник: Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow. European Two-Phase Flow Group Meeting, Ispra, Italy, paper E2, 1979; `docs/source_audit_checkpoint_5_6.md`. В текущем source-аудите полный первичный текст доклада не доступен.
 - Код: `published_friction.friedel_1979_pressure_gradient_pa_per_m` — защитная заглушка, которая выбрасывает `SourceRequiredCorrelationError`.
 - Тесты: `tests/test_two_phase_pressure_drop.py`; `tests/test_formula_registry.py`.
 
@@ -780,6 +786,7 @@ Hy(f)-H=0
 ## Правила сопровождения
 
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
+- Для снятия `SOURCE_REQUIRED` нужен полный первоисточник; DOI landing page, abstract, Crossref metadata, учебники, обзоры и пересказы формул не являются достаточным основанием для подключения модели как `published`.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
 - Сценарные и регрессионные проверки допускаются со статусом `REGRESSION_DIAGNOSTIC`, если они не добавляют формулу и не объявляются физической моделью.
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.

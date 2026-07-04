@@ -97,10 +97,18 @@ def test_published_closure_pressure_gradient_uses_lockhart_martinelli_chisholm()
 
 
 def test_muller_steinhagen_heck_guard_requires_primary_source_audit() -> None:
-    with pytest.raises(SourceRequiredCorrelationError, match="Muller-Steinhagen-Heck 1986"):
+    with pytest.raises(SourceRequiredCorrelationError, match="Muller-Steinhagen-Heck 1986") as exc_info:
         muller_steinhagen_heck_1986_pressure_gradient_pa_per_m()
+    message = str(exc_info.value)
+    assert "not implemented" in message
+    assert "primary-source" in message
+    assert "source audit" in message
 
 
 def test_friedel_guard_requires_primary_source_audit() -> None:
-    with pytest.raises(SourceRequiredCorrelationError, match="Friedel 1979"):
+    with pytest.raises(SourceRequiredCorrelationError, match="Friedel 1979") as exc_info:
         friedel_1979_pressure_gradient_pa_per_m()
+    message = str(exc_info.value)
+    assert "not implemented" in message
+    assert "primary-source" in message
+    assert "source audit" in message

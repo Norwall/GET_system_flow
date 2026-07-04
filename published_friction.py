@@ -23,7 +23,7 @@ def friedel_1979_pressure_gradient_pa_per_m(*args: Any, **kwargs: Any) -> Any:
     """Guard for the Friedel 1979 pressure-drop correlation until source audit is complete."""
 
     raise SourceRequiredCorrelationError(
-        "Friedel 1979 is not implemented: the full primary conference paper and "
+        "Friedel 1979 is not implemented: the full primary-source conference paper and "
         "formula conventions are not available in the current source audit."
     )
 

@@ -162,6 +162,12 @@ Wojtan-Ursenbacher-Thome пока не подключаются как расч�
 добавлены защитные source-gate функции в `published_friction.py`; они
 выбрасывают `SourceRequiredCorrelationError`, пока первоисточник не сверен.
 
+С 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика
+primary-source-only: DOI landing page, Crossref metadata, abstract, учебник,
+обзор или пересказ формулы не снимают source-gate. Published-корреляция может
+быть подключена только после проверки полного первоисточника и обновления
+`docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
+
 Checkpoint 6 split:
 
 - текущие эвристические режимные классификаторы вынесены в
@@ -218,6 +224,8 @@ Markdown-отчет дополнительно выводит source/failure/boi
 ```powershell
 pytest -q
 ```
+
+Последний полный прогон в текущем окружении: `225 passed in 510.06s`.
 
 Если окружение не дает писать во внешний temp-каталог, используйте локальный temp:
 

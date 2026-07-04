@@ -583,6 +583,13 @@ Lockhart-Martinelli/Chisholm. Müller-Steinhagen-Heck, Friedel,
 Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome пока остаются
 задачами следующих этапов до сверки точных формул по полному первоисточнику.
 
+После обновления source-audit от 2026-07-04 для этих записей действует правило
+primary-source-only: DOI landing page, Crossref metadata, abstract, учебник,
+обзор или пересказ формулы не считаются достаточным основанием для расчётной
+реализации. Снять `SOURCE_REQUIRED` можно только после проверки полного
+первоисточника, переноса формул и областей применимости в
+`docs/formula_registry.md` и добавления численных тестов.
+
 После source-gate прохода для Müller-Steinhagen-Heck 1986 и Friedel 1979 в
 `published_friction.py` добавлены только защитные функции:
 `muller_steinhagen_heck_1986_pressure_gradient_pa_per_m(...)` и

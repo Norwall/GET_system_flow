@@ -451,6 +451,12 @@ Friedel 1979 остаётся без найденной первичной DOI-�
 явно показывал незакрытые source-gate ограничения вместо того, чтобы выглядеть
 как полностью реализованная published-физика.
 
+Статус primary-source-only update от 2026-07-04: для всех записей
+`SOURCE_REQUIRED` явно закреплено правило полного первоисточника. DOI landing
+page, Crossref metadata, abstract, учебник, обзор или пересказ формулы не
+снимают source-gate. Реестр формул и `docs/source_audit_checkpoint_5_6.md`
+связаны тестами; полный прогон `pytest -q` прошёл: 225 passed.
+
 ### Задачи
 
 - [x] Разделить closure models на:
