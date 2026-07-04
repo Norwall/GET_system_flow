@@ -34,6 +34,10 @@ def frame_to_text_table(df: pd.DataFrame) -> str:
         return df.to_string(index=False)
 
 
+def existing_columns(df: pd.DataFrame, columns: list[str]) -> list[str]:
+    return [column for column in columns if column in df.columns]
+
+
 def run_scenarios(model: CO2MathcadModel) -> pd.DataFrame:
     rows = []
     for sc in DEFAULT_SCENARIOS:
@@ -84,13 +88,43 @@ def build_report(checks: dict, scenarios: pd.DataFrame, sweep: pd.DataFrame) -> 
     lines.append('')
     lines.append('## Scenario summary')
     show_cols = ['scenario', 'qtr', 'converged', 'solver_status', 'fff', 'tav_C', 'tmm_C', 'tvih_C', 'GG0_liq_equiv_lph', 'GG0_gas_lph', 'GL1_lph', 'GL0_lph', 'chiG1_mass', 'phiG1_true', 'deltaP_Pa']
-    lines.append(frame_to_text_table(scenarios[show_cols]))
+    lines.append(frame_to_text_table(scenarios[existing_columns(scenarios, show_cols)]))
+    lines.append('')
+    lines.append('## Source and limit diagnostics')
+    diagnostic_cols = [
+        'scenario',
+        'fluid',
+        'property_backend',
+        'model_scientific_status',
+        'model_source_status',
+        'regime_model',
+        'regime_model_source_status',
+        'failure_class',
+        'boiling_heat_transfer_status',
+        'boiling_heat_transfer_limit',
+        'dryout_limit',
+        'qcrit_status',
+    ]
+    lines.append(frame_to_text_table(scenarios[existing_columns(scenarios, diagnostic_cols)]))
+    source_gate_rows = scenarios[['scenario', 'source_gate_reasons']] if 'source_gate_reasons' in scenarios else pd.DataFrame()
+    if not source_gate_rows.empty:
+        lines.append('')
+        lines.append('### Source-gate reasons')
+        for _, row in source_gate_rows.iterrows():
+            reasons = row['source_gate_reasons']
+            if isinstance(reasons, list):
+                reason_text = '; '.join(str(item) for item in reasons) or 'none'
+            else:
+                reason_text = str(reasons) if reasons else 'none'
+            lines.append(f"- {row['scenario']}: {reason_text}")
     lines.append('')
     lines.append('## Notes on validation')
     lines.append('- The dissertation states that the working model takes evaporator length, condenser height, condenser temperature and heat load as inputs; the same input structure is used here.')
     lines.append('- The dissertation chapter 4 / appendix G gives a CO2 benchmark for H=2.5 m, Li=200 m, tcon=0 C with qmax=71.18 W/m. In the Python port, this point is computable and some quantities are close (for example GG(0) ≈ 235.09 l/h), but the full critical-regime table is not reproduced exactly from the single XMCD workbook alone.')
     lines.append('- The dissertation explicitly defines upper critical heat load through the special limiting condition f=0; that outer critical-load algorithm is not fully encoded in the uploaded workbook and therefore is not claimed as fully reproduced here.')
     lines.append('- In distributed mode the flow-regime map is not just diagnostic anymore for the regime-aware closure: the diagnosed local regime is used to switch the underlying void-fraction and friction model inside the momentum solver.')
+    lines.append('- The steady-run result reports `qcrit_status="not_evaluated"` because the separate `critical_loads` sweep is intentionally not launched from this demo.')
+    lines.append('- Boiling and dryout fields are diagnostic/source-gated metadata only; published HTC, dryout and CHF correlations are not wired without full primary-source formulas.')
     lines.append('')
     lines.append('## Files')
     lines.append('- get_co2_model.py — model implementation')

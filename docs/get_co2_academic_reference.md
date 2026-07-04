@@ -2,13 +2,15 @@
 title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
-date: "3 июля 2026 г."
+date: "4 июля 2026 г."
 toc-title: "Содержание"
 ---
 
 # Аннотация
 
 Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10 и source-gate аудита Checkpoint 5-6: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
+
+После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model` и флаг `allow_property_extrapolation`. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics и `qcrit_status`. Это является интерфейсной и отчётной доработкой: она не добавляет новых физических корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -37,6 +39,8 @@ toc-title: "Содержание"
 После Checkpoint 9 критические тепловые нагрузки вынесены в отдельный отчёт `critical_loads.py`. Он использует текущий стационарный solver как физическую систему уравнений, уточняет нижнюю и верхнюю границы существования решения после bracket-поиска и отдельно решает диссертационное условие \(Hy(q_\ell,f=0)-H=0\). Этот отчёт нельзя смешивать с dryout/CHF: кризис теплообмена по-прежнему требует опубликованной heat-transfer корреляции.
 
 После Checkpoint 10 добавлен `scenario_matrix.py`. Он не вводит новых уравнений, коэффициентов или published-корреляций: слой только выбирает набор контрольных точек CO₂/NH₃, выполняет быстрый поиск корня \(Hy(f)-H=0\) с укороченной сеткой и классифицирует результат как `working`, `no_root`, `no_driving_head`, `near_critical_region`, `property_out_of_range`, `validation_error`, `backend_unavailable` или `numerical_failure`. Сценарная матрица является регрессионной и диагностической проверкой покрытия режимов; она не является расчётом \(q_{\rm cr}\), не заменяет `critical_loads.py` и не добавляет научную валидацию модели.
+
+Интерфейсные средства (`get_designer_api.py`, `web/src/main.jsx`, `run_get_co2_demo-1.py`) должны рассматриваться как слой постановки, запуска и представления результата. Их академическая роль состоит в явном отображении выбранных источников и ограничений расчёта; они не являются самостоятельной физической моделью.
 
 Документ содержит:
 
@@ -119,7 +123,7 @@ toc-title: "Содержание"
     derive_geometry
             |
             v
-    H, qtr, Li, tcon, fluid, property_backend, mode, closure_model, friction_model, heat_transfer_model
+    H, qtr, Li, tcon, fluid, property_backend, mode, closure_model, regime_model, friction_model, heat_transfer_model
             |
             v
     CO2MathcadModel / RefrigerantLoopModel / SteadyLoopSolver
@@ -141,6 +145,7 @@ toc-title: "Содержание"
             +--> словарь совместимости
             +--> REST API
             +--> CSV, Markdown и графики
+            +--> designer/web diagnostics
             +--> scenario_matrix status report
 
 ## 2.2. Назначение модулей
@@ -166,9 +171,10 @@ toc-title: "Содержание"
 | co2_results.py | типизированные результаты, профили и имена совместимости |
 | co2_function_matrix.py | расчёт матрицы функционирования и приближённых границ сходимости |
 | co2_visualization.py | графики профилей, замыканий и режимов |
-| get_designer_geometry.py | схема сценария, валидация и преобразование нарисованной геометрии |
-| get_designer_api.py | локальный REST API и запуск решателя |
-| web/src/main.jsx | интерактивный редактор геометрии |
+| get_designer_geometry.py | схема сценария, валидация геометрии и solver-настроек, преобразование нарисованной геометрии |
+| get_designer_api.py | локальный REST API, derivation геометрии и запуск общего refrigerant solver |
+| web/src/main.jsx | интерактивный редактор геометрии, solver controls и вывод source/failure diagnostics |
+| run_get_co2_demo-1.py | демонстрационный CSV/Markdown/PNG отчёт с source, failure, boiling/dryout и qcrit diagnostics |
 
 ## 2.3. Уровни научной прослеживаемости
 
@@ -1676,6 +1682,11 @@ SteadyPassResult содержит интегральные расходы, пу�
 | property_backend, property_source | источник термодинамических свойств |
 | tmm_C, tvih_C, tav_C | вспомогательные температуры Mathcad |
 | RVN0, RVN, RV1 | нормированные индикаторы |
+| model_scientific_status | статус выбранного closure-слоя: mathcad_compatible, published, experimental, mixed |
+| model_source_status | агрегированный source-status активной расчётной цепочки |
+| source_gate_reasons | список причин, по которым результат остаётся source-gated или experimental |
+| regime_model | выбранный источник режимной диагностики |
+| regime_model_source_status | source-status режимной диагностики |
 | friction_model | фактически выбранная модель коэффициента трения |
 | pressure_balance_terms | список гидростатических, фрикционных, ускорительных и местных членов |
 | pressure_balance_sections | агрегированные члены баланса по участкам |
@@ -1762,7 +1773,22 @@ SteadyPassResult содержит интегральные расходы, пу�
 
 Допустимые типы сегментов: evaporator, riser, condenser, downcomer, connector.
 
+Connector-сегменты могут храниться в сценарии как элементы редактирования, но текущий steady solver принимает только расчётные участки evaporator, riser, condenser и downcomer. Произвольная многосегментная схема с локальными сопротивлениями переходов остаётся следующим этапом.
+
 Допустимый тепловой режим пока один: prescribed_qtr.
+
+Поле `solver` хранит:
+
+- `tcon_C`;
+- `mode`;
+- `closure_model`;
+- `H_override_m`;
+- `fluid`;
+- `property_backend`;
+- `regime_model`;
+- `friction_model`;
+- `heat_transfer_model`;
+- `allow_property_extrapolation`.
 
 ## 15.2. Валидация сценария
 
@@ -1777,6 +1803,9 @@ SteadyPassResult содержит интегральные расходы, пу�
 - положительные свойства грунта;
 - корректный порядок границ грунтовых слоёв;
 - допустимые mode и closure_model;
+- допустимые fluid и property_backend;
+- запрет `mathcad_table` для NH₃;
+- допустимые regime_model, friction_model и heat_transfer_model;
 - положительный H_override_m.
 
 Перед запуском дополнительно требуются \(L_i>0\), \(H>0\), \(q_\ell>0\).
@@ -1786,11 +1815,13 @@ SteadyPassResult содержит интегральные расходы, пу�
 После Checkpoint 4 designer передаёт в solver не только скалярные режимные параметры, но и объект `LoopGeometry`:
 
 \[
-\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm heat\_transfer\_model},\ {\rm geometry}\}.
+\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm regime\_model},\ {\rm friction\_model},\ {\rm heat\_transfer\_model},\ {\rm geometry}\}.
 \tag{15.1}
 \]
 
-`geometry` содержит четыре расчётных участка `FlowSection`: evaporator, riser, condenser и downcomer. Для каждого участка сохраняются идентификатор, тип, ориентация, длина, перепад отметки, гидравлический диаметр, абсолютная и относительная шероховатость, площадь и `heat_mode`. Python-фасад также допускает ручную геометрию с `geometry_source="manual_sections"`. Параметры `friction_model` и `heat_transfer_model` доступны через Python-фасады `CO2MathcadModel` и `RefrigerantLoopModel`; в сценарии конструктора тепловой режим пока соответствует `prescribed_qtr` / `prescribed_heat_input`.
+`fluid`, `property_backend` и `allow_property_extrapolation` используются при создании `RefrigerantLoopModel` и его property backend; остальные параметры передаются в `SteadyLoopInputs`. Для старых CO₂-сценариев дефолты сохраняют ветку `mathcad_table`, `experimental_regime_aware`, `mathcad_compat` и `prescribed_heat_input`; для NH₃ `mathcad_table` запрещён.
+
+`geometry` содержит четыре расчётных участка `FlowSection`: evaporator, riser, condenser и downcomer. Для каждого участка сохраняются идентификатор, тип, ориентация, длина, перепад отметки, гидравлический диаметр, абсолютная и относительная шероховатость, площадь и `heat_mode`. Python-фасад также допускает ручную геометрию с `geometry_source="manual_sections"`. В сценарии конструктора тепловой режим участка пока соответствует `prescribed_qtr` / `prescribed_heat_input`.
 
 ## 15.4. Параметры грунта
 
@@ -1818,6 +1849,8 @@ SteadyPassResult содержит интегральные расходы, пу�
 
 API предназначен для локальной работы. CORS разрешён только для localhost и 127.0.0.1 на порту 5173. Сценарии записываются в artifacts/scenarios.
 
+`POST /api/run` возвращает полный `SteadyLoopResult.to_dict()`. Поэтому клиент получает не только старые инженерные величины \(f\), \(H_y\), \(\Delta p\), \(G\) и \(x\), но и source/failure поля: `fluid`, `property_backend`, `model_source_status`, `source_gate_reasons`, `failure_class`, `boiling_heat_transfer_limit`, `dryout_limit`, `qcrit_status` и `qcrit_model`.
+
 ## 15.6. Web-интерфейс
 
 React-интерфейс позволяет:
@@ -1826,11 +1859,15 @@ React-интерфейс позволяет:
 - соединять их сегментами;
 - назначать типы;
 - задавать диаметры и шероховатости;
-- редактировать \(q_\ell,t_k,H\), mode и closure_model;
+- редактировать \(q_\ell,t_k,H\), mode, closure_model, fluid, property_backend, regime_model, friction_model и heat_transfer_model;
+- включать явную экстраполяцию свойств, если пользователь принимает этот риск;
 - сохранять и запускать сценарий;
-- видеть основные результаты.
+- видеть основные гидравлические результаты;
+- видеть source/failure diagnostics, boiling/dryout statuses, `qcrit_status` и список `source_gate_reasons`.
 
 Клиент повторяет часть геометрических формул для интерактивного предварительного просмотра. Авторитетный расчёт перед запуском выполняется сервером.
+
+Web-интерфейс не запускает `critical_loads` по умолчанию: поле `qcrit_status` в обычном steady-run остаётся `not_evaluated`. При выборе NH₃ клиент автоматически заменяет `mathcad_table` на `coolprop`, чтобы не отправлять заведомо недопустимый backend.
 
 # 16. Верификация и валидация
 
@@ -1903,7 +1940,15 @@ React-интерфейс позволяет:
 - `pytest tests/test_pressure_balance.py tests/test_void_fraction_models.py tests/test_two_phase_pressure_drop.py tests/test_regime_maps.py -q` — 20 passed;
 - `pytest tests/test_nh3_properties.py tests/test_nh3_loop_solver.py -q -m "not slow and not distributed"` — 9 passed, 1 deselected.
 
-Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel`, NH₃ loop scenarios, qcrit bracket/f-zero solver, сценарную матрицу Checkpoint 10 и защиту boiling/dryout diagnostics от подмены численной несходимости. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
+После обновления отчётов и designer UI выполнены проверки:
+
+- `pytest tests/test_get_designer_geometry.py tests/test_get_designer_api.py tests/test_refrigerant_loop_model.py tests/test_co2_result_fields.py tests/test_boiling_diagnostics.py -q -m "not slow"` — 19 passed, 3 deselected;
+- `pytest tests/test_formula_registry.py tests/test_regime_maps.py tests/test_two_phase_pressure_drop.py tests/test_void_fraction_models.py -q` — 117 passed;
+- `python run_get_co2_demo-1.py` — демонстрационный отчёт, CSV и графики пересобраны;
+- `npm.cmd run build` в `web` — production build собран;
+- `python -m py_compile get_designer_geometry.py get_designer_api.py run_get_co2_demo-1.py` — синтаксическая проверка пройдена.
+
+Тесты включают свойства CO₂/NH₃, CoolProp reference CSV, регрессию Mathcad-compatible ветки, формульный реестр, pressure balance, результаты, геометрию, API, новый `RefrigerantLoopModel`, NH₃ loop scenarios, qcrit bracket/f-zero solver, сценарную матрицу Checkpoint 10, защиту boiling/dryout diagnostics от подмены численной несходимости, а также round-trip новых designer solver controls и возврат source/failure diagnostics через REST API. Это хороший уровень программной защиты от случайных изменений, но не научная валидация.
 
 ## 16.6. Экспериментальные данные
 
@@ -2113,7 +2158,8 @@ Boiling/dryout поля результата допустимо использо
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
 - агрегированный `model_source_status` и список `source_gate_reasons`, которые не дают перепутать published fallback closure с полностью реализованной published-физикой;
 - отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
-- быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы.
+- быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы;
+- designer/API и демонстрационный Markdown-отчёт показывают source/failure/boiling/dryout/qcrit diagnostics пользователю, а не оставляют их скрытыми в Python-словаре.
 
 Научные ограничения:
 
@@ -2123,8 +2169,9 @@ Boiling/dryout поля результата допустимо использо
 - отсутствие экспериментальной валидации и табличной калибровки qcrit-отчёта;
 - отсутствие published режимных карт и boiling/dryout prediction; NH₃ qcrit остаётся переносом общего solver без отдельной аммиачной валидации;
 - сценарная матрица остаётся регрессионной диагностикой и не является физической режимной картой или qcrit-моделью;
-- неподключённая физика грунта и произвольной геометрии;
-- обнаруженные вопросы к legacy-логарифму трения и неподключённой произвольной геометрии конструктора.
+- отображение source/failure diagnostics в UI и отчётах не является научной валидацией и не закрывает source-gate;
+- неподключённая физика грунта и локальные сопротивления произвольной геометрии;
+- обнаруженные вопросы к legacy-логарифму трения и ограниченная поддержка произвольной многосегментной геометрии конструктора.
 
 Поэтому текущую версию корректно характеризовать как исследовательский инженерный расчётный инструмент и платформу для последующей научной верификации, а не как завершённую универсальную модель ГЕТ.
 
@@ -2246,6 +2293,8 @@ Boiling/dryout поля результата допустимо использо
 | numerical_failure | no_root_bracket, root_solver_failed, aux_temperature_failed | численная причина, не равная dryout |
 
 Эти поля являются классификацией текущего программного результата одного steady-run. `model_source_status="source_required"` не является ошибкой solver; это академический флаг, что часть заявленной published-физики пока не перенесена из полного первоисточника. Поля не являются самим `critical_loads`-отчётом и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) без отдельного bracket/refinement расчёта.
+
+Designer, REST API, web UI и демонстрационный Markdown-отчёт только передают и отображают эти поля. Отображение статуса `source_required` или `experimental_no_primary_source` является защитной академической маркировкой, а не дефектом численного решения.
 
 ## Б.3. Статусы сценарной матрицы
 

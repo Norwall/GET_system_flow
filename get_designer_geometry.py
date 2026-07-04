@@ -33,6 +33,37 @@ VALID_CLOSURE_MODELS = {
     "regime_aware",
     "experimental_regime_aware",
 }
+VALID_PROPERTY_BACKENDS = {
+    "mathcad",
+    "mathcad_table",
+    "worksheet_compatible",
+    "coolprop",
+    "heos",
+    "refprop",
+    "nist_refprop",
+}
+MATHCAD_PROPERTY_BACKENDS = {"mathcad", "mathcad_table", "worksheet_compatible"}
+VALID_REGIME_MODELS = {"experimental_regime_aware", "regime_aware", "published_regime_map"}
+VALID_FRICTION_MODELS = {
+    "mathcad_compat",
+    "worksheet_compatible",
+    "legacy",
+    "legacy_blended",
+    "colebrook",
+    "colebrook_white",
+    "churchill",
+    "churchill_explicit",
+    "laminar_only",
+    "zero_friction",
+}
+VALID_HEAT_TRANSFER_MODELS = {
+    "prescribed_heat_input",
+    "prescribed",
+    "prescribed_qtr",
+    "fixed_heat_input",
+    "wall_coupled",
+    "wall_soil_coupled",
+}
 
 DEFAULT_SCENARIO_DIR = Path("artifacts") / "scenarios"
 
@@ -88,6 +119,12 @@ class SolverConfig:
     mode: str = "worksheet_compatible"
     closure_model: str = "worksheet_compatible"
     H_override_m: float | None = None
+    fluid: str = "CO2"
+    property_backend: str = "mathcad_table"
+    regime_model: str = "experimental_regime_aware"
+    friction_model: str = "mathcad_compat"
+    heat_transfer_model: str = "prescribed_heat_input"
+    allow_property_extrapolation: bool = False
 
 
 @dataclass(frozen=True)
@@ -164,13 +201,13 @@ class DerivedGeometry:
         except ValueError as exc:
             raise ScenarioValidationError(str(exc)) from exc
 
-    def to_solver_inputs(self, scenario: GETScenario) -> dict[str, float | str | LoopGeometry]:
+    def to_solver_inputs(self, scenario: GETScenario) -> dict[str, Any]:
         if self.evaporator_length_m <= 0.0:
             raise ScenarioValidationError("Scenario must include at least one evaporator segment.")
         if self.H_m <= 0.0:
-            raise ScenarioValidationError("Derived or overridden H must be positive before running the CO2 solver.")
+            raise ScenarioValidationError("Derived or overridden H must be positive before running the refrigerant solver.")
         if self.qtr_W_m <= 0.0:
-            raise ScenarioValidationError("qtr_W_m must be positive before running the CO2 solver.")
+            raise ScenarioValidationError("qtr_W_m must be positive before running the refrigerant solver.")
         return {
             "H": self.H_m,
             "qtr": self.qtr_W_m,
@@ -178,7 +215,10 @@ class DerivedGeometry:
             "tcon": scenario.solver.tcon_C,
             "mode": scenario.solver.mode,
             "closure_model": scenario.solver.closure_model,
+            "regime_model": scenario.solver.regime_model,
+            "friction_model": scenario.solver.friction_model,
             "geometry": self.to_loop_geometry(),
+            "heat_transfer_model": scenario.solver.heat_transfer_model,
         }
 
 
@@ -263,6 +303,12 @@ def scenario_to_dict(scenario: GETScenario) -> dict[str, Any]:
             "mode": scenario.solver.mode,
             "closure_model": scenario.solver.closure_model,
             "H_override_m": scenario.solver.H_override_m,
+            "fluid": scenario.solver.fluid,
+            "property_backend": scenario.solver.property_backend,
+            "regime_model": scenario.solver.regime_model,
+            "friction_model": scenario.solver.friction_model,
+            "heat_transfer_model": scenario.solver.heat_transfer_model,
+            "allow_property_extrapolation": scenario.solver.allow_property_extrapolation,
         },
     }
 
@@ -331,6 +377,18 @@ def validate_scenario(scenario: GETScenario) -> None:
         raise ScenarioValidationError(f"Unsupported solver mode: {scenario.solver.mode!r}.")
     if scenario.solver.closure_model not in VALID_CLOSURE_MODELS:
         raise ScenarioValidationError(f"Unsupported closure model: {scenario.solver.closure_model!r}.")
+    normalized_fluid = _normalize_fluid_for_validation(scenario.solver.fluid)
+    property_backend = scenario.solver.property_backend.strip().lower()
+    if property_backend not in VALID_PROPERTY_BACKENDS:
+        raise ScenarioValidationError(f"Unsupported property backend: {scenario.solver.property_backend!r}.")
+    if normalized_fluid == "NH3" and property_backend in MATHCAD_PROPERTY_BACKENDS:
+        raise ScenarioValidationError("NH3 scenarios cannot use the mathcad_table property backend.")
+    if scenario.solver.regime_model not in VALID_REGIME_MODELS:
+        raise ScenarioValidationError(f"Unsupported regime model: {scenario.solver.regime_model!r}.")
+    if scenario.solver.friction_model not in VALID_FRICTION_MODELS:
+        raise ScenarioValidationError(f"Unsupported friction model: {scenario.solver.friction_model!r}.")
+    if scenario.solver.heat_transfer_model not in VALID_HEAT_TRANSFER_MODELS:
+        raise ScenarioValidationError(f"Unsupported heat-transfer model: {scenario.solver.heat_transfer_model!r}.")
     if scenario.solver.H_override_m is not None and scenario.solver.H_override_m <= 0.0:
         raise ScenarioValidationError("H_override_m must be positive when provided.")
     for layer in scenario.soil.layers:
@@ -442,15 +500,26 @@ def _heat_mode_for_kind(kind: str) -> str:
     return "adiabatic"
 
 
-def solver_inputs_from_scenario(scenario: GETScenario) -> dict[str, float | str | LoopGeometry]:
+def solver_inputs_from_scenario(scenario: GETScenario) -> dict[str, Any]:
     return derive_geometry(scenario).to_solver_inputs(scenario)
 
 
 def run_scenario(scenario: GETScenario) -> Any:
-    from get_co2_model import CO2MathcadModel
+    from refrigerant_loop_model import RefrigerantLoopModel
+    from refrigerant_properties import BackendUnavailableError
 
-    model = CO2MathcadModel()
-    return model.run_result(**solver_inputs_from_scenario(scenario))
+    inputs = solver_inputs_from_scenario(scenario)
+    geometry = inputs["geometry"]
+    try:
+        model = RefrigerantLoopModel(
+            fluid=scenario.solver.fluid,
+            property_backend=scenario.solver.property_backend,
+            geometry=geometry,
+            allow_property_extrapolation=scenario.solver.allow_property_extrapolation,
+        )
+        return model.run_result(**inputs)
+    except (BackendUnavailableError, ValueError) as exc:
+        raise ScenarioValidationError(str(exc)) from exc
 
 
 def save_scenario(scenario: GETScenario, directory: Path = DEFAULT_SCENARIO_DIR) -> Path:
@@ -541,6 +610,12 @@ def _solver_from_dict(data: Mapping[str, Any]) -> SolverConfig:
         mode=_optional_str(data, "mode", "worksheet_compatible"),
         closure_model=_optional_str(data, "closure_model", "worksheet_compatible"),
         H_override_m=_optional_float(data, "H_override_m"),
+        fluid=_optional_str(data, "fluid", "CO2"),
+        property_backend=_optional_str(data, "property_backend", "mathcad_table"),
+        regime_model=_optional_str(data, "regime_model", "experimental_regime_aware"),
+        friction_model=_optional_str(data, "friction_model", "mathcad_compat"),
+        heat_transfer_model=_optional_str(data, "heat_transfer_model", "prescribed_heat_input"),
+        allow_property_extrapolation=_optional_bool(data, "allow_property_extrapolation", False),
     )
 
 
@@ -588,6 +663,15 @@ def _optional_float(data: Mapping[str, Any], key: str, default: float | None = N
     return _coerce_finite_float(data[key], key)
 
 
+def _optional_bool(data: Mapping[str, Any], key: str, default: bool) -> bool:
+    if key not in data or data[key] is None:
+        return default
+    value = data[key]
+    if isinstance(value, bool):
+        return value
+    raise ScenarioValidationError(f"{key} must be a boolean.")
+
+
 def _coerce_finite_float(value: Any, key: str) -> float:
     if isinstance(value, bool):
         raise ScenarioValidationError(f"{key} must be a finite number.")
@@ -602,3 +686,12 @@ def _coerce_finite_float(value: Any, key: str) -> float:
 
 def _float_or_default(value: float | None, default: float) -> float:
     return default if value is None else value
+
+
+def _normalize_fluid_for_validation(fluid: str) -> str:
+    from refrigerant_properties import normalize_fluid_name
+
+    try:
+        return normalize_fluid_name(fluid)
+    except ValueError as exc:
+        raise ScenarioValidationError(str(exc)) from exc

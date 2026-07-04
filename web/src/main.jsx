@@ -21,6 +21,11 @@ const CLOSURE_MODELS = [
   "regime_aware",
   "experimental_regime_aware",
 ];
+const FLUIDS = ["CO2", "NH3"];
+const PROPERTY_BACKENDS = ["mathcad_table", "coolprop", "refprop"];
+const REGIME_MODELS = ["experimental_regime_aware", "published_regime_map"];
+const FRICTION_MODELS = ["mathcad_compat", "colebrook_white", "churchill_explicit", "laminar_only"];
+const HEAT_TRANSFER_MODELS = ["prescribed_heat_input", "wall_coupled"];
 
 const KIND_LABELS = {
   evaporator: "Evaporator",
@@ -75,6 +80,12 @@ const fallbackScenario = {
     mode: "distributed_steady",
     closure_model: "worksheet_compatible",
     H_override_m: null,
+    fluid: "CO2",
+    property_backend: "mathcad_table",
+    regime_model: "experimental_regime_aware",
+    friction_model: "mathcad_compat",
+    heat_transfer_model: "prescribed_heat_input",
+    allow_property_extrapolation: false,
   },
 };
 
@@ -328,6 +339,48 @@ function App() {
             options={CLOSURE_MODELS}
             onChange={(value) => updateScenario((next) => (next.solver.closure_model = value))}
           />
+          <SelectInput
+            label="Fluid"
+            value={scenario.solver.fluid ?? "CO2"}
+            options={FLUIDS}
+            onChange={(value) =>
+              updateScenario((next) => {
+                next.solver.fluid = value;
+                if (value === "NH3" && (next.solver.property_backend ?? "mathcad_table") === "mathcad_table") {
+                  next.solver.property_backend = "coolprop";
+                }
+              })
+            }
+          />
+          <SelectInput
+            label="Properties"
+            value={scenario.solver.property_backend ?? "mathcad_table"}
+            options={propertyBackendOptions(scenario.solver.fluid ?? "CO2")}
+            onChange={(value) => updateScenario((next) => (next.solver.property_backend = value))}
+          />
+          <SelectInput
+            label="Regime"
+            value={scenario.solver.regime_model ?? "experimental_regime_aware"}
+            options={REGIME_MODELS}
+            onChange={(value) => updateScenario((next) => (next.solver.regime_model = value))}
+          />
+          <SelectInput
+            label="Friction"
+            value={scenario.solver.friction_model ?? "mathcad_compat"}
+            options={FRICTION_MODELS}
+            onChange={(value) => updateScenario((next) => (next.solver.friction_model = value))}
+          />
+          <SelectInput
+            label="Heat"
+            value={scenario.solver.heat_transfer_model ?? "prescribed_heat_input"}
+            options={HEAT_TRANSFER_MODELS}
+            onChange={(value) => updateScenario((next) => (next.solver.heat_transfer_model = value))}
+          />
+          <CheckboxInput
+            label="Extrapolate"
+            checked={Boolean(scenario.solver.allow_property_extrapolation)}
+            onChange={(value) => updateScenario((next) => (next.solver.allow_property_extrapolation = value))}
+          />
 
           <PanelTitle title="Derived" />
           <Metric label="Li" value={derived.error ? "-" : `${format(derived.evaporator_length_m)} m`} />
@@ -452,11 +505,27 @@ function App() {
           {serverResult ? (
             <>
               <Metric label="Converged" value={String(serverResult.converged)} />
+              <Metric label="Status" value={textValue(serverResult.solver_status)} />
+              <Metric label="Failure" value={textValue(serverResult.failure_class)} />
               <Metric label="f" value={format(serverResult.fff)} />
               <Metric label="Hy" value={`${format(serverResult.Hy_m)} m`} />
               <Metric label="dP" value={`${format(serverResult.deltaP_Pa)} Pa`} />
               <Metric label="GL1" value={`${format(serverResult.GL1_lph)} l/h`} />
               <Metric label="Quality" value={format(serverResult.chiG1_mass)} />
+              <PanelTitle title="Sources" />
+              <Metric label="Fluid" value={textValue(serverResult.fluid)} />
+              <Metric label="Backend" value={textValue(serverResult.property_backend)} />
+              <Metric label="Source" value={textValue(serverResult.model_source_status)} />
+              <Metric label="Regime" value={textValue(serverResult.regime_model)} />
+              <Metric label="Regime src" value={textValue(serverResult.regime_model_source_status)} />
+              <Metric label="Friction" value={textValue(serverResult.friction_model)} />
+              <PanelTitle title="Limits" />
+              <Metric label="Heat flux" value={`${format(serverResult.boiling_heat_flux_w_m2)} W/m2`} />
+              <Metric label="Boiling" value={textValue(serverResult.boiling_heat_transfer_limit)} />
+              <Metric label="Dryout" value={textValue(serverResult.dryout_limit)} />
+              <Metric label="qcrit" value={textValue(serverResult.qcrit_status)} />
+              <Metric label="qcrit model" value={textValue(serverResult.qcrit_model)} />
+              <SourceGateReasons reasons={serverResult.source_gate_reasons} />
             </>
           ) : (
             <p className="muted">No solver result</p>
@@ -552,6 +621,15 @@ function NumberInput({ label, value, onChange, allowEmpty = false }) {
   );
 }
 
+function CheckboxInput({ label, checked, onChange }) {
+  return (
+    <label className="field checkbox-field">
+      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    </label>
+  );
+}
+
 function SelectInput({ label, value, options, onChange }) {
   return (
     <label className="field">
@@ -567,6 +645,19 @@ function SelectInput({ label, value, options, onChange }) {
   );
 }
 
+function SourceGateReasons({ reasons }) {
+  if (!Array.isArray(reasons) || reasons.length === 0) {
+    return <p className="muted">No source-gate reasons</p>;
+  }
+  return (
+    <ul className="source-reasons">
+      {reasons.map((reason, index) => (
+        <li key={`${index}-${reason}`}>{reason}</li>
+      ))}
+    </ul>
+  );
+}
+
 function Metric({ label, value }) {
   return (
     <div className="metric">
@@ -574,6 +665,13 @@ function Metric({ label, value }) {
       <strong>{value ?? "-"}</strong>
     </div>
   );
+}
+
+function propertyBackendOptions(fluid) {
+  if (fluid === "NH3") {
+    return PROPERTY_BACKENDS.filter((backend) => backend !== "mathcad_table");
+  }
+  return PROPERTY_BACKENDS;
 }
 
 function deriveScenario(scenario) {
@@ -676,6 +774,13 @@ function format(value) {
     return "-";
   }
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 3 });
+}
+
+function textValue(value) {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+  return String(value).replaceAll("_", " ");
 }
 
 createRoot(document.getElementById("root")).render(<App />);

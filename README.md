@@ -133,6 +133,10 @@ print(result["fluid"], result["property_backend"], result["converged"])
   сохраняет `experimental_regime_aware`, а `RefrigerantLoopModel` по умолчанию
   использует `published_regime_map`, который пока возвращает source-gated
   `source_required` metadata вместо неподтвержденных режимных границ.
+- designer/API сценарии поддерживают выбор `fluid`, `property_backend`,
+  `regime_model`, `friction_model`, `heat_transfer_model` и показывают
+  `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout
+  и `qcrit`-статусы без запуска дорогого `qcrit`-sweep.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -199,6 +203,10 @@ python run_get_co2_demo-1.py
 - `get_co2_sweep.csv` - sweep по тепловой нагрузке;
 - `get_co2_report.md` - сводный отчет;
 - `*.png` - графики sweep, профилей испарителя/райзера и режимов течения.
+
+Markdown-отчет дополнительно выводит source/failure/boiling/qcrit diagnostics.
+`qcrit_status="not_evaluated"` в этом отчете означает, что отдельный
+`critical_loads`-расчет не запускался.
 
 Файлы `get_co2_*.csv`, `get_co2_*.png` и `get_co2_*.md` в корне проекта являются
 историческими артефактами. Новые результаты следует писать в `artifacts/`.

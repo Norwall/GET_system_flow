@@ -735,6 +735,13 @@ NH₃/R717/Ammonia считается через CoolProp backend и общий 
 - `heat_transfer_model`;
 - `qcrit_model`.
 
+Статус отчётов и designer UI: сценарии `GETScenario` сохраняют и передают
+`fluid`, `property_backend`, `regime_model`, `friction_model`,
+`heat_transfer_model` и `allow_property_extrapolation`; REST API запускает общий
+`RefrigerantLoopModel`, а web-интерфейс и `run_get_co2_demo-1.py` выводят
+`model_source_status`, `source_gate_reasons`, `failure_class`,
+boiling/dryout diagnostics и `qcrit_status` без запуска дорогого qcrit-sweep.
+
 ### Новые поля результата
 
 - `fluid`;
@@ -806,6 +813,9 @@ NH₃/R717/Ammonia считается через CoolProp backend и общий 
 11. Полная сценарная матрица.
 12. Обновление отчётов и designer UI.
 
+Статус пункта 12: выполнено как интерфейсная и документационная доработка.
+Новые published-корреляции не добавлялись; source-gate ограничения сохранены.
+
 ## 18. Критерии завершения всей доработки
 
 - [x] CO₂ Mathcad-compatible ветка воспроизводит старые baseline-тесты.
@@ -816,4 +826,5 @@ NH₃/R717/Ammonia считается через CoolProp backend и общий 
 - [x] Все заявленные режимные карты имеют библиографические ссылки и source-gate статус; расчётные transition equations не подключены без полного первоисточника.
 - [x] Solver различает физический отказ, численную несходимость, dryout и выход за диапазон свойств.
 - [x] Designer реально передаёт геометрию в solver.
+- [x] Designer/API и демонстрационный отчёт показывают source/failure/boiling/dryout/qcrit diagnostics.
 - [x] Тесты покрывают CO₂, NH₃, свойства, трение, пустотность, гидростатику, режимы, `qcrit` и ошибочные входы.

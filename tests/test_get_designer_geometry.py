@@ -12,7 +12,9 @@ from get_designer_geometry import (
     derive_geometry,
     load_scenario,
     save_scenario,
+    scenario_from_dict,
     scenario_to_dict,
+    solver_inputs_from_scenario,
     validate_scenario,
 )
 
@@ -73,6 +75,64 @@ def test_save_and_load_scenario_round_trip(tmp_path) -> None:
 
     assert path.name == "case-1.json"
     assert scenario_to_dict(loaded) == scenario_to_dict(scenario)
+
+
+def test_solver_config_round_trip_includes_refrigerant_controls() -> None:
+    scenario = _profile_scenario(H_override_m=2.5)
+    scenario = GETScenario(
+        scenario_id=scenario.scenario_id,
+        name=scenario.name,
+        nodes=scenario.nodes,
+        segments=scenario.segments,
+        thermal=scenario.thermal,
+        solver=SolverConfig(
+            tcon_C=0.0,
+            mode="distributed_steady",
+            closure_model="zivi",
+            H_override_m=2.5,
+            fluid="NH3",
+            property_backend="coolprop",
+            regime_model="published_regime_map",
+            friction_model="colebrook_white",
+            heat_transfer_model="prescribed_heat_input",
+            allow_property_extrapolation=True,
+        ),
+    )
+
+    payload = scenario_to_dict(scenario)
+    loaded = scenario_from_dict(payload)
+    inputs = solver_inputs_from_scenario(loaded)
+
+    assert payload["solver"]["fluid"] == "NH3"
+    assert payload["solver"]["property_backend"] == "coolprop"
+    assert payload["solver"]["regime_model"] == "published_regime_map"
+    assert payload["solver"]["friction_model"] == "colebrook_white"
+    assert payload["solver"]["heat_transfer_model"] == "prescribed_heat_input"
+    assert payload["solver"]["allow_property_extrapolation"] is True
+    assert inputs["regime_model"] == "published_regime_map"
+    assert inputs["friction_model"] == "colebrook_white"
+    assert inputs["heat_transfer_model"] == "prescribed_heat_input"
+
+
+def test_nh3_rejects_mathcad_table_backend() -> None:
+    scenario = _profile_scenario()
+    scenario = GETScenario(
+        scenario_id=scenario.scenario_id,
+        name=scenario.name,
+        nodes=scenario.nodes,
+        segments=scenario.segments,
+        thermal=scenario.thermal,
+        solver=SolverConfig(
+            tcon_C=0.0,
+            mode="worksheet_compatible",
+            closure_model="zivi",
+            fluid="NH3",
+            property_backend="mathcad_table",
+        ),
+    )
+
+    with pytest.raises(ScenarioValidationError, match="NH3"):
+        validate_scenario(scenario)
 
 
 def test_accepts_explicit_experimental_regime_aware_closure() -> None:
