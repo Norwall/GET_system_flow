@@ -19,6 +19,7 @@ def test_refrigerant_loop_model_runs_co2_coolprop_with_published_defaults() -> N
     assert data["property_backend"] == "coolprop"
     assert data["property_model_name"] == "CoolPropSaturationProperties"
     assert data["model_scientific_status"] == "published"
+    assert data["model_source_status"] == "source_required"
     assert data["regime_model"] == "published_regime_map"
     assert data["regime_model_scientific_status"] == "published"
     assert data["regime_model_source_status"] == "source_required"
@@ -27,6 +28,9 @@ def test_refrigerant_loop_model_runs_co2_coolprop_with_published_defaults() -> N
     assert data["boiling_heat_transfer_status"] == "diagnostic_only_source_required"
     assert "source_required" in data["evaporator_flow_regime_status_summary"]
     assert "Wojtan" in data["evaporator_flow_regime_source_summary"]
+    assert any("regime_model=published_regime_map" in reason for reason in data["source_gate_reasons"])
+    assert any("boiling_heat_transfer" in reason for reason in data["source_gate_reasons"])
+    assert any("dryout_limit" in reason for reason in data["source_gate_reasons"])
     assert "zivi" in data["closure_name"]
     assert data["fff"] == pytest.approx(0.61331227093134, rel=1e-9)
 

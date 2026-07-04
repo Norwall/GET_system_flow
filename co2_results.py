@@ -250,6 +250,8 @@ class SteadyLoopResult:
     property_warning: str = ""
     near_critical_warning: str = ""
     model_scientific_status: str = ""
+    model_source_status: str = "source_complete"
+    source_gate_reasons: tuple[str, ...] = ()
     regime_model: str = "experimental_regime_aware"
     regime_model_scientific_status: str = ""
     regime_model_source_status: str = ""
@@ -289,6 +291,8 @@ class SteadyLoopResult:
             "property_warning": self.property_warning,
             "near_critical_warning": self.near_critical_warning,
             "model_scientific_status": self.model_scientific_status,
+            "model_source_status": self.model_source_status,
+            "source_gate_reasons": list(self.source_gate_reasons),
             "regime_model": self.regime_model,
             "regime_model_scientific_status": self.regime_model_scientific_status,
             "regime_model_source_status": self.regime_model_source_status,

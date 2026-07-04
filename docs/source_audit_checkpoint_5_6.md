@@ -30,6 +30,11 @@ transition equations или областей применимости в код.
 - Новый вход `regime_model` отделяет режимную диагностику от `closure_model`.
   Значение `published_regime_map` означает source-gated published metadata, а
   `experimental_regime_aware` - старые эвристические пороги.
+- Результаты steady-run содержат `model_source_status` и `source_gate_reasons`.
+  Эти поля агрегируют source-gate ограничения активной цепочки расчета, поэтому
+  published fallback closure не маскирует тот факт, что режимные карты,
+  Zuber-Findlay drift-flux, boiling HTC и dryout/CHF ещё требуют полного
+  первоисточника.
 
 ## Что нужно для снятия source-gate
 

@@ -347,3 +347,17 @@ published-карт должен выполняться только после �
 - `published_friction.py` и `published_void_fraction.py` — единственные места для новых published closure-функций;
 - `published_regimes.py` — только source-gate заготовка с `source_required`, не published-карта;
 - текущий `regime_aware` / `experimental_regime_aware` — исследовательский режим, а не окончательная научная модель.
+
+После source-gate finish результат solver дополнительно содержит:
+
+- `model_source_status`;
+- `source_gate_reasons`.
+
+Эти поля нужны для академически корректной интерпретации `RefrigerantLoopModel`.
+Если фасад использует `closure_model="zivi"` и `regime_model="published_regime_map"`,
+то closure-слой может быть `published`, но весь результат остаётся
+`source_required`, пока опубликованные WUT/TBD-карты, Zuber-Findlay drift-flux,
+boiling HTC и dryout/CHF корреляции не перенесены из полных первоисточников.
+Для `experimental_regime_aware` агрегированный статус должен читаться как
+`experimental_no_primary_source`, даже если отдельные базовые формулы трения и
+пустотности имеют published-источники.

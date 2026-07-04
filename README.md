@@ -89,8 +89,9 @@ print(result["fluid"], result["property_backend"], result["converged"])
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
   оставлено как alias для совместимости;
-- результаты содержат `model_scientific_status`, `fluid`, `property_backend`,
-  `property_source`, `property_warning` и `near_critical_warning`;
+- результаты содержат `model_scientific_status`, `model_source_status`,
+  `source_gate_reasons`, `fluid`, `property_backend`, `property_source`,
+  `property_warning` и `near_critical_warning`;
 - добавлен общий интерфейс свойств насыщения CO2/NH3 в `refrigerant_properties.py`;
 - создан русскоязычный реестр формул и свойств `docs/formula_registry.md`;
 - введен явный баланс давления в `pressure_balance.py`;
@@ -144,7 +145,10 @@ print(result["fluid"], result["property_backend"], result["converged"])
 `EXPERIMENTAL / NO PRIMARY SOURCE`. Результаты `run(...)` и `run_result(...)`
 дополнительно содержат `friction_model`, `pressure_balance_terms`,
 `pressure_balance_sections`, суммарные pressure-balance вклады,
-`pressure_balance_residual_pa`, `qcrit_status` и `qcrit_model`.
+`pressure_balance_residual_pa`, `qcrit_status` и `qcrit_model`. Поле
+`model_source_status` агрегирует незакрытые source-gate ограничения: published
+defaults могут быть `source_required`, даже если отдельные подтвержденные
+closure-модели имеют `model_scientific_status="published"`.
 
 Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и
 Wojtan-Ursenbacher-Thome пока не подключаются как расчетные `published`-модели:

@@ -189,6 +189,10 @@ def test_experimental_regime_aware_preserves_legacy_regime_aware_numerics() -> N
     assert explicit["converged"] is True
     assert legacy["model_scientific_status"] == "experimental"
     assert explicit["model_scientific_status"] == "experimental"
+    assert legacy["model_source_status"] == "experimental_no_primary_source"
+    assert explicit["model_source_status"] == "experimental_no_primary_source"
+    assert any("closure_model=experimental_regime_aware" in reason for reason in explicit["source_gate_reasons"])
+    assert any("regime_model=experimental_regime_aware" in reason for reason in explicit["source_gate_reasons"])
     assert "alias:regime_aware" in str(legacy["closure_name"])
     assert "experimental_regime_aware" in str(explicit["closure_name"])
 

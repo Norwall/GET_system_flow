@@ -167,6 +167,12 @@
 использует `published_regime_map`; это не включает неподтверждённые формулы, а
 возвращает source-gated metadata `source_required`.
 
+Итоговый результат дополнительно содержит `model_source_status` и
+`source_gate_reasons`. Эти поля агрегируют активные ограничения выбранной
+цепочки расчёта: published fallback closure может быть научно подтверждён, но
+весь результат остаётся `source_required`, если режимная карта, boiling HTC или
+dryout/CHF ещё не перенесены из полного первоисточника.
+
 ### 4.6. Ускорительные потери
 
 Кроме трения модель учитывает ускорительные потери давления.
@@ -280,6 +286,11 @@ CO₂ Mathcad-compatible ветка получает свойства из ис�
   испарителя
 - `riser_flow_regime_source_summary` — источники диагностических режимов riser
 - `riser_flow_regime_status_summary` — статусы диагностических режимов riser
+- `model_source_status` — агрегированный статус источников активной цепочки
+  расчёта: `source_complete`, `source_required`,
+  `experimental_no_primary_source` или `mixed`
+- `source_gate_reasons` — список причин, почему результат остаётся
+  source-gated или experimental
 - `heat_transfer_model` — фактически выбранный тепловой diagnostic mode
 - `boiling_heat_flux_w_m2` — средний тепловой поток на смоченный периметр
   испарителя, \(q''=qtr/P_h\)
@@ -590,6 +601,12 @@ Checkpoint 6 split не добавляет новых published-карт. Он �
 `regime_model="published_regime_map"` published-заготовки не возвращают
 физический режим, а явно сообщают `source_required`, пока первоисточник не
 сверен.
+
+Поэтому `model_scientific_status="published"` не следует читать как итоговую
+валидацию всей модели. Он относится к closure-выбору. Для отчёта по всей
+цепочке нужно смотреть `model_source_status`: новый published-default фасад
+корректно сообщает `source_required`, а legacy experimental ветка —
+`experimental_no_primary_source`.
 
 ### 9.8. NH₃-ветка не является новой валидацией
 

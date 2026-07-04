@@ -785,5 +785,6 @@ Hy(f)-H=0
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.
 - Вызовы свойств вне диапазона backend должны давать понятную ошибку, если экстраполяция не включена явно.
 - Текущая blended-модель трения не является Colebrook-White и сохранена как `mathcad_compat`. Для аудита и опубликованных альтернатив доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и `zero_friction`.
+- Поля результата `model_source_status` и `source_gate_reasons` не заменяют этот реестр; они агрегируют активные `SOURCE_REQUIRED` и `EXPERIMENTAL / NO PRIMARY SOURCE` ограничения выбранной цепочки расчета.
 - `published_regimes.py` содержит только защитные source-gate заготовки, возвращающие `unknown_or_out_of_range` / `source_required`; опубликованные горизонтальная и вертикальная режимные карты в Checkpoint 6 не реализованы.
 - Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler и Wojtan-Ursenbacher-Thome не подключаются как расчетные `published`-модели, пока точные формулы и области применимости не сверены с полным первоисточником.

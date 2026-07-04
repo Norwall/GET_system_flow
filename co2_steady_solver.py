@@ -151,6 +151,79 @@ class SteadyLoopSolver:
     def regime_model_source_status(self, inputs: SteadyLoopInputs) -> str:
         return regime_model_source_status(inputs.regime_model)
 
+    def model_source_gate_fields(self, inputs: SteadyLoopInputs, boiling_diagnostics) -> dict[str, object]:
+        reasons: list[str] = []
+        has_experimental = False
+        has_source_required = False
+        has_non_diagnostic_source_required = False
+
+        closure_status = self.model_scientific_status(inputs)
+        effective_closure_model = self.effective_closure_model(inputs)
+        if closure_status == "experimental":
+            has_experimental = True
+            reasons.append(
+                f"closure_model={effective_closure_model} uses experimental heuristics without a primary source."
+            )
+        elif closure_status == "unknown":
+            has_source_required = True
+            has_non_diagnostic_source_required = True
+            reasons.append(f"closure_model={effective_closure_model} has no verified source classification.")
+
+        effective_regime_model = self.effective_regime_model(inputs)
+        regime_source_status = self.regime_model_source_status(inputs)
+        if regime_source_status == "source_required":
+            has_source_required = True
+            has_non_diagnostic_source_required = True
+            reasons.append(
+                f"regime_model={effective_regime_model} requires primary-source transition equations before "
+                "it can provide physical regime classifications."
+            )
+        elif regime_source_status == "experimental_no_primary_source":
+            has_experimental = True
+            reasons.append(
+                f"regime_model={effective_regime_model} uses experimental thresholds without a primary source."
+            )
+        elif regime_source_status == "unknown":
+            has_source_required = True
+            has_non_diagnostic_source_required = True
+            reasons.append(f"regime_model={effective_regime_model} has no verified source classification.")
+
+        boiling_status_text = " ".join(
+            str(value)
+            for value in (
+                boiling_diagnostics.boiling_heat_transfer_status,
+                boiling_diagnostics.boiling_heat_transfer_limit,
+            )
+        )
+        if "source_required" in boiling_status_text:
+            has_source_required = True
+            reasons.append(
+                "boiling_heat_transfer requires a primary-source saturated flow-boiling HTC correlation; "
+                "current output is diagnostic-only."
+            )
+
+        if "source_required" in str(boiling_diagnostics.dryout_limit):
+            has_source_required = True
+            reasons.append(
+                "dryout_limit requires a primary-source dryout/CHF correlation and is not inferred from "
+                "solver convergence."
+            )
+
+        unique_reasons = tuple(dict.fromkeys(reasons))
+        if has_experimental and has_non_diagnostic_source_required:
+            model_source_status = "mixed"
+        elif has_experimental:
+            model_source_status = "experimental_no_primary_source"
+        elif has_source_required:
+            model_source_status = "source_required"
+        else:
+            model_source_status = "source_complete"
+
+        return {
+            "model_source_status": model_source_status,
+            "source_gate_reasons": unique_reasons,
+        }
+
     def _uses_experimental_regime_metadata(self, inputs: SteadyLoopInputs) -> bool:
         return self.effective_regime_model(inputs) == "experimental_regime_aware"
 
@@ -2046,11 +2119,13 @@ class SteadyLoopSolver:
                 near_critical_warning=near_critical_warning,
                 failure_reason=failure_reason,
             )
+        source_gate_fields = self.model_source_gate_fields(inputs, boiling_diagnostics)
         return {
             "closure_name": self.closure_label(inputs),
             "property_model_name": self.property_model_name,
             **property_fields,
             "model_scientific_status": self.model_scientific_status(inputs),
+            **source_gate_fields,
             "regime_model": self.effective_regime_model(inputs),
             "regime_model_scientific_status": self.regime_model_scientific_status(inputs),
             "regime_model_source_status": self.regime_model_source_status(inputs),

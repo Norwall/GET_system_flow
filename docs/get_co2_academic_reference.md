@@ -2090,6 +2090,8 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 
 при условии отдельной проверки legacy-логарифма коэффициента трения. Для сравнительных расчетов с опубликованными двухфазными замыканиями доступны `homogeneous_equilibrium` и `zivi`; их пустотность и фрикционная база отделены от experimental-слоя. Новый `RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")` использует тот же гидравлический solver и published fallback closure, но не закрывает валидацию аммиачной ГЕТ. `experimental_regime_aware` следует считать исследовательским режимом.
 
+Поле `model_scientific_status` относится к выбранному closure-слою и не означает, что вся цепочка результата уже является завершённой published-моделью. Для этого добавлены агрегированные поля `model_source_status` и `source_gate_reasons`. Если `RefrigerantLoopModel` использует published fallback closures вместе с `published_regime_map`, то результат может иметь `model_scientific_status="published"` и одновременно `model_source_status="source_required"`, потому что режимные карты, boiling HTC и dryout/CHF пока оставлены за source-gate. Для legacy `experimental_regime_aware` корректный агрегированный статус — `experimental_no_primary_source`.
+
 Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки.
 
 # 20. Заключение
@@ -2109,6 +2111,7 @@ Boiling/dryout поля результата допустимо использо
 - общий property backend для CO₂/NH₃;
 - CoolProp reference CSV и тесты NH₃ loop solver;
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
+- агрегированный `model_source_status` и список `source_gate_reasons`, которые не дают перепутать published fallback closure с полностью реализованной published-физикой;
 - отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
 - быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы.
 
@@ -2238,9 +2241,11 @@ Boiling/dryout поля результата допустимо использо
 | qcrit_model | not_evaluated, dissertation_scan_plus_f_zero | выбранный алгоритм qcrit-отчёта |
 | regime_model | experimental_regime_aware, published_regime_map | выбранный источник режимной диагностики |
 | regime_model_source_status | experimental_no_primary_source, source_required | статус источника режимной диагностики |
+| model_source_status | source_complete, source_required, experimental_no_primary_source, mixed | агрегированный статус источников активной цепочки результата |
+| source_gate_reasons | список строк | причины, по которым результат остаётся source-gated или experimental |
 | numerical_failure | no_root_bracket, root_solver_failed, aux_temperature_failed | численная причина, не равная dryout |
 
-Эти поля являются классификацией текущего программного результата одного steady-run. Они не являются самим `critical_loads`-отчётом и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) без отдельного bracket/refinement расчёта.
+Эти поля являются классификацией текущего программного результата одного steady-run. `model_source_status="source_required"` не является ошибкой solver; это академический флаг, что часть заявленной published-физики пока не перенесена из полного первоисточника. Поля не являются самим `critical_loads`-отчётом и не доказывают значения \(q_{\rm cr}^{\min}\) или \(q_{\rm cr}^{\max}\) без отдельного bracket/refinement расчёта.
 
 ## Б.3. Статусы сценарной матрицы
 
