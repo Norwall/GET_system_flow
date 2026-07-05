@@ -16,9 +16,13 @@ primary-source-only: формулы, коэффициенты, transition equati
 применимости нельзя переносить в расчет по DOI landing page, abstract, Crossref
 metadata, учебнику, обзору или пересказу. Gate снимается только после проверки
 полного первоисточника, что фиксируется в `docs/source_audit_checkpoint_5_6.md`,
-`docs/source_audit_open_web_2026-07-05.md` и `docs/source_gate_manifest.json`.
+`docs/source_audit_open_web_2026-07-05.md`, `docs/source_gate_manifest.json` и
+`docs/primary_source_inventory.md`.
 Repository landing page без доступного full-text/`ORIGINAL` bitstream не
 считается полным первоисточником.
+Если gate снимается по локальному PDF/скану, файл должен лежать в
+`sources/primary/`, не коммититься в репозиторий, а инвентарь должен фиксировать
+`SHA256`, страницы/уравнения, решение аудита и связанные reference-тесты.
 
 ## Сводка реализованных записей
 
@@ -807,6 +811,7 @@ Hy(f)-H=0
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Для снятия `SOURCE_REQUIRED` нужен полный первоисточник; DOI landing page, abstract, Crossref metadata, учебники, обзоры и пересказы формул не являются достаточным основанием для подключения модели как `published`.
 - Repository landing page без доступного full-text/`ORIGINAL` bitstream не считается полным первоисточником; это зафиксировано в `docs/source_audit_open_web_2026-07-04.md` и подтверждено в `docs/source_audit_open_web_2026-07-05.md`.
+- Если полный первоисточник предоставлен локально, он должен быть внесён в `docs/primary_source_inventory.md` с путём под `sources/primary/`, `SHA256`, страницами/уравнениями и решением аудита; сами PDF/сканы не коммитятся.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.
 - Сценарные и регрессионные проверки допускаются со статусом `REGRESSION_DIAGNOSTIC`, если они не добавляют формулу и не объявляются физической моделью.
 - Published closure models не должны ссылаться на записи `EXP-*`; это проверяется `tests/test_formula_registry.py`.

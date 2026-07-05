@@ -1,5 +1,5 @@
 {
-  "manifest_version": "source-gate-open-web-2026-07-05",
+  "manifest_version": "source-gate-primary-source-intake-2026-07-05",
   "policy": {
     "primary_source_only": true,
     "audit_document": "docs/source_audit_open_web_2026-07-05.md",
@@ -7,10 +7,14 @@
       "docs/source_audit_open_web_2026-07-04.md"
     ],
     "checkpoint_audit_document": "docs/source_audit_checkpoint_5_6.md",
+    "local_source_inventory_document": "docs/primary_source_inventory.md",
+    "source_drop_directory": "sources/primary",
     "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
+    "local_source_file_policy": "Primary-source PDFs, scans, and extracted full text are local working evidence under sources/primary and are not committed. Released gates require SHA256, page/equation references, and an audit decision in docs/primary_source_inventory.md.",
     "released_requirements": [
       "evidence_status must be audited",
-      "local_full_text_ref must identify the verified full text",
+      "local_full_text_ref must identify the verified local full text under sources/primary",
+      "docs/primary_source_inventory.md must record the local file, SHA256, citation, audited pages/equations, and release decision",
       "required_audit_checks must be completed in docs/formula_registry.md",
       "required_tests_before_release must be implemented and passing"
     ]

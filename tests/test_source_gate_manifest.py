@@ -23,15 +23,24 @@ FORMULA_REGISTRY_PATH = PROJECT_ROOT / "docs" / "formula_registry.md"
 OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-05.md"
 PREVIOUS_OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-04.md"
 CHECKPOINT_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_checkpoint_5_6.md"
+PRIMARY_SOURCE_INVENTORY_PATH = PROJECT_ROOT / "docs" / "primary_source_inventory.md"
+PRIMARY_SOURCE_DROP_DIR = PROJECT_ROOT / "sources" / "primary"
+PRIMARY_SOURCE_README_PATH = PRIMARY_SOURCE_DROP_DIR / "README.md"
 README_PATH = PROJECT_ROOT / "README.md"
 ACADEMIC_REFERENCE_PATH = PROJECT_ROOT / "docs" / "get_co2_academic_reference.md"
+GITIGNORE_PATH = PROJECT_ROOT / ".gitignore"
+PLAN_PATH = PROJECT_ROOT / "plan.md"
 
 FORMULA_REGISTRY_TEXT = FORMULA_REGISTRY_PATH.read_text(encoding="utf-8")
 OPEN_WEB_AUDIT_TEXT = OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
 PREVIOUS_OPEN_WEB_AUDIT_TEXT = PREVIOUS_OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
 CHECKPOINT_AUDIT_TEXT = CHECKPOINT_AUDIT_PATH.read_text(encoding="utf-8")
+PRIMARY_SOURCE_INVENTORY_TEXT = PRIMARY_SOURCE_INVENTORY_PATH.read_text(encoding="utf-8")
+PRIMARY_SOURCE_README_TEXT = PRIMARY_SOURCE_README_PATH.read_text(encoding="utf-8")
 README_TEXT = README_PATH.read_text(encoding="utf-8")
 ACADEMIC_REFERENCE_TEXT = ACADEMIC_REFERENCE_PATH.read_text(encoding="utf-8")
+GITIGNORE_TEXT = GITIGNORE_PATH.read_text(encoding="utf-8")
+PLAN_TEXT = PLAN_PATH.read_text(encoding="utf-8")
 
 SOURCE_REQUIRED_REGISTRY_IDS = {
     "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
@@ -98,14 +107,21 @@ def test_manifest_points_to_existing_audit_documents(manifest: dict) -> None:
     assert OPEN_WEB_AUDIT_PATH.exists()
     assert PREVIOUS_OPEN_WEB_AUDIT_PATH.exists()
     assert CHECKPOINT_AUDIT_PATH.exists()
+    assert PRIMARY_SOURCE_INVENTORY_PATH.exists()
+    assert PRIMARY_SOURCE_DROP_DIR.is_dir()
+    assert PRIMARY_SOURCE_README_PATH.exists()
 
     policy = manifest["policy"]
     assert policy["primary_source_only"] is True
-    assert manifest["manifest_version"] == "source-gate-open-web-2026-07-05"
+    assert manifest["manifest_version"] == "source-gate-primary-source-intake-2026-07-05"
     assert policy["audit_document"] == "docs/source_audit_open_web_2026-07-05.md"
     assert "docs/source_audit_open_web_2026-07-04.md" in policy["previous_audit_documents"]
     assert policy["checkpoint_audit_document"] == "docs/source_audit_checkpoint_5_6.md"
+    assert policy["local_source_inventory_document"] == "docs/primary_source_inventory.md"
+    assert policy["source_drop_directory"] == "sources/primary"
     assert "repository landing pages without an accessible full-text bitstream" in policy["source_gate_rule"]
+    assert "not committed" in policy["local_source_file_policy"]
+    assert "SHA256" in policy["local_source_file_policy"]
 
 
 def test_manifest_entries_have_required_shape(manifest_entries: list[dict]) -> None:
@@ -149,14 +165,43 @@ def test_all_active_source_required_registry_ids_are_manifested(manifest_entries
         assert registry_id in CHECKPOINT_AUDIT_TEXT
 
 
-def test_released_decision_requires_full_audit(manifest_entries: list[dict]) -> None:
+def test_released_decision_requires_full_audit(manifest: dict, manifest_entries: list[dict]) -> None:
+    source_drop_prefix = manifest["policy"]["source_drop_directory"] + "/"
     for entry in manifest_entries:
         if entry["decision"] != "released":
             continue
         assert entry["evidence_status"] == "audited"
-        assert entry["local_full_text_ref"]
+        assert entry["local_full_text_ref"].startswith(source_drop_prefix)
         assert "docs/formula_registry.md" in " ".join(entry["required_audit_checks"])
+        assert "docs/primary_source_inventory.md" in " ".join(manifest["policy"]["released_requirements"])
         assert entry["required_tests_before_release"]
+
+
+def test_local_primary_source_intake_policy_is_documented_and_ignored(manifest: dict) -> None:
+    policy = manifest["policy"]
+
+    assert policy["source_drop_directory"] == "sources/primary"
+    assert policy["local_source_inventory_document"] == "docs/primary_source_inventory.md"
+    assert "sources/primary/*" in GITIGNORE_TEXT
+    assert "!sources/primary/README.md" in GITIGNORE_TEXT
+
+    for text in (
+        PRIMARY_SOURCE_README_TEXT,
+        PRIMARY_SOURCE_INVENTORY_TEXT,
+        README_TEXT,
+        ACADEMIC_REFERENCE_TEXT,
+        FORMULA_REGISTRY_TEXT,
+        CHECKPOINT_AUDIT_TEXT,
+        OPEN_WEB_AUDIT_TEXT,
+        PLAN_TEXT,
+    ):
+        assert "sources/primary" in text
+        assert "docs/primary_source_inventory.md" in text
+
+    assert "SHA256" in PRIMARY_SOURCE_README_TEXT
+    assert "SHA256" in PRIMARY_SOURCE_INVENTORY_TEXT
+    assert "не коммит" in PRIMARY_SOURCE_INVENTORY_TEXT
+    assert "source_required" in PRIMARY_SOURCE_INVENTORY_TEXT
 
 
 def test_epfl_landing_pages_do_not_release_wojtan_gates(manifest_entries: list[dict]) -> None:
@@ -194,6 +239,8 @@ def test_user_and_academic_docs_reference_open_web_audit_context() -> None:
         assert "docs/source_audit_open_web_2026-07-05.md" in text
         assert "docs/source_audit_open_web_2026-07-04.md" in text
         assert "docs/source_gate_manifest.json" in text
+        assert "docs/primary_source_inventory.md" in text
+        assert "sources/primary" in text
         assert "OSTI" in text
         assert "10.2172/4636495" in text
 

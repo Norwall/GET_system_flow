@@ -466,6 +466,13 @@ Gungor–Winterton. EPFL landing pages без `ORIGINAL`/full-text bitstream
 считаются `metadata_only`. OSTI `10.2172/4636495` зафиксирован только как
 `source_candidate`, без подключения в расчёт.
 
+Статус primary-source intake update от 2026-07-05: добавлены локальная папка
+`sources/primary/` для полных PDF/сканов, tracked-инвентарь
+`docs/primary_source_inventory.md` и manifest-политика, требующая `SHA256`,
+страницы/уравнения, audit decision, обновление реестра формул и reference-тесты
+до перевода любой source-gate записи в `released`. Сами PDF/сканы не коммитятся;
+все активные Checkpoint 5-6 модели остаются `source_required`.
+
 ### Задачи
 
 - [x] Разделить closure models на:
@@ -477,6 +484,11 @@ Gungor–Winterton. EPFL landing pages без `ORIGINAL`/full-text bitstream
   - `homogeneous_equilibrium`;
   - `zivi_1964`;
   - `lockhart_martinelli_chisholm`.
+- [x] Добавить локальную процедуру intake полного первоисточника:
+  - `sources/primary/` как некоммитимая папка PDF/сканов;
+  - `docs/primary_source_inventory.md` как tracked-инвентарь SHA256, страниц,
+    уравнений и решения аудита;
+  - тестовую проверку, что `released` требует локальный полный текст.
 - [ ] Реализовать или формально подтвердить по полному первоисточнику:
   - `muller_steinhagen_heck_1986`;
   - `friedel_1979`, если первоисточник доступен и формула точно воспроизведена.
@@ -808,6 +820,7 @@ boiling/dryout diagnostics и `qcrit_status` без запуска дорого�
 - `tests/test_qcrit_solver.py`;
 - `tests/test_scenario_matrix.py`;
 - `tests/test_refrigerant_loop_model.py`.
+- `tests/test_source_gate_manifest.py`;
 
 Каждый checkpoint считается завершённым только после:
 
@@ -836,6 +849,10 @@ boiling/dryout diagnostics и `qcrit_status` без запуска дорого�
 
 Статус пункта 12: выполнено как интерфейсная и документационная доработка.
 Новые published-корреляции не добавлялись; source-gate ограничения сохранены.
+Дополнительно source-gate документация обновлена локальным primary-source intake:
+полные тексты принимаются через `sources/primary/`, фиксируются в
+`docs/primary_source_inventory.md`, а manifest и тесты запрещают release без
+локального SHA256/audit trail.
 
 ## 18. Критерии завершения всей доработки
 
@@ -845,6 +862,10 @@ boiling/dryout diagnostics и `qcrit_status` без запуска дорого�
 - [x] Свойства насыщенной жидкости и пара берутся из CoolProp/REFPROP/NIST или явно помеченного Mathcad baseline.
 - [x] Все реализованные формулы задокументированы в `docs/formula_registry.md`; ожидающие первоисточник модели имеют source-gate записи.
 - [x] Все заявленные режимные карты имеют библиографические ссылки и source-gate статус; расчётные transition equations не подключены без полного первоисточника.
+- [x] Для будущего снятия source-gate задан локальный audit trail:
+  `sources/primary/`, `docs/primary_source_inventory.md`,
+  `docs/source_gate_manifest.json` и тесты требуют полный текст, SHA256,
+  страницы/уравнения и reference-тесты до runtime-release.
 - [x] Solver различает физический отказ, численную несходимость, dryout и выход за диапазон свойств.
 - [x] Designer реально передаёт геометрию в solver.
 - [x] Designer/API и демонстрационный отчёт показывают source/failure/boiling/dryout/qcrit diagnostics.

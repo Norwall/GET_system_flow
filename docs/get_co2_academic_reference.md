@@ -8,7 +8,7 @@ toc-title: "Содержание"
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10, source-gate аудита Checkpoint 5-6 и wall/soil update Checkpoint 7: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10, source-gate аудита Checkpoint 5-6, wall/soil update Checkpoint 7 и локального primary-source intake update: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), быстрый root-scan набор сценариев с фиксированными статусами отказов, а также локальный inventory-процесс `sources/primary/` + `docs/primary_source_inventory.md` для будущего снятия source-gate. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
 После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model`, флаг `allow_property_extrapolation`, слои грунта и эффективную линейную проводимость wall/soil boundary. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics, `wall_soil_*` fields и `qcrit_status`. Это является интерфейсной, граничной и отчётной доработкой: она не добавляет published HTC/dryout корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
@@ -30,9 +30,16 @@ toc-title: "Содержание"
 
 После Checkpoint 5 опубликованные элементы `homogeneous_equilibrium`, `zivi` и Lockhart–Martinelli/Chisholm физически отделены от экспериментальных эвристик в модулях `published_void_fraction.py` и `published_friction.py`. После source-gate аудита Müller-Steinhagen-Heck и Friedel добавлены не расчётные корреляции, а защищённые функции-заглушки, выбрасывающие `SourceRequiredCorrelationError`: доступный библиографический уровень и предварительная страница статьи подтверждают публикации, но не фиксируют полную формулу, соглашение по жидкостным/газовым опорным градиентам, полному массовому потоку и выбору коэффициента трения Darcy/Fanning. После Checkpoint 6 split режимные эвристики вынесены в `experimental_regimes.py`, а `published_regimes.py` пока не содержит расчётной published-карты и возвращает source-gated статус `source_required`. Отдельный вход `regime_model` отделяет режимную диагностику от `closure_model`: старый CO₂-фасад сохраняет experimental default, а универсальный фасад по умолчанию показывает source-required published metadata. Эти шаги не добавляют новых эмпирических корреляций: Müller-Steinhagen-Heck, Friedel, Zuber-Findlay, Taitel–Barnea–Dukler и Wojtan–Ursenbacher–Thome остаются библиографически зафиксированными, но не подключёнными как расчётные `published`-модели до сверки точных формул по полному первоисточнику.
 
-После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
+После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md`, `docs/primary_source_inventory.md`, `docs/source_gate_manifest.json` и тестов.
 
 Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, контрольная endpoint-проверка от 2026-07-05 — в `docs/source_audit_open_web_2026-07-05.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен; повторная endpoint-проверка не сняла ни один gate. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
+
+Для следующего этапа введён локальный intake полных первоисточников:
+`sources/primary/` хранит некоммитимые PDF/сканы, а
+`docs/primary_source_inventory.md` фиксирует имя файла, SHA256,
+библиографическую ссылку, страницы/уравнения и решение аудита. Manifest может
+перевести source-gated модель в `released` только после такой локальной записи,
+обновления реестра формул и прохождения reference-тестов.
 
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
@@ -216,6 +223,11 @@ published-кандидатов определяется не только биб
 означает только доступность полного текста. До аудита применимости, переноса
 формул в реестр и добавления reference-тестов такой источник не становится
 released-моделью и не меняет поведение solver.
+
+Если полный текст предоставлен локально, он должен быть зарегистрирован в
+`docs/primary_source_inventory.md`: путь под `sources/primary/`, SHA256,
+цитирование, страницы/уравнения, audited convention details и release-решение.
+Сами PDF/сканы являются локальной evidence-базой и не коммитятся.
 
 # 3. Обозначения
 
@@ -1974,14 +1986,27 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 - `pytest tests/test_scenario_matrix.py -q` — 18 passed;
 - `pytest tests/test_refrigerant_loop_model.py tests/test_segmented_geometry.py tests/test_qcrit_solver.py tests/test_scenario_matrix.py -q` — 31 passed.
 
-После source-audit обновления от 2026-07-04 полный набор в текущем окружении
-завершился успешно:
+После локального primary-source intake update от 2026-07-05 коллекция тестов
+составляет 242 теста. Одиночный `pytest -q` в текущем окружении дошёл примерно
+до 59% и завершился по timeout 360 s, поэтому фактическая верификация выполнена
+по чанкам:
 
-- `pytest -q` — 225 passed за 510.06 s.
-- `pytest tests/test_formula_registry.py tests/test_regime_maps.py tests/test_two_phase_pressure_drop.py tests/test_refrigerant_loop_model.py -q` — 120 passed за 21.65 s.
+- `pytest -q tests/test_source_gate_manifest.py` — 10 passed;
+- `pytest -q tests/test_source_gate_manifest.py tests/test_formula_registry.py tests/test_regime_maps.py tests/test_boiling_diagnostics.py` — 130 passed;
+- `pytest -q tests/test_refrigerant_loop_model.py tests/test_scenario_matrix.py` — 20 passed;
+- `pytest -q tests/test_two_phase_pressure_drop.py tests/test_void_fraction_models.py` — 12 passed;
+- `pytest -q tests/test_baseline_compatibility.py` — 8 passed за 140.30 s;
+- `pytest -q tests/test_co2_model_regression.py tests/test_co2_model_sweep.py tests/test_co2_function_matrix.py tests/test_co2_properties_baseline.py` — 11 passed;
+- `pytest -q tests/test_co2_result_fields.py tests/test_get_designer_api.py tests/test_get_designer_geometry.py` — 17 passed;
+- `pytest -q tests/test_mathcad_log_audit.py tests/test_nh3_loop_solver.py tests/test_nh3_properties.py tests/test_pressure_balance.py` — 18 passed;
+- `pytest -q tests/test_qcrit_solver.py` — 6 passed;
+- `pytest -q tests/test_refrigerant_properties.py` — 14 passed;
+- `pytest -q tests/test_segmented_geometry.py` — 6 passed.
 
-Этот полный прогон заменяет прежнюю запись о таймауте. Targeted-наборы ниже
-остаются полезными для быстрой локальной проверки отдельных подсистем.
+Такой chunked-прогон покрывает весь собранный набор без снятия source-gate и
+сохраняет отдельную проверку тяжёлой Mathcad-compatible baseline-ветки.
+Targeted-наборы ниже остаются полезными для быстрой локальной проверки
+отдельных подсистем.
 
 После добавления Checkpoint 7 scaffold дополнительно выполнены targeted-проверки:
 
@@ -2050,7 +2075,7 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
-| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны | ACADEMIC POLICY |
+| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
@@ -2433,3 +2458,5 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 28. Source-gate manifest. Локальный структурированный manifest проекта: [docs/source_gate_manifest.json](source_gate_manifest.json).
 
 29. A correlation for boiling heat transfer to saturated fluids in convective flow. Technical report, 1962. OSTI ID 4636495. DOI: [10.2172/4636495](https://doi.org/10.2172/4636495). Full-text PURL: [https://www.osti.gov/servlets/purl/4636495](https://www.osti.gov/servlets/purl/4636495).
+
+30. Локальный инвентарь полных первоисточников для source-gate release. Локальный документ проекта: [docs/primary_source_inventory.md](primary_source_inventory.md); некоммитимая рабочая папка: `sources/primary/`.

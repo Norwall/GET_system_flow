@@ -49,6 +49,9 @@ PowerShell `Invoke-WebRequest` и `curl.exe` в текущем Windows-окру�
   Kandlikar/Shah/Gungor-Winterton и не является released-моделью для текущего
   saturated loop solver.
 - Следующий достаточный шаг для любого release: получить полный первоисточник,
-  вручную перенести формулы/коэффициенты/переменные/размерности/область
-  применимости в `docs/formula_registry.md`, добавить численные reference-тесты
-  и только затем удалить соответствующий guard.
+  занести локальный PDF/скан в некоммитимую папку `sources/primary/`,
+  зафиксировать файл, SHA256, страницы/уравнения и audit decision в
+  `docs/primary_source_inventory.md`, вручную перенести
+  формулы/коэффициенты/переменные/размерности/область применимости в
+  `docs/formula_registry.md`, добавить численные reference-тесты и только затем
+  удалить соответствующий guard.
