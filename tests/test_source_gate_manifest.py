@@ -20,13 +20,15 @@ from published_regimes import (
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = PROJECT_ROOT / "docs" / "source_gate_manifest.json"
 FORMULA_REGISTRY_PATH = PROJECT_ROOT / "docs" / "formula_registry.md"
-OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-04.md"
+OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-05.md"
+PREVIOUS_OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-04.md"
 CHECKPOINT_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_checkpoint_5_6.md"
 README_PATH = PROJECT_ROOT / "README.md"
 ACADEMIC_REFERENCE_PATH = PROJECT_ROOT / "docs" / "get_co2_academic_reference.md"
 
 FORMULA_REGISTRY_TEXT = FORMULA_REGISTRY_PATH.read_text(encoding="utf-8")
 OPEN_WEB_AUDIT_TEXT = OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
+PREVIOUS_OPEN_WEB_AUDIT_TEXT = PREVIOUS_OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
 CHECKPOINT_AUDIT_TEXT = CHECKPOINT_AUDIT_PATH.read_text(encoding="utf-8")
 README_TEXT = README_PATH.read_text(encoding="utf-8")
 ACADEMIC_REFERENCE_TEXT = ACADEMIC_REFERENCE_PATH.read_text(encoding="utf-8")
@@ -94,11 +96,14 @@ def _entry_by_candidate_id(entries: list[dict], candidate_id: str) -> dict:
 def test_manifest_points_to_existing_audit_documents(manifest: dict) -> None:
     assert MANIFEST_PATH.exists()
     assert OPEN_WEB_AUDIT_PATH.exists()
+    assert PREVIOUS_OPEN_WEB_AUDIT_PATH.exists()
     assert CHECKPOINT_AUDIT_PATH.exists()
 
     policy = manifest["policy"]
     assert policy["primary_source_only"] is True
-    assert policy["audit_document"] == "docs/source_audit_open_web_2026-07-04.md"
+    assert manifest["manifest_version"] == "source-gate-open-web-2026-07-05"
+    assert policy["audit_document"] == "docs/source_audit_open_web_2026-07-05.md"
+    assert "docs/source_audit_open_web_2026-07-04.md" in policy["previous_audit_documents"]
     assert policy["checkpoint_audit_document"] == "docs/source_audit_checkpoint_5_6.md"
     assert "repository landing pages without an accessible full-text bitstream" in policy["source_gate_rule"]
 
@@ -165,7 +170,8 @@ def test_epfl_landing_pages_do_not_release_wojtan_gates(manifest_entries: list[d
         assert "infoscience.epfl.ch" in entry["primary_record"]["repository_record"]
         assert "no ORIGINAL/full-text bitstream" in entry["access_evidence"]["endpoint_check"]
 
-    assert "EPFL repository landing page без `ORIGINAL`/full-text bitstream" in OPEN_WEB_AUDIT_TEXT
+    assert "EPFL DSpace bundles" in OPEN_WEB_AUDIT_TEXT
+    assert "EPFL repository landing page без `ORIGINAL`/full-text bitstream" in PREVIOUS_OPEN_WEB_AUDIT_TEXT
     assert "repository landing page без" in CHECKPOINT_AUDIT_TEXT
     assert "Repository landing page без доступного full-text" in FORMULA_REGISTRY_TEXT
 
@@ -178,12 +184,14 @@ def test_osti_full_text_is_candidate_not_active_model(manifest_entries: list[dic
     assert osti["decision"] == "source_candidate"
     assert osti["local_full_text_ref"] == "https://www.osti.gov/servlets/purl/4636495"
     assert "Content-Length 1533908" in osti["access_evidence"]["endpoint_check"]
+    assert "HTTP 200" in osti["access_evidence"]["endpoint_check"]
     assert "10.2172/4636495" in OPEN_WEB_AUDIT_TEXT
     assert "10.2172/4636495" not in FORMULA_REGISTRY_TEXT
 
 
 def test_user_and_academic_docs_reference_open_web_audit_context() -> None:
     for text in (README_TEXT, ACADEMIC_REFERENCE_TEXT):
+        assert "docs/source_audit_open_web_2026-07-05.md" in text
         assert "docs/source_audit_open_web_2026-07-04.md" in text
         assert "docs/source_gate_manifest.json" in text
         assert "OSTI" in text
@@ -192,7 +200,11 @@ def test_user_and_academic_docs_reference_open_web_audit_context() -> None:
     assert "EPFL" in README_TEXT
     assert "landing pages" in README_TEXT
     assert "ORIGINAL`/full-text bitstream" in README_TEXT
+    assert "Академический контекст и source-gate" in README_TEXT
+    assert "source_candidate` означает, что полный текст найден" in README_TEXT
     assert "EPFL landing page без доступного `ORIGINAL`/full-text bitstream" in ACADEMIC_REFERENCE_TEXT
+    assert "Минимальная цепочка интерпретации" in ACADEMIC_REFERENCE_TEXT
+    assert "OSTI `10.2172/4636495`" in ACADEMIC_REFERENCE_TEXT
     assert "source_candidate" in ACADEMIC_REFERENCE_TEXT
 
 

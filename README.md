@@ -172,16 +172,38 @@ primary-source-only: DOI landing page, Crossref metadata, abstract, учебни
 быть подключена только после проверки полного первоисточника и обновления
 `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
 
-Open-web аудит от 2026-07-04 оформлен отдельно в
-`docs/source_audit_open_web_2026-07-04.md`, а машинно-проверяемые решения по
+Open-web аудит от 2026-07-04 и контрольная endpoint-проверка от 2026-07-05
+оформлены отдельно в `docs/source_audit_open_web_2026-07-04.md` и
+`docs/source_audit_open_web_2026-07-05.md`, а машинно-проверяемые решения по
 каждой source-gate записи вынесены в `docs/source_gate_manifest.json`.
 Crossref/Unpaywall/OpenAlex и publisher endpoints подтвердили библиографию для
 части моделей, но не дали открытый полный текст для MSH, Zuber-Findlay,
-Taitel-Barnea-Dukler, Wojtan/Thome, Kandlikar или Gungor-Winterton. EPFL
-landing pages для Wojtan Part I/II не снимают gate, потому что DSpace API не
-показывает `ORIGINAL`/full-text bitstream. Найденный официальный OSTI PDF
+Taitel-Barnea-Dukler, Wojtan/Thome, Kandlikar или Gungor-Winterton; повторная
+проверка endpoints оставила эти gates закрытыми. EPFL landing pages для Wojtan
+Part I/II не снимают gate, потому что DSpace API не показывает
+`ORIGINAL`/full-text bitstream. Найденный официальный OSTI PDF
 `10.2172/4636495` сохранён как `source_candidate`, но не подключён к runtime:
 его применимость к текущей постановке ещё не аудирована.
+
+## Академический контекст и source-gate
+
+Для научной прослеживаемости используйте связку документов:
+
+- `docs/formula_registry.md` - список реализованных формул, источников,
+  применимости и тестов;
+- `docs/source_gate_manifest.json` - машинно-проверяемые решения по
+  неподключенным published-кандидатам;
+- `docs/source_audit_checkpoint_5_6.md` и
+  `docs/source_audit_open_web_2026-07-05.md` - аудит первоисточников;
+- `docs/get_co2_academic_reference.md` - академическое описание модели,
+  допущений, статусов и ограничений.
+
+`model_source_status="source_required"` не является ошибкой solver. Это
+академический флаг: часть выбранной цепочки расчета ссылается на опубликованную
+модель только библиографически, но формулы/коэффициенты ещё не сверены по
+полному первоисточнику. `source_candidate` означает, что полный текст найден,
+но применимость к текущей постановке не аудирована; такой источник тоже не
+подключается к runtime автоматически.
 
 Checkpoint 6 split:
 

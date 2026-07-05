@@ -195,6 +195,9 @@ def test_source_required_policy_is_primary_source_only() -> None:
     assert "полного первоисточника" in REGISTRY_TEXT
     assert "DOI landing page, abstract, Crossref" in REGISTRY_TEXT
     assert "Повторная проверка политики: 2026-07-04." in SOURCE_AUDIT_TEXT
+    assert "Контрольная endpoint-проверка: 2026-07-05." in SOURCE_AUDIT_TEXT
+    assert "docs/source_audit_open_web_2026-07-05.md" in REGISTRY_TEXT
+    assert "docs/source_audit_open_web_2026-07-05.md" in SOURCE_AUDIT_TEXT
     assert "Crossref, DOI landing page, abstract" in SOURCE_AUDIT_TEXT
 
 

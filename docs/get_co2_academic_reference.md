@@ -32,7 +32,7 @@ toc-title: "Содержание"
 
 После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md` и тестов.
 
-Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
+Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, контрольная endpoint-проверка от 2026-07-05 — в `docs/source_audit_open_web_2026-07-05.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен; повторная endpoint-проверка не сняла ни один gate. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
 
 Модель коэффициента трения выбирается независимо от замыкания пустотности через параметр `friction_model`. Для обратной совместимости используется `mathcad_compat`; дополнительно доступны `colebrook_white`, `churchill_explicit`, `laminar_only` и диагностический `zero_friction`.
 
@@ -202,6 +202,20 @@ q_\ell=G_{\rm eff}(T_{\rm soil}-t_k).
 | SOURCE_REQUIRED | публикация библиографически определена, но расчётная формула и соглашения о величинах ещё не сверены по полному первоисточнику |
 | PLACEHOLDER | структура данных присутствует, но физически не подключена |
 | REQUIRES AUDIT | обнаружено расхождение или требуется независимая проверка |
+
+После endpoint-проверки 2026-07-05 академический статус неподключённых
+published-кандидатов определяется не только библиографической ссылкой, но и
+записью в `docs/source_gate_manifest.json`. Минимальная цепочка интерпретации:
+`docs/formula_registry.md` задаёт формульную запись и статус, audit-документы
+фиксируют доступность полного первоисточника, manifest хранит машинно-проверяемое
+решение, а runtime-поля `model_source_status` и `source_gate_reasons` показывают,
+какая часть выбранной расчётной цепочки остаётся `source_required` или
+`experimental_no_primary_source`.
+
+Если источник имеет статус `source_candidate`, как OSTI `10.2172/4636495`, это
+означает только доступность полного текста. До аудита применимости, переноса
+формул в реестр и добавления reference-тестов такой источник не становится
+released-моделью и не меняет поведение solver.
 
 # 3. Обозначения
 
@@ -2036,7 +2050,7 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
-| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_gate_manifest.json | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны | ACADEMIC POLICY |
+| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны | ACADEMIC POLICY |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
@@ -2414,7 +2428,7 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 
 26. Gao K., Wu J., Bell I. H., Lemmon E. W. Thermodynamic Properties of Ammonia for Temperatures from the Melting Line to 725 K and Pressures to 1000 MPa // Journal of Physical and Chemical Reference Data. 2020. Указано в документации CoolProp как equation-of-state reference для Ammonia.
 
-27. Open-web аудит source-gate источников. Локальный документ проекта: [docs/source_audit_open_web_2026-07-04.md](source_audit_open_web_2026-07-04.md).
+27. Open-web аудит source-gate источников. Локальные документы проекта: [docs/source_audit_open_web_2026-07-04.md](source_audit_open_web_2026-07-04.md), [docs/source_audit_open_web_2026-07-05.md](source_audit_open_web_2026-07-05.md).
 
 28. Source-gate manifest. Локальный структурированный manifest проекта: [docs/source_gate_manifest.json](source_gate_manifest.json).
 

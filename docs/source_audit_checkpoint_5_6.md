@@ -2,7 +2,9 @@
 
 Дата проверки: 2026-07-03.
 Повторная проверка политики: 2026-07-04.
-Open-web проверка доступности: `docs/source_audit_open_web_2026-07-04.md`.
+Контрольная endpoint-проверка: 2026-07-05.
+Open-web проверка доступности: `docs/source_audit_open_web_2026-07-05.md`
+(предыдущий проход: `docs/source_audit_open_web_2026-07-04.md`).
 Структурированный manifest: `docs/source_gate_manifest.json`.
 
 Цель проверки - отделить библиографически подтвержденные published-модели от
@@ -29,6 +31,15 @@ Unpaywall/OpenAlex помечают запись как green OA. Единств
 открытый PDF-кандидат, OSTI `10.2172/4636495`, не относится к уже выбранным
 MSH/Friedel/Zuber-Findlay/Taitel/Wojtan source-gate моделям и требует
 отдельного аудита применимости перед любым подключением.
+
+Контрольная endpoint-проверка 2026-07-05 не сняла ни один source-gate:
+Elsevier TDM endpoints для MSH, Wojtan Part I/II и Gungor-Winterton вернули
+HTTP 400 без авторизованного API-контекста; Wiley PDF для Taitel-Barnea-Dukler
+и ASME PDF для Zuber-Findlay/Kandlikar вернули HTTP 403; EPFL DSpace API для
+Wojtan Part I/II по-прежнему показывает только `LICENSE` bundle без
+`ORIGINAL`/full-text bitstream. OSTI `10.2172/4636495` снова подтвердился как
+доступный `application/pdf`, `Content-Length 1533908`, но остаётся
+`source_candidate`, а не released HTC-моделью.
 
 ## Подтвержденные библиографические записи
 

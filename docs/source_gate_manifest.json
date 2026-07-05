@@ -1,8 +1,11 @@
 {
-  "manifest_version": "source-gate-open-web-2026-07-04",
+  "manifest_version": "source-gate-open-web-2026-07-05",
   "policy": {
     "primary_source_only": true,
-    "audit_document": "docs/source_audit_open_web_2026-07-04.md",
+    "audit_document": "docs/source_audit_open_web_2026-07-05.md",
+    "previous_audit_documents": [
+      "docs/source_audit_open_web_2026-07-04.md"
+    ],
     "checkpoint_audit_document": "docs/source_audit_checkpoint_5_6.md",
     "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
     "released_requirements": [
@@ -30,7 +33,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -66,7 +69,7 @@
         "crossref": "no matching primary DOI record found by title search",
         "unpaywall": "not applicable without DOI",
         "openalex": "not checked as a releasable full-text source",
-        "endpoint_check": "no publisher full-text endpoint identified"
+        "endpoint_check": "no publisher full-text endpoint identified; 2026-07-05 audit did not identify a releasable primary endpoint"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -102,7 +105,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
-        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context"
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -139,7 +142,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
         "openalex": "green landing page at EPFL, no PDF URL",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -175,7 +178,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and Wiley PDF URLs",
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
-        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context"
+        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -211,7 +214,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
         "unpaywall": "closed; no repository copy",
         "openalex": "not used as a release source",
-        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context"
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -247,7 +250,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "closed; no repository copy",
         "openalex": "not used as a release source",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text during open-web audit"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text during open-web audit; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -284,7 +287,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
         "openalex": "not used as a release source",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -320,7 +323,7 @@
         "crossref": "confirmed DOI and title via search result",
         "unpaywall": "green repository full-text PDF",
         "openalex": "not used as a release source",
-        "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908"
+        "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908; 2026-07-05 HEAD recheck returned HTTP 200 application/pdf with Content-Length 1533908"
       },
       "local_full_text_ref": "https://www.osti.gov/servlets/purl/4636495",
       "decision": "source_candidate",
