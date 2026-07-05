@@ -28,6 +28,30 @@ _DRYOUT_SOURCE_WARNING = (
 
 
 @dataclass(frozen=True)
+class WallSoilBoundary:
+    far_field_temperature_c: float
+    effective_conductance_w_m_k: float
+    source: str = "designer_soil_effective_conductance"
+
+    def heat_input_w_m(self, saturation_temperature_c: float) -> float:
+        far_field_temperature = float(self.far_field_temperature_c)
+        saturation_temperature = float(saturation_temperature_c)
+        conductance = float(self.effective_conductance_w_m_k)
+        if not math.isfinite(far_field_temperature):
+            raise ValueError("wall_soil_boundary.far_field_temperature_c must be finite.")
+        if not math.isfinite(saturation_temperature):
+            raise ValueError("tcon must be finite for wall_coupled heat input.")
+        if not math.isfinite(conductance) or conductance <= 0.0:
+            raise ValueError("wall_soil_boundary.effective_conductance_w_m_k must be positive and finite.")
+        heat_input = conductance * (far_field_temperature - saturation_temperature)
+        if not math.isfinite(heat_input) or heat_input <= 0.0:
+            raise ValueError(
+                "wall_coupled heat input must be positive; far-field soil temperature must exceed tcon."
+            )
+        return heat_input
+
+
+@dataclass(frozen=True)
 class BoilingDiagnostics:
     heat_transfer_model: str
     boiling_heat_transfer_status: str
@@ -39,6 +63,12 @@ class BoilingDiagnostics:
     numerical_failure: str = "not_active"
     failure_class: str = "none"
     warnings: tuple[str, ...] = ()
+    thermal_boundary_model: str = PRESCRIBED_HEAT_INPUT
+    wall_soil_temperature_c: float | None = None
+    wall_soil_effective_conductance_w_m_k: float | None = None
+    wall_soil_delta_t_k: float | None = None
+    wall_soil_qtr_w_m: float | None = None
+    wall_soil_boundary_source: str = ""
 
     def to_result_fields(self) -> dict[str, Any]:
         return {
@@ -52,6 +82,12 @@ class BoilingDiagnostics:
             "numerical_failure": self.numerical_failure,
             "failure_class": self.failure_class,
             "warnings": list(self.warnings),
+            "thermal_boundary_model": self.thermal_boundary_model,
+            "wall_soil_temperature_c": self.wall_soil_temperature_c,
+            "wall_soil_effective_conductance_w_m_k": self.wall_soil_effective_conductance_w_m_k,
+            "wall_soil_delta_t_k": self.wall_soil_delta_t_k,
+            "wall_soil_qtr_w_m": self.wall_soil_qtr_w_m,
+            "wall_soil_boundary_source": self.wall_soil_boundary_source,
         }
 
 
@@ -96,6 +132,9 @@ def diagnostics_for_solver_status(
     solver_status: str,
     near_critical_warning: str = "",
     failure_reason: str | None = None,
+    wall_soil_boundary: WallSoilBoundary | None = None,
+    wall_soil_qtr_w_m: float | None = None,
+    tcon_c: float | None = None,
 ) -> BoilingDiagnostics:
     failure_class = failure_class_from_solver_status(
         solver_status,
@@ -118,7 +157,7 @@ def diagnostics_for_solver_status(
 
     if heat_transfer_model == WALL_COUPLED:
         boiling_status = "validation_error"
-        limit = "requires_wall_boundary"
+        limit = "requires_wall_boundary" if wall_soil_boundary is None else "invalid_wall_boundary"
         warnings = tuple(value for value in warnings if value != _HTC_SOURCE_WARNING)
         if failure_reason:
             warnings = (*warnings, failure_reason)
@@ -126,12 +165,21 @@ def diagnostics_for_solver_status(
             heat_transfer_model=heat_transfer_model,
             boiling_heat_transfer_status=boiling_status,
             boiling_heat_transfer_limit=limit,
-            dryout_limit="not_evaluated_requires_wall_boundary",
+            dryout_limit=(
+                "not_evaluated_requires_wall_boundary"
+                if wall_soil_boundary is None
+                else "not_evaluated_source_required"
+            ),
             hydrodynamic_limit=hydrodynamic_limit,
             property_limit=property_limit,
             numerical_failure=numerical_failure,
             failure_class=failure_class,
             warnings=warnings,
+            **_wall_soil_result_fields(
+                wall_soil_boundary=wall_soil_boundary,
+                wall_soil_qtr_w_m=wall_soil_qtr_w_m,
+                tcon_c=tcon_c,
+            ),
         )
 
     return BoilingDiagnostics(
@@ -152,6 +200,9 @@ def diagnose_prescribed_heat_input(
     evaporator_hydraulic_diameter_m: float,
     boiling_length_m: float,
     near_critical_warning: str = "",
+    heat_transfer_model: str = PRESCRIBED_HEAT_INPUT,
+    wall_soil_boundary: WallSoilBoundary | None = None,
+    tcon_c: float | None = None,
 ) -> BoilingDiagnostics:
     perimeter_m = hydraulic_perimeter_m(
         area_m2=evaporator_area_m2,
@@ -169,14 +220,29 @@ def diagnose_prescribed_heat_input(
         failure_class = "hydrodynamic_limit" if not near_critical_warning else failure_class
 
     return BoilingDiagnostics(
-        heat_transfer_model=PRESCRIBED_HEAT_INPUT,
+        heat_transfer_model=heat_transfer_model,
         boiling_heat_transfer_status=status,
         boiling_heat_flux_w_m2=heat_flux_w_m2,
         hydrodynamic_limit=hydrodynamic_limit,
         property_limit=property_limit,
         failure_class=failure_class,
         warnings=warnings,
+        **_wall_soil_result_fields(
+            wall_soil_boundary=wall_soil_boundary,
+            wall_soil_qtr_w_m=heat_flux_w_m2 * perimeter_m if wall_soil_boundary is not None else None,
+            tcon_c=tcon_c,
+        ),
     )
+
+
+def wall_coupled_heat_input_w_m(
+    wall_soil_boundary: WallSoilBoundary | None,
+    *,
+    tcon_c: float,
+) -> float:
+    if wall_soil_boundary is None:
+        raise ValueError("heat_transfer_model='wall_coupled' requires wall/soil boundary conditions.")
+    return wall_soil_boundary.heat_input_w_m(tcon_c)
 
 
 def hydraulic_perimeter_m(*, area_m2: float, hydraulic_diameter_m: float) -> float:
@@ -196,13 +262,36 @@ def _diagnostic_warnings(near_critical_warning: str) -> tuple[str, ...]:
     return tuple(warnings)
 
 
+def _wall_soil_result_fields(
+    *,
+    wall_soil_boundary: WallSoilBoundary | None,
+    wall_soil_qtr_w_m: float | None,
+    tcon_c: float | None,
+) -> dict[str, Any]:
+    if wall_soil_boundary is None:
+        return {}
+    temperature_c = float(wall_soil_boundary.far_field_temperature_c)
+    conductance = float(wall_soil_boundary.effective_conductance_w_m_k)
+    delta_t = None if tcon_c is None else temperature_c - float(tcon_c)
+    return {
+        "thermal_boundary_model": "wall_soil_effective_conductance",
+        "wall_soil_temperature_c": temperature_c,
+        "wall_soil_effective_conductance_w_m_k": conductance,
+        "wall_soil_delta_t_k": delta_t,
+        "wall_soil_qtr_w_m": wall_soil_qtr_w_m,
+        "wall_soil_boundary_source": wall_soil_boundary.source,
+    }
+
+
 __all__ = [
     "BoilingDiagnostics",
     "PRESCRIBED_HEAT_INPUT",
     "WALL_COUPLED",
+    "WallSoilBoundary",
     "diagnose_prescribed_heat_input",
     "diagnostics_for_solver_status",
     "failure_class_from_solver_status",
     "hydraulic_perimeter_m",
     "normalize_heat_transfer_model",
+    "wall_coupled_heat_input_w_m",
 ]

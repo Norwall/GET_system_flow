@@ -7,6 +7,8 @@ from get_designer_geometry import (
     DesignerSegment,
     GETScenario,
     ScenarioValidationError,
+    SoilConfig,
+    SoilLayer,
     SolverConfig,
     ThermalConfig,
     derive_geometry,
@@ -112,6 +114,49 @@ def test_solver_config_round_trip_includes_refrigerant_controls() -> None:
     assert inputs["regime_model"] == "published_regime_map"
     assert inputs["friction_model"] == "colebrook_white"
     assert inputs["heat_transfer_model"] == "prescribed_heat_input"
+
+
+def test_wall_coupled_scenario_derives_heat_input_from_soil_boundary() -> None:
+    scenario = _profile_scenario(H_override_m=2.5)
+    scenario = GETScenario(
+        scenario_id=scenario.scenario_id,
+        name=scenario.name,
+        nodes=scenario.nodes,
+        segments=scenario.segments,
+        thermal=ThermalConfig(qtr_W_m=5.0),
+        soil=SoilConfig(
+            effective_conductance_W_mK=12.0,
+            layers=(
+                SoilLayer(
+                    name="active",
+                    top_z_m=0.0,
+                    bottom_z_m=-5.0,
+                    initial_temperature_C=4.0,
+                ),
+            ),
+        ),
+        solver=SolverConfig(
+            tcon_C=0.0,
+            mode="worksheet_compatible",
+            closure_model="worksheet_compatible",
+            H_override_m=2.5,
+            heat_transfer_model="wall_coupled",
+        ),
+    )
+
+    payload = scenario_to_dict(scenario)
+    loaded = scenario_from_dict(payload)
+    derived = derive_geometry(loaded)
+    inputs = solver_inputs_from_scenario(loaded)
+
+    assert payload["soil"]["effective_conductance_W_mK"] == pytest.approx(12.0)
+    assert derived.thermal_boundary_model == "wall_soil_effective_conductance"
+    assert derived.wall_soil_temperature_C == pytest.approx(4.0)
+    assert derived.wall_soil_delta_t_K == pytest.approx(4.0)
+    assert derived.qtr_W_m == pytest.approx(48.0)
+    assert inputs["qtr"] == pytest.approx(48.0)
+    assert inputs["wall_soil_boundary"] is not None
+    assert inputs["wall_soil_boundary"].heat_input_w_m(0.0) == pytest.approx(48.0)
 
 
 def test_nh3_rejects_mathcad_table_backend() -> None:

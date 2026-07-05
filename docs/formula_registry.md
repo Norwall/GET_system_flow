@@ -30,6 +30,7 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 | `PROP-REFPROP-ADAPTER` | OPTIONAL_ADAPTER | `RefpropSaturationProperties` |
 | `BAL-HEAT-INPUT` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `HEAT-LINEAR-TO-WALL-FLUX` | DEFINITIONAL | `boiling_heat_transfer.diagnose_prescribed_heat_input` |
+| `HEAT-WALL-SOIL-EFFECTIVE-CONDUCTANCE` | USER_SUPPLIED_BOUNDARY | `boiling_heat_transfer.WallSoilBoundary` |
 | `BAL-VAPOR-GENERATION` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `QCRIT-DISSERTATION-SCAN` | DISSERTATION / NUMERICAL_SEARCH | `critical_loads.find_critical_loads` |
@@ -169,6 +170,21 @@ P_h = \frac{4A}{D_h}
 - Источник: определение гидравлического диаметра и теплового потока через площадь поверхности; без эмпирических коэффициентов.
 - Код: `boiling_heat_transfer.hydraulic_perimeter_m`; `boiling_heat_transfer.diagnose_prescribed_heat_input`; `co2_steady_solver.SteadyLoopSolver._result_common_fields`.
 - Тесты: `tests/test_boiling_diagnostics.py`; `tests/test_co2_result_fields.py`.
+
+## HEAT-WALL-SOIL-EFFECTIVE-CONDUCTANCE
+
+- Статус: USER_SUPPLIED_BOUNDARY.
+- Математическая запись:
+
+```math
+q_l = G_{\rm eff}(T_{\rm soil}-T_{\rm sat})
+```
+
+- Переменные и размерности: `q_l`/`qtr`, Вт/м; `G_eff`, Вт/(м К); `T_soil` и `T_sat`, °C или K для разности.
+- Область применимости: lumped boundary condition для `heat_transfer_model="wall_coupled"`. Это не опубликованная корреляция saturated flow boiling HTC, dryout или CHF.
+- Источник: пользовательская эффективная проводимость wall/soil boundary; source-gate политика для published heat-transfer/dryout моделей сохраняется.
+- Код: `boiling_heat_transfer.WallSoilBoundary`; `co2_steady_solver.SteadyLoopSolver._effective_heat_inputs`; `get_designer_geometry.DerivedGeometry.to_solver_inputs`.
+- Тесты: `tests/test_boiling_diagnostics.py`; `tests/test_get_designer_geometry.py`; `tests/test_get_designer_api.py`.
 
 ## BAL-VAPOR-GENERATION
 

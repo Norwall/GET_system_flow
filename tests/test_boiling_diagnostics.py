@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from boiling_heat_transfer import diagnostics_for_solver_status
+from boiling_heat_transfer import WallSoilBoundary, diagnostics_for_solver_status
 from get_co2_model import CO2MathcadModel
 
 
@@ -39,6 +39,56 @@ def test_wall_coupled_heat_transfer_requires_boundary_conditions(
     assert result["heat_transfer_model"] == "wall_coupled"
     assert result["boiling_heat_transfer_limit"] == "requires_wall_boundary"
     assert result["failure_class"] == "validation_error"
+
+
+def test_wall_coupled_heat_transfer_derives_qtr_from_boundary(
+    co2_model: CO2MathcadModel,
+) -> None:
+    boundary = WallSoilBoundary(
+        far_field_temperature_c=5.0,
+        effective_conductance_w_m_k=10.0,
+    )
+
+    result = co2_model.run(
+        2.5,
+        1.0,
+        200.0,
+        0.0,
+        heat_transfer_model="wall_coupled",
+        wall_soil_boundary=boundary,
+    )
+
+    assert result["converged"] is True
+    assert result["qtr"] == pytest.approx(50.0)
+    assert result["thermal_boundary_model"] == "wall_soil_effective_conductance"
+    assert result["wall_soil_temperature_c"] == pytest.approx(5.0)
+    assert result["wall_soil_effective_conductance_w_m_k"] == pytest.approx(10.0)
+    assert result["wall_soil_delta_t_k"] == pytest.approx(5.0)
+    assert result["wall_soil_qtr_w_m"] == pytest.approx(50.0)
+    assert result["boiling_heat_transfer_status"] == "diagnostic_only_source_required"
+    assert result["boiling_heat_transfer_limit"] == "not_evaluated_source_required"
+    assert result["dryout_limit"] == "not_evaluated_source_required"
+
+
+def test_wall_coupled_heat_transfer_rejects_non_positive_boundary_heat(
+    co2_model: CO2MathcadModel,
+) -> None:
+    result = co2_model.run(
+        2.5,
+        1.0,
+        200.0,
+        0.0,
+        heat_transfer_model="wall_coupled",
+        wall_soil_boundary=WallSoilBoundary(
+            far_field_temperature_c=-1.0,
+            effective_conductance_w_m_k=10.0,
+        ),
+    )
+
+    assert result["converged"] is False
+    assert result["solver_status"] == "validation_error"
+    assert "positive" in result["failure_reason"]
+    assert result["boiling_heat_transfer_limit"] == "invalid_wall_boundary"
 
 
 def test_unknown_heat_transfer_model_is_validation_error(co2_model: CO2MathcadModel) -> None:

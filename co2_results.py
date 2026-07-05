@@ -267,6 +267,12 @@ class SteadyLoopResult:
     numerical_failure: str = "not_active"
     failure_class: str = "none"
     warnings: tuple[str, ...] = ()
+    thermal_boundary_model: str = "prescribed_heat_input"
+    wall_soil_temperature_c: float | None = None
+    wall_soil_effective_conductance_w_m_k: float | None = None
+    wall_soil_delta_t_k: float | None = None
+    wall_soil_qtr_w_m: float | None = None
+    wall_soil_boundary_source: str = ""
     qcrit_status: str = "not_evaluated"
     qcrit_model: str = "not_evaluated"
 
@@ -308,6 +314,12 @@ class SteadyLoopResult:
             "numerical_failure": self.numerical_failure,
             "failure_class": self.failure_class,
             "warnings": list(self.warnings),
+            "thermal_boundary_model": self.thermal_boundary_model,
+            "wall_soil_temperature_c": self.wall_soil_temperature_c,
+            "wall_soil_effective_conductance_w_m_k": self.wall_soil_effective_conductance_w_m_k,
+            "wall_soil_delta_t_k": self.wall_soil_delta_t_k,
+            "wall_soil_qtr_w_m": self.wall_soil_qtr_w_m,
+            "wall_soil_boundary_source": self.wall_soil_boundary_source,
             "qcrit_status": self.qcrit_status,
             "qcrit_model": self.qcrit_model,
         }

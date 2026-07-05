@@ -6,7 +6,7 @@ from typing import Callable, Literal
 
 from scipy.optimize import root_scalar
 
-from boiling_heat_transfer import WALL_COUPLED, normalize_heat_transfer_model
+from boiling_heat_transfer import WALL_COUPLED, WallSoilBoundary, normalize_heat_transfer_model
 from co2_geometry import LoopGeometry
 from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver
 from refrigerant_properties import PropertyRangeError
@@ -41,6 +41,7 @@ class CriticalLoadConfig:
     friction_model: str = "mathcad_compat"
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
+    wall_soil_boundary: WallSoilBoundary | None = None
     qtr_min_w_m: float = 0.0
     qtr_max_w_m: float = 150.0
     qtr_step_w_m: float = 1.0
@@ -93,6 +94,7 @@ class CriticalLoadConfig:
             friction_model=self.friction_model,
             geometry=self.geometry,
             heat_transfer_model=self.heat_transfer_model,
+            wall_soil_boundary=self.wall_soil_boundary,
         )
 
 
@@ -274,7 +276,10 @@ class CriticalLoadSolver:
                 qtr_w_m=qtr,
                 status="validation_error",
                 solver_status="validation_error",
-                failure_reason="wall_coupled qcrit requires wall/soil boundary conditions.",
+                failure_reason=(
+                    "wall_coupled qcrit is not supported by the prescribed-qtr sweep; "
+                    "run the steady solver with wall_soil_boundary or scan boundary parameters explicitly."
+                ),
                 failure_class="validation_error",
             )
 
@@ -509,6 +514,7 @@ def solve_critical_loads(
     friction_model: str = "mathcad_compat",
     geometry: LoopGeometry | None = None,
     heat_transfer_model: str = "prescribed_heat_input",
+    wall_soil_boundary: WallSoilBoundary | None = None,
     qtr_min_w_m: float = 0.0,
     qtr_max_w_m: float = 150.0,
     qtr_step_w_m: float = 1.0,
@@ -528,6 +534,7 @@ def solve_critical_loads(
         friction_model=friction_model,
         geometry=geometry,
         heat_transfer_model=heat_transfer_model,
+        wall_soil_boundary=wall_soil_boundary,
         qtr_min_w_m=qtr_min_w_m,
         qtr_max_w_m=qtr_max_w_m,
         qtr_step_w_m=qtr_step_w_m,

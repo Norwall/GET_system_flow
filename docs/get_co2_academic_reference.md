@@ -2,15 +2,15 @@
 title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
-date: "4 июля 2026 г."
+date: "5 июля 2026 г."
 toc-title: "Содержание"
 ---
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10 и source-gate аудита Checkpoint 5-6: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10, source-gate аудита Checkpoint 5-6 и wall/soil update Checkpoint 7: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), а также быстрый root-scan набор сценариев с фиксированными статусами отказов. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
-После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model` и флаг `allow_property_extrapolation`. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics и `qcrit_status`. Это является интерфейсной и отчётной доработкой: она не добавляет новых физических корреляций и не снимает source-gate с неподтверждённых published-моделей.
+После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model`, флаг `allow_property_extrapolation`, слои грунта и эффективную линейную проводимость wall/soil boundary. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics, `wall_soil_*` fields и `qcrit_status`. Это является интерфейсной, граничной и отчётной доработкой: она не добавляет published HTC/dryout корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -38,7 +38,14 @@ toc-title: "Содержание"
 
 Для CO₂ доступны две ветки свойств: Mathcad-compatible таблицы из `CO2.xmcd` и CoolProp HEOS. Для NH₃ доступна CoolProp/REFPROP-ориентированная ветка через `RefrigerantSaturationProperties`; перенос CO₂-табличных коэффициентов на аммиак запрещён. NH₃-результаты являются расчётом тем же стационарным гидравлическим solver, но не являются экспериментальной валидацией аммиачной установки из [5]. Границы `critical_loads(...)` для NH₃ считаются тем же алгоритмом текущего solver; это не published режимная карта и не отдельно валидированная аммиачная qcrit-модель.
 
-После Checkpoint 7 введён параметр `heat_transfer_model`. Реализованный вариант `prescribed_heat_input` не добавляет эмпирическую корреляцию теплоотдачи: он только переводит заданную линейную тепловую нагрузку \(q_\ell\) в средний тепловой поток \(q''\) через гидравлический периметр испарителя. Корреляции saturated flow boiling heat transfer, dryout и CHF не подключены; соответствующие поля результата явно получают статусы `not_evaluated_source_required`. Поэтому новый слой следует считать защитной диагностикой и интерфейсной подготовкой к published-моделям, а не прогнозом кризиса теплообмена.
+После Checkpoint 7 введён параметр `heat_transfer_model`. Реализованный вариант `prescribed_heat_input` не добавляет эмпирическую корреляцию теплоотдачи: он только переводит заданную линейную тепловую нагрузку \(q_\ell\) в средний тепловой поток \(q''\) через гидравлический периметр испарителя. Реализованный вариант `wall_coupled` вычисляет эквивалентную линейную нагрузку из пользовательской эффективной проводимости и температуры грунтового слоя:
+
+\[
+q_\ell=G_{\rm eff}(T_{\rm soil}-t_k).
+\tag{0.1}
+\]
+
+Это lumped boundary condition, а не опубликованная корреляция кипения. Корреляции saturated flow boiling heat transfer, dryout и CHF не подключены; соответствующие поля результата явно получают статусы `not_evaluated_source_required`. Поэтому новый слой следует считать защитной диагностикой, постановкой тепловой границы и интерфейсной подготовкой к published-моделям, а не прогнозом кризиса теплообмена.
 
 После Checkpoint 9 критические тепловые нагрузки вынесены в отдельный отчёт `critical_loads.py`. Он использует текущий стационарный solver как физическую систему уравнений, уточняет нижнюю и верхнюю границы существования решения после bracket-поиска и отдельно решает диссертационное условие \(Hy(q_\ell,f=0)-H=0\). Этот отчёт нельзя смешивать с dryout/CHF: кризис теплообмена по-прежнему требует опубликованной heat-transfer корреляции.
 
@@ -1636,9 +1643,11 @@ Q_{l,{\rm out}}\le1\ {\rm л/ч}.
 | heat_transfer_model | Статус | Поведение |
 |---|---|---|
 | prescribed_heat_input | реализован | заданный \(q_\ell\) переводится в средний \(q''\), без HTC/dryout корреляции |
-| wall_coupled | reserved | возвращает `validation_error`, пока нет wall/soil boundary model |
+| wall_coupled | реализован как user-supplied boundary | \(q_\ell=G_{\rm eff}(T_{\rm soil}-t_k)\), без HTC/dryout корреляции |
 
 Для `prescribed_heat_input` поле `boiling_heat_transfer_status` равно `diagnostic_only_source_required` при сошедшемся расчёте. Это означает, что solver может сообщить величину \(q''\), но не оценивает коэффициент теплоотдачи, температуру стенки, wall superheat, dryout или CHF.
+
+Для `wall_coupled` solver сначала строит `WallSoilBoundary`, проверяет положительность \(G_{\rm eff}\), выбирает температуру грунтового слоя, содержащего среднюю отметку испарителя, и заменяет входной \(q_\ell\) на вычисленное значение. Если граничное условие отсутствует, \(G_{\rm eff}\le0\) или \(T_{\rm soil}\le t_k\), расчёт завершается `validation_error`. Этот режим не решает теплопроводность грунта во времени и не рассчитывает температуру стенки трубы; он только задаёт внешнюю эффективную линейную связь "грунт -> испаритель".
 
 Если гидравлический расчёт не сошёлся, dryout не объявляется автоматически. Например, `no_root_bracket` классифицируется как `numerical_failure`, а `dryout_limit` остаётся `not_evaluated_source_required`. Near-critical предупреждение от property backend переносится в `property_limit`, чтобы не маскировать область свойств под кризис кипения.
 
@@ -1708,6 +1717,12 @@ SteadyPassResult содержит интегральные расходы, пу�
 | pressure_balance_total_resistance_pa | сумма сопротивлений без гидростатики |
 | pressure_balance_residual_pa | невязка явного замкнутого баланса |
 | heat_transfer_model | выбранный уровень тепловой постановки |
+| thermal_boundary_model | `prescribed_heat_input` или `wall_soil_effective_conductance` |
+| wall_soil_temperature_c | температура грунтового слоя, использованная для `wall_coupled` |
+| wall_soil_effective_conductance_w_m_k | пользовательская эффективная линейная проводимость \(G_{\rm eff}\) |
+| wall_soil_delta_t_k | разность \(T_{\rm soil}-t_k\) |
+| wall_soil_qtr_w_m | вычисленная линейная нагрузка \(q_\ell\) для `wall_coupled` |
+| wall_soil_boundary_source | строка-источник граничной постановки |
 | boiling_heat_flux_w_m2 | средний \(q''=q_\ell/P_h\), диагностический пересчёт |
 | boiling_heat_transfer_status | статус диагностики теплообмена |
 | boiling_heat_transfer_limit | статус ограничения теплоотдачи, сейчас source-required |
@@ -1786,7 +1801,7 @@ SteadyPassResult содержит интегральные расходы, пу�
 
 Connector-сегменты могут храниться в сценарии как элементы редактирования, но текущий steady solver принимает только расчётные участки evaporator, riser, condenser и downcomer. Произвольная многосегментная схема с локальными сопротивлениями переходов остаётся следующим этапом.
 
-Допустимый тепловой режим пока один: prescribed_qtr.
+Допустимый `thermal.mode` пока один: prescribed_qtr. Фактический способ задания тепловой нагрузки выбирается через `solver.heat_transfer_model`: `prescribed_heat_input` использует `thermal.qtr_W_m`, а `wall_coupled` вычисляет \(q_\ell\) из параметров грунтового boundary.
 
 Поле `solver` хранит:
 
@@ -1826,11 +1841,11 @@ Connector-сегменты могут храниться в сценарии к�
 После Checkpoint 4 designer передаёт в solver не только скалярные режимные параметры, но и объект `LoopGeometry`:
 
 \[
-\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm regime\_model},\ {\rm friction\_model},\ {\rm heat\_transfer\_model},\ {\rm geometry}\}.
+\{H,\ q_\ell,\ L_i,\ t_k,\ {\rm mode},\ {\rm closure\_model},\ {\rm regime\_model},\ {\rm friction\_model},\ {\rm heat\_transfer\_model},\ {\rm geometry},\ {\rm wall\_soil\_boundary}\}.
 \tag{15.1}
 \]
 
-`fluid`, `property_backend` и `allow_property_extrapolation` используются при создании `RefrigerantLoopModel` и его property backend; остальные параметры передаются в `SteadyLoopInputs`. Для старых CO₂-сценариев дефолты сохраняют ветку `mathcad_table`, `experimental_regime_aware`, `mathcad_compat` и `prescribed_heat_input`; для NH₃ `mathcad_table` запрещён.
+`fluid`, `property_backend` и `allow_property_extrapolation` используются при создании `RefrigerantLoopModel` и его property backend; остальные параметры передаются в `SteadyLoopInputs`. Для старых CO₂-сценариев дефолты сохраняют ветку `mathcad_table`, `experimental_regime_aware`, `mathcad_compat` и `prescribed_heat_input`; для NH₃ `mathcad_table` запрещён. При `heat_transfer_model="wall_coupled"` designer передаёт `WallSoilBoundary`; авторитетное значение \(q_\ell\) в solver становится вычисленным wall/soil значением, а не ручным `thermal.qtr_W_m`.
 
 `geometry` содержит четыре расчётных участка `FlowSection`: evaporator, riser, condenser и downcomer. Для каждого участка сохраняются идентификатор, тип, ориентация, длина, перепад отметки, гидравлический диаметр, абсолютная и относительная шероховатость, площадь и `heat_mode`. Python-фасад также допускает ручную геометрию с `geometry_source="manual_sections"`. В сценарии конструктора тепловой режим участка пока соответствует `prescribed_qtr` / `prescribed_heat_input`.
 
@@ -1842,9 +1857,10 @@ Connector-сегменты могут храниться в сценарии к�
 - объёмная теплоёмкость;
 - объёмная скрытая теплота;
 - начальная температура;
-- отметки слоёв.
+- отметки слоёв;
+- эффективная линейная проводимость `effective_conductance_W_mK`.
 
-Эти данные валидируются и сохраняются, но не используются при вычислении \(q_\ell\), температуры испарителя или теплового поля. Их статус — PLACEHOLDER.
+Теплопроводность, объёмная теплоёмкость и скрытая теплота пока валидируются и сохраняются как данные будущей распределённой модели грунта. В режиме `wall_coupled` текущий solver использует только `effective_conductance_W_mK` и `initial_temperature_C` слоя, содержащего среднюю отметку испарителя, чтобы вычислить \(q_\ell=G_{\rm eff}(T_{\rm soil}-t_k)\). Поэтому статус грунтового слоя смешанный: эффективная boundary condition реализована, а нестационарная soil model остаётся PLACEHOLDER.
 
 ## 15.5. REST API
 
@@ -1860,7 +1876,7 @@ Connector-сегменты могут храниться в сценарии к�
 
 API предназначен для локальной работы. CORS разрешён только для localhost и 127.0.0.1 на порту 5173. Сценарии записываются в artifacts/scenarios.
 
-`POST /api/run` возвращает полный `SteadyLoopResult.to_dict()`. Поэтому клиент получает не только старые инженерные величины \(f\), \(H_y\), \(\Delta p\), \(G\) и \(x\), но и source/failure поля: `fluid`, `property_backend`, `model_source_status`, `source_gate_reasons`, `failure_class`, `boiling_heat_transfer_limit`, `dryout_limit`, `qcrit_status` и `qcrit_model`.
+`POST /api/run` возвращает полный `SteadyLoopResult.to_dict()`. Поэтому клиент получает не только старые инженерные величины \(f\), \(H_y\), \(\Delta p\), \(G\) и \(x\), но и source/failure поля: `fluid`, `property_backend`, `model_source_status`, `source_gate_reasons`, `failure_class`, `boiling_heat_transfer_limit`, `dryout_limit`, `thermal_boundary_model`, `wall_soil_*`, `qcrit_status` и `qcrit_model`.
 
 ## 15.6. Web-интерфейс
 
@@ -1871,10 +1887,11 @@ React-интерфейс позволяет:
 - назначать типы;
 - задавать диаметры и шероховатости;
 - редактировать \(q_\ell,t_k,H\), mode, closure_model, fluid, property_backend, regime_model, friction_model и heat_transfer_model;
+- для `wall_coupled` задавать температуру грунтового слоя и эффективную линейную проводимость;
 - включать явную экстраполяцию свойств, если пользователь принимает этот риск;
 - сохранять и запускать сценарий;
 - видеть основные гидравлические результаты;
-- видеть source/failure diagnostics, boiling/dryout statuses, `qcrit_status` и список `source_gate_reasons`.
+- видеть source/failure diagnostics, boiling/dryout statuses, `wall_soil_*` fields, `qcrit_status` и список `source_gate_reasons`.
 
 Клиент повторяет часть геометрических формул для интерактивного предварительного просмотра. Авторитетный расчёт перед запуском выполняется сервером.
 
@@ -1988,6 +2005,7 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 |---|---|---|---|
 | \(U=q_\ell L_i\) | solver и designer | баланс энергии, [1] | DISSERTATION |
 | \(q''=q_\ell/P_h\) | boiling_heat_transfer | определение среднего теплового потока | DEFINITIONAL |
+| \(q_\ell=G_{\rm eff}(T_{\rm soil}-t_k)\) | wall_coupled boundary | пользовательская эффективная wall/soil boundary condition | USER_SUPPLIED_BOUNDARY |
 | расходы (6.3)–(6.5) | solver | [1], (2.75) | DISSERTATION |
 | \(y_n\), (6.7) | solver | [1], (2.77) | DISSERTATION |
 | общий интерфейс свойств | refrigerant_properties | API-инвариант проекта | ENGINEERING |
@@ -2029,7 +2047,8 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | CubicSpline | properties | de Boor, SciPy [17, 19] | NUMERICAL |
 | Brent | solver | Brent, SciPy [18, 19] | NUMERICAL |
 | матрица сходимости | function_matrix | авторский анализ | NUMERICAL |
-| параметры грунта | designer | не подключены | PLACEHOLDER |
+| эффективная wall/soil boundary | designer + solver | пользовательские \(G_{\rm eff}\) и температура выбранного слоя | USER_SUPPLIED_BOUNDARY |
+| распределённая физика грунта | designer data only | не подключена к steady solver | PLACEHOLDER |
 
 # 18. Выявленные расхождения и риски
 
@@ -2161,7 +2180,7 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 `model_source_status` на `source_complete`. Для этого требуется полный
 первоисточник, запись в реестре формул и тесты численных контрольных точек.
 
-Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки.
+Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области, wall/soil boundary inputs при `wall_coupled` и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки или published-прогноз температуры стенки.
 
 # 20. Заключение
 
@@ -2180,6 +2199,7 @@ Boiling/dryout поля результата допустимо использо
 - общий property backend для CO₂/NH₃;
 - CoolProp reference CSV и тесты NH₃ loop solver;
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
+- пользовательская `wall_coupled` boundary condition для пересчёта температуры грунтового слоя и эффективной линейной проводимости в \(q_\ell\);
 - агрегированный `model_source_status` и список `source_gate_reasons`, которые не дают перепутать published fallback closure с полностью реализованной published-физикой;
 - отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
 - быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы;
@@ -2194,7 +2214,7 @@ Boiling/dryout поля результата допустимо использо
 - отсутствие published режимных карт и boiling/dryout prediction; NH₃ qcrit остаётся переносом общего solver без отдельной аммиачной валидации;
 - сценарная матрица остаётся регрессионной диагностикой и не является физической режимной картой или qcrit-моделью;
 - отображение source/failure diagnostics в UI и отчётах не является научной валидацией и не закрывает source-gate;
-- неподключённая физика грунта и локальные сопротивления произвольной геометрии;
+- отсутствующая распределённая физика грунта и локальные сопротивления произвольной геометрии;
 - обнаруженные вопросы к legacy-логарифму трения и ограниченная поддержка произвольной многосегментной геометрии конструктора.
 
 Поэтому текущую версию корректно характеризовать как исследовательский инженерный расчётный инструмент и платформу для последующей научной верификации, а не как завершённую универсальную модель ГЕТ.
@@ -2306,6 +2326,11 @@ Boiling/dryout поля результата допустимо использо
 | failure_class | hydrodynamic_limit | гидравлическое ограничение, например отсутствие движущего напора |
 | failure_class | property_limit | выход за диапазон свойств или near-critical warning |
 | failure_class | numerical_failure | численный отказ, например no_root_bracket |
+| thermal_boundary_model | prescribed_heat_input, wall_soil_effective_conductance | источник тепловой нагрузки steady-run |
+| wall_soil_temperature_c | число или null | температура грунтового слоя для `wall_coupled` |
+| wall_soil_effective_conductance_w_m_k | число или null | пользовательская эффективная линейная проводимость |
+| wall_soil_delta_t_k | число или null | разность температур \(T_{\rm soil}-t_k\) |
+| wall_soil_qtr_w_m | число или null | вычисленная нагрузка \(q_\ell\) для `wall_coupled` |
 | boiling_heat_transfer_limit | not_evaluated_source_required | published HTC-корреляция не подключена |
 | dryout_limit | not_evaluated_source_required | published dryout/CHF-корреляция не подключена |
 | qcrit_status | not_evaluated, evaluated, failed | статус отдельного qcrit-отчёта; steady-run сам его не запускает |

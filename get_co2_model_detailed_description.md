@@ -47,9 +47,10 @@
 - `mode` — `worksheet_compatible` или `distributed_steady`
 - `closure_model` — модель пустотности и двухфазного замыкания
 - `friction_model` — модель коэффициента трения Дарси
-- `heat_transfer_model` — уровень тепловой постановки: сейчас реализован
-  `prescribed_heat_input`; `wall_coupled` зарезервирован для следующей модели
-  wall/soil boundary и возвращает validation error без граничных условий
+- `heat_transfer_model` — уровень тепловой постановки: реализованы
+  `prescribed_heat_input` и `wall_coupled`
+- `wall_soil_boundary` — для `wall_coupled`: пользовательская эффективная
+  связь грунт-испаритель с температурой слоя и линейной проводимостью
 
 Внутри модели также зашиты геометрические параметры:
 
@@ -292,6 +293,11 @@ CO₂ Mathcad-compatible ветка получает свойства из ис�
 - `source_gate_reasons` — список причин, почему результат остаётся
   source-gated или experimental
 - `heat_transfer_model` — фактически выбранный тепловой diagnostic mode
+- `thermal_boundary_model` — источник тепловой нагрузки:
+  `prescribed_heat_input` или `wall_soil_effective_conductance`
+- `wall_soil_temperature_c`, `wall_soil_effective_conductance_w_m_k`,
+  `wall_soil_delta_t_k`, `wall_soil_qtr_w_m` — параметры и результат
+  `wall_coupled` boundary
 - `boiling_heat_flux_w_m2` — средний тепловой поток на смоченный периметр
   испарителя, \(q''=qtr/P_h\)
 - `boiling_heat_transfer_status` — статус heat-transfer диагностики
@@ -485,6 +491,18 @@ diagnostic-only тепловой слой. Для `heat_transfer_model="prescrib
 не объявляется причиной отказа: `failure_class` остаётся `numerical_failure`,
 `hydrodynamic_limit` или `property_limit` в зависимости от фактического статуса.
 
+Для `heat_transfer_model="wall_coupled"` solver сначала вычисляет эквивалентную
+линейную нагрузку из пользовательской граничной постановки:
+
+`qtr = effective_conductance_w_m_k * (far_field_temperature_c - tcon)`
+
+Эта постановка не является published HTC-корреляцией и не решает температуру
+стенки или нестационарное тепловое поле грунта. Она только задаёт внешний
+lumped boundary input для того же гидравлического steady solver. В результате
+возвращаются `thermal_boundary_model="wall_soil_effective_conductance"` и
+поля `wall_soil_*`; `boiling_heat_transfer_limit` и `dryout_limit` остаются
+`not_evaluated_source_required`.
+
 ## 8. Что делает `run_get_co2_demo-1.py`
 
 Файл [run_get_co2_demo-1.py](run_get_co2_demo-1.py) — это демонстрационный сценарий.
@@ -569,9 +587,11 @@ diagnostic-only тепловой слой. Для `heat_transfer_model="prescrib
 границы текущей steady-системы уравнений, но не является экспериментальной
 валидацией, подгонкой к таблицам приложений или published dryout/CHF-прогнозом.
 
-После Checkpoint 7 heat-transfer слой остаётся safe diagnostic scaffold: средний
-heat flux вычисляется из `qtr` и гидравлического периметра, а published
-heat-transfer, dryout и CHF-корреляции явно помечены как `source_required`.
+После Checkpoint 7 heat-transfer слой остаётся safe diagnostic scaffold:
+средний heat flux вычисляется из `qtr` и гидравлического периметра, а
+`wall_coupled` только пересчитывает пользовательскую wall/soil boundary в
+эквивалентный `qtr`. Published heat-transfer, dryout и CHF-корреляции явно
+помечены как `source_required`.
 Kandlikar, Shah и Gungor-Winterton не подключены до сверки первоисточников и
 областей применимости.
 
@@ -670,7 +690,9 @@ CoolProp-свойства. Это означает, что баланс масс
 - source-strict published-замыкания HEM, Zivi и Lockhart-Martinelli/Chisholm;
 - experimental-замыкания для исследовательского regime-aware режима;
 - source-tagged диагностические режимы течения без заявления published-карты.
-- diagnostic-only boiling/dryout scaffold без published HTC/CHF-корреляции.
+- diagnostic-only boiling/dryout scaffold без published HTC/CHF-корреляции;
+- пользовательская `wall_coupled` boundary condition без распределённой
+  модели грунта.
 
 Полный workflow модели выглядит так:
 

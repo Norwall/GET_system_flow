@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from boiling_heat_transfer import WallSoilBoundary
 from co2_geometry import LoopGeometry
 from co2_results import SteadyLoopResult
 from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver
@@ -52,6 +53,7 @@ class RefrigerantLoopModel:
         friction_model: str,
         geometry: LoopGeometry | None,
         heat_transfer_model: str,
+        wall_soil_boundary: WallSoilBoundary | None,
     ) -> SteadyLoopInputs:
         return SteadyLoopInputs(
             H=H,
@@ -64,6 +66,7 @@ class RefrigerantLoopModel:
             friction_model=friction_model,
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
+            wall_soil_boundary=wall_soil_boundary,
         )
 
     def run_result(
@@ -78,6 +81,7 @@ class RefrigerantLoopModel:
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
+        wall_soil_boundary: WallSoilBoundary | None = None,
     ) -> SteadyLoopResult:
         """Return a structured result for the configured refrigerant."""
 
@@ -93,6 +97,7 @@ class RefrigerantLoopModel:
                 friction_model=friction_model,
                 geometry=geometry,
                 heat_transfer_model=heat_transfer_model,
+                wall_soil_boundary=wall_soil_boundary,
             )
         )
 
@@ -108,6 +113,7 @@ class RefrigerantLoopModel:
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
+        wall_soil_boundary: WallSoilBoundary | None = None,
     ) -> dict[str, Any]:
         """Return a dictionary result for compatibility with reporting code."""
 
@@ -122,6 +128,7 @@ class RefrigerantLoopModel:
             friction_model=friction_model,
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
+            wall_soil_boundary=wall_soil_boundary,
         ).to_dict()
 
     def solve_f(
@@ -139,6 +146,7 @@ class RefrigerantLoopModel:
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
+        wall_soil_boundary: WallSoilBoundary | None = None,
     ) -> float | None:
         """Return the circulation factor if the head-balance root is bracketed."""
 
@@ -154,6 +162,7 @@ class RefrigerantLoopModel:
                 friction_model=friction_model,
                 geometry=geometry,
                 heat_transfer_model=heat_transfer_model,
+                wall_soil_boundary=wall_soil_boundary,
             ),
             fmin=fmin,
             fmax=fmax,
@@ -172,6 +181,7 @@ class RefrigerantLoopModel:
         friction_model: str = "colebrook_white",
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
+        wall_soil_boundary: WallSoilBoundary | None = None,
         qtr_min_w_m: float = 0.0,
         qtr_max_w_m: float = 150.0,
         qtr_step_w_m: float = 1.0,
@@ -194,6 +204,7 @@ class RefrigerantLoopModel:
             friction_model=friction_model,
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
+            wall_soil_boundary=wall_soil_boundary,
             qtr_min_w_m=qtr_min_w_m,
             qtr_max_w_m=qtr_max_w_m,
             qtr_step_w_m=qtr_step_w_m,

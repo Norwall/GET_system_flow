@@ -63,6 +63,7 @@ const fallbackScenario = {
   soil: {
     mode: "dynamic_placeholder",
     surface_z_m: 0,
+    effective_conductance_W_mK: null,
     layers: [
       {
         name: "soil",
@@ -376,6 +377,33 @@ function App() {
             options={HEAT_TRANSFER_MODELS}
             onChange={(value) => updateScenario((next) => (next.solver.heat_transfer_model = value))}
           />
+          {scenario.solver.heat_transfer_model === "wall_coupled" ? (
+            <>
+              <PanelTitle title="Soil" />
+              <NumberInput
+                label="Soil temp, C"
+                value={scenario.soil.layers?.[0]?.initial_temperature_C ?? ""}
+                onChange={(value) =>
+                  updateScenario((next) => {
+                    if (!next.soil.layers?.length) {
+                      next.soil.layers = [{ name: "soil", top_z_m: 0, bottom_z_m: -10 }];
+                    }
+                    next.soil.layers[0].initial_temperature_C = value;
+                  })
+                }
+              />
+              <NumberInput
+                label="G soil, W/m/K"
+                value={scenario.soil.effective_conductance_W_mK ?? ""}
+                allowEmpty
+                onChange={(value) =>
+                  updateScenario((next) => {
+                    next.soil.effective_conductance_W_mK = value === "" ? null : value;
+                  })
+                }
+              />
+            </>
+          ) : null}
           <CheckboxInput
             label="Extrapolate"
             checked={Boolean(scenario.solver.allow_property_extrapolation)}
@@ -386,7 +414,9 @@ function App() {
           <Metric label="Li" value={derived.error ? "-" : `${format(derived.evaporator_length_m)} m`} />
           <Metric label="H" value={derived.error ? "-" : `${format(derived.H_m)} m`} />
           <Metric label="Depth" value={derived.error ? "-" : `${format(derived.evaporator_depth_m)} m`} />
+          <Metric label="qtr" value={derived.error ? "-" : `${format(derived.qtr_W_m)} W/m`} />
           <Metric label="U" value={derived.error ? "-" : `${format(derived.heat_power_W)} W`} />
+          <Metric label="Boundary" value={derived.error ? "-" : textValue(derived.thermal_boundary_model)} />
           {derived.error ? <p className="error-text">{derived.error}</p> : null}
         </aside>
 
@@ -519,7 +549,9 @@ function App() {
               <Metric label="Regime" value={textValue(serverResult.regime_model)} />
               <Metric label="Regime src" value={textValue(serverResult.regime_model_source_status)} />
               <Metric label="Friction" value={textValue(serverResult.friction_model)} />
+              <Metric label="Boundary" value={textValue(serverResult.thermal_boundary_model)} />
               <PanelTitle title="Limits" />
+              <Metric label="Wall qtr" value={`${format(serverResult.wall_soil_qtr_w_m)} W/m`} />
               <Metric label="Heat flux" value={`${format(serverResult.boiling_heat_flux_w_m2)} W/m2`} />
               <Metric label="Boiling" value={textValue(serverResult.boiling_heat_transfer_limit)} />
               <Metric label="Dryout" value={textValue(serverResult.dryout_limit)} />
@@ -703,6 +735,25 @@ function deriveScenario(scenario) {
     const evaporatorMeanZ = evaporatorWeightedZ / evaporatorLength;
     const geometricHead = topZ - evaporatorMeanZ;
     const H = scenario.solver.H_override_m ?? geometricHead;
+    let qtr = Number(scenario.thermal.qtr_W_m);
+    let thermalBoundaryModel = "prescribed_heat_input";
+    let wallSoilTemperature = null;
+    let wallSoilConductance = null;
+    let wallSoilDeltaT = null;
+    if ((scenario.solver.heat_transfer_model ?? "prescribed_heat_input") === "wall_coupled") {
+      wallSoilConductance = Number(scenario.soil?.effective_conductance_W_mK);
+      if (!Number.isFinite(wallSoilConductance) || wallSoilConductance <= 0) {
+        throw new Error("Set positive soil conductance");
+      }
+      const soilLayer = soilLayerForZ(scenario.soil, evaporatorMeanZ);
+      wallSoilTemperature = Number(soilLayer.initial_temperature_C);
+      wallSoilDeltaT = wallSoilTemperature - Number(scenario.solver.tcon_C);
+      qtr = wallSoilConductance * wallSoilDeltaT;
+      if (!Number.isFinite(qtr) || qtr <= 0) {
+        throw new Error("Soil temperature must exceed tcon for wall-coupled heat input");
+      }
+      thermalBoundaryModel = "wall_soil_effective_conductance";
+    }
     return {
       total_length_m: totalLength,
       evaporator_length_m: evaporatorLength,
@@ -711,13 +762,26 @@ function deriveScenario(scenario) {
       top_z_m: topZ,
       geometric_head_m: geometricHead,
       H_m: H,
-      qtr_W_m: Number(scenario.thermal.qtr_W_m),
-      heat_power_W: Number(scenario.thermal.qtr_W_m) * evaporatorLength,
+      qtr_W_m: qtr,
+      heat_power_W: qtr * evaporatorLength,
+      thermal_boundary_model: thermalBoundaryModel,
+      wall_soil_temperature_C: wallSoilTemperature,
+      wall_soil_effective_conductance_W_mK: wallSoilConductance,
+      wall_soil_delta_t_K: wallSoilDeltaT,
       error: "",
     };
   } catch (error) {
     return { error: error.message };
   }
+}
+
+function soilLayerForZ(soil, zM) {
+  const layers = soil?.layers ?? [];
+  const layer = layers.find((item) => Number(item.bottom_z_m) <= zM && zM <= Number(item.top_z_m));
+  if (!layer) {
+    throw new Error("No soil layer covers evaporator depth");
+  }
+  return layer;
 }
 
 function computeViewport(nodes) {

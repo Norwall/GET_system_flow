@@ -120,6 +120,10 @@ print(result["fluid"], result["property_backend"], result["converged"])
   `heat_transfer_model="prescribed_heat_input"` результат содержит средний
   `boiling_heat_flux_w_m2`, а `boiling_heat_transfer_limit` и `dryout_limit`
   явно остаются `not_evaluated_source_required` до published-корреляций.
+- для `heat_transfer_model="wall_coupled"` добавлена пользовательская lumped
+  wall/soil boundary condition: solver вычисляет `qtr` из
+  `G_eff * (T_soil - tcon)` и возвращает `wall_soil_*` поля результата; это не
+  снимает source-gate для published HTC/dryout корреляций.
 - добавлен отдельный `critical_loads.py`: методы `critical_loads(...)` фасадов
   строят отчёт по нижней/верхней гидродинамической границе текущего steady
   solver и отдельно проверяют диссертационный предел `f=0`; одиночный

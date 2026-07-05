@@ -565,12 +565,18 @@ Gungor–Winterton. EPFL landing pages без `ORIGINAL`/full-text bitstream
 published heat-transfer/dryout корреляций. Полноценные Kandlikar/Shah/
 Gungor–Winterton и dryout/CHF модели не реализованы до сверки первоисточника.
 
+Статус wall/soil update: добавлена пользовательская lumped boundary condition
+`wall_coupled`, которая вычисляет эквивалентную линейную нагрузку как
+`qtr = G_eff * (T_soil - tcon)` по явным входам wall/soil boundary. Это не
+published HTC-корреляция; `boiling_heat_transfer_limit` и `dryout_limit`
+остаются `source_required` до первоисточников.
+
 ### Задачи
 
 - [x] Создать `boiling_heat_transfer.py`.
-- [ ] Поддержать два уровня постановки:
+- [x] Поддержать два уровня постановки:
   - [x] prescribed heat input — текущая задача;
-  - [ ] wall/soil coupled heat transfer — следующая физическая задача.
+  - [x] wall/soil coupled heat transfer — пользовательская lumped boundary condition.
 - [x] Добавить diagnostic-only расчёт среднего heat flux для saturated flow boiling без published HTC-корреляции.
 - [ ] Выбрать опубликованную корреляцию после сверки первоисточника:
   - Kandlikar;

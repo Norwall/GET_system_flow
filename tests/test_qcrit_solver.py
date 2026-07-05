@@ -8,6 +8,7 @@ from critical_loads import (
     CriticalLoadPoint,
     find_critical_loads,
 )
+from boiling_heat_transfer import WallSoilBoundary
 from get_co2_model import CO2MathcadModel
 
 
@@ -116,3 +117,27 @@ def test_co2_mathcad_qcrit_smoke_uses_f_zero_limit_not_old_heatmap_name() -> Non
     assert report.upper_f_zero_load.point is not None
     assert report.upper_f_zero_load.point.circulation_factor == pytest.approx(0.0)
     assert report.to_dict()["qcrit_model"] == "dissertation_scan_plus_f_zero"
+
+
+def test_wall_coupled_qcrit_rejects_prescribed_qtr_sweep() -> None:
+    model = CO2MathcadModel()
+
+    report = model.critical_loads(
+        H=2.5,
+        Li=200.0,
+        tcon=0.0,
+        heat_transfer_model="wall_coupled",
+        wall_soil_boundary=WallSoilBoundary(
+            far_field_temperature_c=5.0,
+            effective_conductance_w_m_k=10.0,
+        ),
+        qtr_min_w_m=0.0,
+        qtr_max_w_m=10.0,
+        qtr_step_w_m=5.0,
+        nsamp=20,
+        ngrid=20,
+    )
+
+    assert report.qcrit_status == "failed"
+    assert any(point.status == "validation_error" for point in report.scan_points)
+    assert any("prescribed-qtr sweep" in (point.failure_reason or "") for point in report.scan_points)

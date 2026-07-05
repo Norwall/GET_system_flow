@@ -8,9 +8,11 @@ from scipy.optimize import root_scalar
 
 from boiling_heat_transfer import (
     WALL_COUPLED,
+    WallSoilBoundary,
     diagnose_prescribed_heat_input,
     diagnostics_for_solver_status,
     normalize_heat_transfer_model,
+    wall_coupled_heat_input_w_m,
 )
 from co2_geometry import LoopGeometry
 from co2_results import EvaporatorProfile, LoopSectionState, RiserProfile, SteadyLoopResult, SteadyPassResult
@@ -84,6 +86,7 @@ class SteadyLoopInputs:
     friction_model: str = "mathcad_compat"
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
+    wall_soil_boundary: WallSoilBoundary | None = None
 
 
 @dataclass(frozen=True)
@@ -293,6 +296,20 @@ class SteadyLoopSolver:
             model=self.effective_friction_model(inputs),
         )
 
+    def _effective_heat_inputs(self, inputs: SteadyLoopInputs) -> SteadyLoopInputs:
+        heat_transfer_model = normalize_heat_transfer_model(inputs.heat_transfer_model)
+        if heat_transfer_model != WALL_COUPLED:
+            return replace(inputs, heat_transfer_model=heat_transfer_model)
+        qtr_w_m = wall_coupled_heat_input_w_m(
+            inputs.wall_soil_boundary,
+            tcon_c=inputs.tcon,
+        )
+        return replace(
+            inputs,
+            qtr=float(qtr_w_m),
+            heat_transfer_model=heat_transfer_model,
+        )
+
     def _section_geometry_fields(self, section) -> dict[str, float | str]:
         return {
             "hydraulic_diameter_m": float(section.hydraulic_diameter_m),
@@ -380,6 +397,7 @@ class SteadyLoopSolver:
         circulation_factor: float,
         ngrid: int = 500,
     ) -> Optional[SteadyPassResult]:
+        inputs = self._effective_heat_inputs(inputs)
         if inputs.geometry is not None and inputs.geometry is not self.geometry:
             inputs.geometry.validate_current_solver_sections()
             solver = SteadyLoopSolver(
@@ -2103,6 +2121,15 @@ class SteadyLoopSolver:
     ) -> dict:
         property_fields = self.property_result_fields(inputs)
         near_critical_warning = property_fields.get("near_critical_warning", "")
+        wall_soil_qtr_w_m = None
+        if heat_transfer_model == WALL_COUPLED and inputs.wall_soil_boundary is not None:
+            try:
+                wall_soil_qtr_w_m = wall_coupled_heat_input_w_m(
+                    inputs.wall_soil_boundary,
+                    tcon_c=inputs.tcon,
+                )
+            except ValueError:
+                wall_soil_qtr_w_m = None
         if solver_status == "converged" and pass_result is not None:
             evaporator_section = self._active_geometry(inputs).evaporator_section(length_m=inputs.Li)
             boiling_diagnostics = diagnose_prescribed_heat_input(
@@ -2111,6 +2138,9 @@ class SteadyLoopSolver:
                 evaporator_hydraulic_diameter_m=evaporator_section.hydraulic_diameter_m,
                 boiling_length_m=pass_result.boiling_length_m,
                 near_critical_warning=near_critical_warning,
+                heat_transfer_model=heat_transfer_model,
+                wall_soil_boundary=inputs.wall_soil_boundary,
+                tcon_c=inputs.tcon,
             )
         else:
             boiling_diagnostics = diagnostics_for_solver_status(
@@ -2118,6 +2148,9 @@ class SteadyLoopSolver:
                 solver_status=solver_status,
                 near_critical_warning=near_critical_warning,
                 failure_reason=failure_reason,
+                wall_soil_boundary=inputs.wall_soil_boundary,
+                wall_soil_qtr_w_m=wall_soil_qtr_w_m,
+                tcon_c=inputs.tcon,
             )
         source_gate_fields = self.model_source_gate_fields(inputs, boiling_diagnostics)
         return {
@@ -2137,28 +2170,14 @@ class SteadyLoopSolver:
     def solve(self, inputs: SteadyLoopInputs) -> SteadyLoopResult:
         geometry_source = self.geometry_source(inputs)
         try:
-            heat_transfer_model = normalize_heat_transfer_model(inputs.heat_transfer_model)
-        except ValueError as exc:
+            inputs = self._effective_heat_inputs(inputs)
             heat_transfer_model = inputs.heat_transfer_model
+        except ValueError as exc:
+            try:
+                heat_transfer_model = normalize_heat_transfer_model(inputs.heat_transfer_model)
+            except ValueError:
+                heat_transfer_model = inputs.heat_transfer_model
             failure_reason = str(exc)
-            return SteadyLoopResult(
-                converged=False,
-                H=inputs.H,
-                qtr=inputs.qtr,
-                Li=inputs.Li,
-                tcon=inputs.tcon,
-                solver_status="validation_error",
-                failure_reason=failure_reason,
-                **self._result_common_fields(
-                    inputs=inputs,
-                    geometry_source=geometry_source,
-                    heat_transfer_model=heat_transfer_model,
-                    solver_status="validation_error",
-                    failure_reason=failure_reason,
-                ),
-            )
-        if heat_transfer_model == WALL_COUPLED:
-            failure_reason = "heat_transfer_model='wall_coupled' requires wall/soil boundary conditions."
             return SteadyLoopResult(
                 converged=False,
                 H=inputs.H,

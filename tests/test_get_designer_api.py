@@ -6,6 +6,8 @@ from get_designer_geometry import (
     DesignerNode,
     DesignerSegment,
     GETScenario,
+    SoilConfig,
+    SoilLayer,
     SolverConfig,
     ThermalConfig,
     scenario_to_dict,
@@ -61,6 +63,38 @@ def _api_run_scenario() -> GETScenario:
     )
 
 
+def _api_wall_coupled_scenario() -> GETScenario:
+    scenario = _api_run_scenario()
+    return GETScenario(
+        scenario_id="api-wall-case",
+        name="API wall case",
+        nodes=scenario.nodes,
+        segments=scenario.segments,
+        thermal=ThermalConfig(qtr_W_m=1.0),
+        soil=SoilConfig(
+            effective_conductance_W_mK=10.0,
+            layers=(
+                SoilLayer(
+                    name="warm-soil",
+                    top_z_m=0.0,
+                    bottom_z_m=-10.0,
+                    initial_temperature_C=5.0,
+                ),
+            ),
+        ),
+        solver=SolverConfig(
+            tcon_C=0.0,
+            mode="worksheet_compatible",
+            closure_model="worksheet_compatible",
+            fluid="CO2",
+            property_backend="mathcad_table",
+            regime_model="experimental_regime_aware",
+            friction_model="mathcad_compat",
+            heat_transfer_model="wall_coupled",
+        ),
+    )
+
+
 def test_api_derives_and_saves_scenarios(tmp_path) -> None:
     pytest.importorskip("fastapi.testclient")
     from fastapi.testclient import TestClient
@@ -105,3 +139,24 @@ def test_api_run_returns_source_and_limit_diagnostics(tmp_path) -> None:
     assert "failure_class" in result
     assert result["qcrit_status"] == "not_evaluated"
     assert result["dryout_limit"] == "not_evaluated_source_required"
+
+
+def test_api_run_wall_coupled_returns_derived_boundary_fields(tmp_path) -> None:
+    pytest.importorskip("fastapi.testclient")
+    from fastapi.testclient import TestClient
+
+    from get_designer_api import create_app
+
+    client = TestClient(create_app(tmp_path))
+
+    response = client.post("/api/run", json=scenario_to_dict(_api_wall_coupled_scenario()))
+
+    assert response.status_code == 200
+    derived = response.json()["derived"]
+    result = response.json()["result"]
+    assert derived["qtr_W_m"] == pytest.approx(50.0)
+    assert derived["thermal_boundary_model"] == "wall_soil_effective_conductance"
+    assert result["heat_transfer_model"] == "wall_coupled"
+    assert result["qtr"] == pytest.approx(50.0)
+    assert result["thermal_boundary_model"] == "wall_soil_effective_conductance"
+    assert result["wall_soil_qtr_w_m"] == pytest.approx(50.0)

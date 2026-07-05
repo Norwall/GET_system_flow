@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from boiling_heat_transfer import WALL_COUPLED, WallSoilBoundary, normalize_heat_transfer_model
 from co2_geometry import (
     CondenserSection,
     DowncomerSection,
@@ -110,6 +111,7 @@ class SoilLayer:
 class SoilConfig:
     mode: str = "dynamic_placeholder"
     surface_z_m: float = 0.0
+    effective_conductance_W_mK: float | None = None
     layers: tuple[SoilLayer, ...] = field(default_factory=lambda: (SoilLayer(),))
 
 
@@ -168,6 +170,10 @@ class DerivedGeometry:
     H_m: float
     qtr_W_m: float
     heat_power_W: float
+    thermal_boundary_model: str = "prescribed_heat_input"
+    wall_soil_temperature_C: float | None = None
+    wall_soil_effective_conductance_W_mK: float | None = None
+    wall_soil_delta_t_K: float | None = None
 
     def to_loop_geometry(self) -> LoopGeometry:
         sections: list[FlowSection] = []
@@ -208,6 +214,18 @@ class DerivedGeometry:
             raise ScenarioValidationError("Derived or overridden H must be positive before running the refrigerant solver.")
         if self.qtr_W_m <= 0.0:
             raise ScenarioValidationError("qtr_W_m must be positive before running the refrigerant solver.")
+        wall_soil_boundary = None
+        if normalize_heat_transfer_model(scenario.solver.heat_transfer_model) == WALL_COUPLED:
+            if (
+                self.wall_soil_temperature_C is None
+                or self.wall_soil_effective_conductance_W_mK is None
+            ):
+                raise ScenarioValidationError("wall_coupled requires a derived wall/soil boundary.")
+            wall_soil_boundary = WallSoilBoundary(
+                far_field_temperature_c=self.wall_soil_temperature_C,
+                effective_conductance_w_m_k=self.wall_soil_effective_conductance_W_mK,
+                source="designer_soil_layer_effective_conductance",
+            )
         return {
             "H": self.H_m,
             "qtr": self.qtr_W_m,
@@ -219,6 +237,7 @@ class DerivedGeometry:
             "friction_model": scenario.solver.friction_model,
             "geometry": self.to_loop_geometry(),
             "heat_transfer_model": scenario.solver.heat_transfer_model,
+            "wall_soil_boundary": wall_soil_boundary,
         }
 
 
@@ -285,6 +304,7 @@ def scenario_to_dict(scenario: GETScenario) -> dict[str, Any]:
         "soil": {
             "mode": scenario.soil.mode,
             "surface_z_m": scenario.soil.surface_z_m,
+            "effective_conductance_W_mK": scenario.soil.effective_conductance_W_mK,
             "layers": [
                 {
                     "name": layer.name,
@@ -343,6 +363,10 @@ def derived_geometry_to_dict(geometry: DerivedGeometry) -> dict[str, Any]:
         "H_m": geometry.H_m,
         "qtr_W_m": geometry.qtr_W_m,
         "heat_power_W": geometry.heat_power_W,
+        "thermal_boundary_model": geometry.thermal_boundary_model,
+        "wall_soil_temperature_C": geometry.wall_soil_temperature_C,
+        "wall_soil_effective_conductance_W_mK": geometry.wall_soil_effective_conductance_W_mK,
+        "wall_soil_delta_t_K": geometry.wall_soil_delta_t_K,
     }
 
 
@@ -389,8 +413,15 @@ def validate_scenario(scenario: GETScenario) -> None:
         raise ScenarioValidationError(f"Unsupported friction model: {scenario.solver.friction_model!r}.")
     if scenario.solver.heat_transfer_model not in VALID_HEAT_TRANSFER_MODELS:
         raise ScenarioValidationError(f"Unsupported heat-transfer model: {scenario.solver.heat_transfer_model!r}.")
+    if normalize_heat_transfer_model(scenario.solver.heat_transfer_model) == WALL_COUPLED:
+        if scenario.soil.effective_conductance_W_mK is None:
+            raise ScenarioValidationError("wall_coupled requires soil.effective_conductance_W_mK.")
+        if scenario.soil.effective_conductance_W_mK <= 0.0:
+            raise ScenarioValidationError("soil.effective_conductance_W_mK must be positive.")
     if scenario.solver.H_override_m is not None and scenario.solver.H_override_m <= 0.0:
         raise ScenarioValidationError("H_override_m must be positive when provided.")
+    if scenario.soil.effective_conductance_W_mK is not None and scenario.soil.effective_conductance_W_mK <= 0.0:
+        raise ScenarioValidationError("soil.effective_conductance_W_mK must be positive.")
     for layer in scenario.soil.layers:
         if layer.bottom_z_m >= layer.top_z_m:
             raise ScenarioValidationError(f"Soil layer {layer.name!r} must have bottom_z_m below top_z_m.")
@@ -465,6 +496,27 @@ def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
     geometric_head_m = top_z_m - evaporator_mean_z_m
     H_m = scenario.solver.H_override_m if scenario.solver.H_override_m is not None else geometric_head_m
     qtr_W_m = scenario.thermal.qtr_W_m
+    thermal_boundary_model = "prescribed_heat_input"
+    wall_soil_temperature_C = None
+    wall_soil_effective_conductance_W_mK = None
+    wall_soil_delta_t_K = None
+    if normalize_heat_transfer_model(scenario.solver.heat_transfer_model) == WALL_COUPLED:
+        if scenario.soil.effective_conductance_W_mK is None:
+            raise ScenarioValidationError("wall_coupled requires soil.effective_conductance_W_mK.")
+        soil_layer = _soil_layer_for_z(scenario.soil, evaporator_mean_z_m)
+        wall_soil_temperature_C = soil_layer.initial_temperature_C
+        wall_soil_effective_conductance_W_mK = scenario.soil.effective_conductance_W_mK
+        wall_soil_delta_t_K = wall_soil_temperature_C - scenario.solver.tcon_C
+        boundary = WallSoilBoundary(
+            far_field_temperature_c=wall_soil_temperature_C,
+            effective_conductance_w_m_k=wall_soil_effective_conductance_W_mK,
+            source=f"designer_soil_layer:{soil_layer.name}",
+        )
+        try:
+            qtr_W_m = boundary.heat_input_w_m(scenario.solver.tcon_C)
+        except ValueError as exc:
+            raise ScenarioValidationError(str(exc)) from exc
+        thermal_boundary_model = "wall_soil_effective_conductance"
 
     return DerivedGeometry(
         segments=tuple(derived_segments),
@@ -477,6 +529,10 @@ def derive_geometry(scenario: GETScenario) -> DerivedGeometry:
         H_m=H_m,
         qtr_W_m=qtr_W_m,
         heat_power_W=qtr_W_m * evaporator_length_m,
+        thermal_boundary_model=thermal_boundary_model,
+        wall_soil_temperature_C=wall_soil_temperature_C,
+        wall_soil_effective_conductance_W_mK=wall_soil_effective_conductance_W_mK,
+        wall_soil_delta_t_K=wall_soil_delta_t_K,
     )
 
 
@@ -498,6 +554,15 @@ def _heat_mode_for_kind(kind: str) -> str:
     if kind == "condenser":
         return "saturation_boundary"
     return "adiabatic"
+
+
+def _soil_layer_for_z(soil: SoilConfig, z_m: float) -> SoilLayer:
+    for layer in soil.layers:
+        if layer.bottom_z_m <= z_m <= layer.top_z_m:
+            return layer
+    raise ScenarioValidationError(
+        f"No soil layer covers evaporator mean elevation z={z_m:.3f} m."
+    )
 
 
 def solver_inputs_from_scenario(scenario: GETScenario) -> dict[str, Any]:
@@ -582,6 +647,7 @@ def _soil_from_dict(data: Mapping[str, Any]) -> SoilConfig:
     return SoilConfig(
         mode=_optional_str(data, "mode", "dynamic_placeholder"),
         surface_z_m=_float_or_default(_optional_float(data, "surface_z_m", 0.0), 0.0),
+        effective_conductance_W_mK=_optional_float(data, "effective_conductance_W_mK"),
         layers=layers,
     )
 
