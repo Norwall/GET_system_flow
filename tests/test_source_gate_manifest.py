@@ -24,6 +24,7 @@ OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-05.
 PREVIOUS_OPEN_WEB_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_open_web_2026-07-04.md"
 CHECKPOINT_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_checkpoint_5_6.md"
 PRIMARY_SOURCE_INVENTORY_PATH = PROJECT_ROOT / "docs" / "primary_source_inventory.md"
+SECONDARY_CANDIDATES_PATH = PROJECT_ROOT / "docs" / "secondary_formula_candidates.md"
 PRIMARY_SOURCE_DROP_DIR = PROJECT_ROOT / "sources" / "primary"
 PRIMARY_SOURCE_README_PATH = PRIMARY_SOURCE_DROP_DIR / "README.md"
 README_PATH = PROJECT_ROOT / "README.md"
@@ -36,6 +37,7 @@ OPEN_WEB_AUDIT_TEXT = OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
 PREVIOUS_OPEN_WEB_AUDIT_TEXT = PREVIOUS_OPEN_WEB_AUDIT_PATH.read_text(encoding="utf-8")
 CHECKPOINT_AUDIT_TEXT = CHECKPOINT_AUDIT_PATH.read_text(encoding="utf-8")
 PRIMARY_SOURCE_INVENTORY_TEXT = PRIMARY_SOURCE_INVENTORY_PATH.read_text(encoding="utf-8")
+SECONDARY_CANDIDATES_TEXT = SECONDARY_CANDIDATES_PATH.read_text(encoding="utf-8")
 PRIMARY_SOURCE_README_TEXT = PRIMARY_SOURCE_README_PATH.read_text(encoding="utf-8")
 README_TEXT = README_PATH.read_text(encoding="utf-8")
 ACADEMIC_REFERENCE_TEXT = ACADEMIC_REFERENCE_PATH.read_text(encoding="utf-8")
@@ -76,6 +78,13 @@ REQUIRED_ENTRY_FIELDS = {
     "required_audit_checks",
     "required_tests_before_release",
 }
+REQUIRED_SECONDARY_CANDIDATE_FIELDS = {
+    "registry_id",
+    "secondary_source_url",
+    "secondary_formula_scope",
+    "known_ambiguities",
+    "release_blockers",
+}
 
 
 @pytest.fixture(scope="module")
@@ -108,6 +117,7 @@ def test_manifest_points_to_existing_audit_documents(manifest: dict) -> None:
     assert PREVIOUS_OPEN_WEB_AUDIT_PATH.exists()
     assert CHECKPOINT_AUDIT_PATH.exists()
     assert PRIMARY_SOURCE_INVENTORY_PATH.exists()
+    assert SECONDARY_CANDIDATES_PATH.exists()
     assert PRIMARY_SOURCE_DROP_DIR.is_dir()
     assert PRIMARY_SOURCE_README_PATH.exists()
 
@@ -119,7 +129,10 @@ def test_manifest_points_to_existing_audit_documents(manifest: dict) -> None:
     assert policy["checkpoint_audit_document"] == "docs/source_audit_checkpoint_5_6.md"
     assert policy["local_source_inventory_document"] == "docs/primary_source_inventory.md"
     assert policy["source_drop_directory"] == "sources/primary"
+    assert policy["secondary_formula_candidate_document"] == "docs/secondary_formula_candidates.md"
     assert "repository landing pages without an accessible full-text bitstream" in policy["source_gate_rule"]
+    assert "do not release SOURCE_REQUIRED gates" in policy["secondary_formula_candidate_rule"]
+    assert "published runtime physics" in policy["secondary_formula_candidate_rule"]
     assert "not committed" in policy["local_source_file_policy"]
     assert "SHA256" in policy["local_source_file_policy"]
 
@@ -177,11 +190,44 @@ def test_released_decision_requires_full_audit(manifest: dict, manifest_entries:
         assert entry["required_tests_before_release"]
 
 
+def test_secondary_formula_candidate_blocks_are_not_release_evidence(manifest_entries: list[dict]) -> None:
+    registry_sections = _registry_sections()
+    candidate_entries = [entry for entry in manifest_entries if "secondary_formula_candidate" in entry]
+
+    assert candidate_entries
+    for entry in candidate_entries:
+        candidate = entry["secondary_formula_candidate"]
+        assert REQUIRED_SECONDARY_CANDIDATE_FIELDS <= set(candidate)
+        assert candidate["registry_id"] in registry_sections
+        assert candidate["registry_id"] in SECONDARY_CANDIDATES_TEXT
+        assert candidate["secondary_source_url"].startswith("https://")
+        assert isinstance(candidate["known_ambiguities"], list) and candidate["known_ambiguities"]
+        assert isinstance(candidate["release_blockers"], list) and candidate["release_blockers"]
+        assert entry["decision"] == "source_required"
+        assert entry["local_full_text_ref"] == ""
+
+    assert "SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED" in SECONDARY_CANDIDATES_TEXT
+    assert "не снимают `SOURCE_REQUIRED`" in SECONDARY_CANDIDATES_TEXT
+
+
+def test_known_secondary_candidates_are_registered_in_manifest(manifest_entries: list[dict]) -> None:
+    candidates = {
+        entry["secondary_formula_candidate"]["registry_id"]
+        for entry in manifest_entries
+        if "secondary_formula_candidate" in entry
+    }
+
+    assert "TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE" in candidates
+    assert "TP-FRIEDEL-1979-SECONDARY-CANDIDATE" in candidates
+    assert "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE" in candidates
+
+
 def test_local_primary_source_intake_policy_is_documented_and_ignored(manifest: dict) -> None:
     policy = manifest["policy"]
 
     assert policy["source_drop_directory"] == "sources/primary"
     assert policy["local_source_inventory_document"] == "docs/primary_source_inventory.md"
+    assert policy["secondary_formula_candidate_document"] == "docs/secondary_formula_candidates.md"
     assert "sources/primary/*" in GITIGNORE_TEXT
     assert "!sources/primary/README.md" in GITIGNORE_TEXT
 
@@ -191,6 +237,7 @@ def test_local_primary_source_intake_policy_is_documented_and_ignored(manifest: 
         README_TEXT,
         ACADEMIC_REFERENCE_TEXT,
         FORMULA_REGISTRY_TEXT,
+        SECONDARY_CANDIDATES_TEXT,
         CHECKPOINT_AUDIT_TEXT,
         OPEN_WEB_AUDIT_TEXT,
         PLAN_TEXT,

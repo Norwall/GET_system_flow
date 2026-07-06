@@ -21,6 +21,7 @@ abstract или чужой пересказ формулы не являются
 | Режимные карты | Experimental local classifier или source-gated published placeholders | Wojtan-Ursenbacher-Thome и Taitel-Barnea-Dukler records | Published transition equations не реализуются без полного primary-source audit. |
 | Flow-boiling HTC | Diagnostic heat-flux only; Chen 1962 записан как source-candidate | OSTI record/PDF для DOI `10.2172/4636495` | HTC, dryout и CHF не рассчитываются; нужна расшифровка уравнений, коэффициентов, границ применимости и reference tests. |
 | Dryout/CHF | Not evaluated | Candidate sources tracked in source-gate docs | Численная несходимость solver не трактуется как dryout/CHF criterion. |
+| Secondary formula candidates | Documentation-only audit layer | `docs/secondary_formula_candidates.md`; `docs/formula_registry.md`; `docs/source_gate_manifest.json` | Формулы из `fluids`, ACHP и `ht` помогают будущему аудиту, но имеют статус `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` и не снимают `SOURCE_REQUIRED`. |
 | Critical loads | Released как границы текущего steady solver | `critical_loads.py`; диссертационный предел `f=0` | Это не published CHF/dryout и не экспериментальная валидация. |
 | Scenario/API/UI | Released metadata transport | Scenario schema, REST API, web UI, tests | UI показывает source-status и onset controls, но не заявляет validation. |
 | Release-candidate snapshot | Source-gated release candidate | `docs/release_candidate_status.md`; полный `pytest -q` от 2026-07-06 | Статус подтверждает прохождение тестов и активные gates, но не добавляет новую физику. |
@@ -33,6 +34,9 @@ abstract или чужой пересказ формулы не являются
 - NIST REFPROP: <https://www.nist.gov/srd/refprop>
 - Chen/OSTI source-candidate record: <https://www.osti.gov/biblio/4636495>
 - Chen/OSTI full-text candidate: <https://www.osti.gov/servlets/purl/4636495>
+- Secondary formula candidate registry: `docs/secondary_formula_candidates.md`
+- Secondary formula source families tracked there: `fluids`, ACHP and `ht`
+  documentation pages with cited primary records.
 
 ## Правило обновления
 

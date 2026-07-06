@@ -24,6 +24,11 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 `sources/primary/`, не коммититься в репозиторий, а инвентарь должен фиксировать
 `SHA256`, страницы/уравнения, решение аудита и связанные reference-тесты.
 
+Статус `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` используется только для
+формул, найденных в авторитетных вторичных источниках. Такие записи являются
+подсказкой для будущего аудита и не снимают `SOURCE_REQUIRED`, пока полный
+первоисточник не проверен локально.
+
 ## Сводка реализованных записей
 
 | ID | Статус | Код |
@@ -39,6 +44,9 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-ISHKOV-SUPERHEAT` | DISSERTATION / OPT_IN | `SteadyLoopSolver._preboiling_onset_fields` |
 | `HTC-CHEN-1962-SOURCE-CANDIDATE` | SOURCE_CANDIDATE / NOT_RELEASED | `boiling_heat_transfer.chen_1962_source_candidate` |
+| `HTC-SHAH-EVAPORATION-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
+| `HTC-CHEN-BENNETT-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
+| `HTC-LIU-WINTERTON-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
 | `QCRIT-DISSERTATION-SCAN` | DISSERTATION / NUMERICAL_SEARCH | `critical_loads.find_critical_loads` |
 | `QCRIT-DISSERTATION-F-ZERO` | DISSERTATION | `critical_loads.CriticalLoadSolver.f_zero_residual` |
 | `FRIC-REYNOLDS` | PUBLISHED | `co2_steady_solver`, `two_phase_closures` |
@@ -54,15 +62,19 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 | `TP-CHISHOLM-MULTIPLIER` | PUBLISHED | `published_friction.two_phase_multiplier_liquid_reference` |
 | `TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE` | SOURCE_REQUIRED | `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` |
 | `TP-FRIEDEL-1979-SOURCE-GATE` | SOURCE_REQUIRED | `published_friction.friedel_1979_pressure_gradient_pa_per_m` |
+| `TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
+| `TP-FRIEDEL-1979-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
 | `FLOW-MASS-QUALITY` | PUBLISHED / DEFINITIONAL | `published_void_fraction.mass_quality_from_mass_flows` |
 | `VOID-GENERIC-SLIP` | PUBLISHED / DEFINITIONAL | `published_void_fraction.void_fraction_from_quality` |
 | `VOID-WORKSHEET-PHI2L` | MATHCAD_COMPATIBLE / DISSERTATION | `worksheet_void_fraction_from_phi2l` |
 | `VOID-HOMOGENEOUS-EQUILIBRIUM` | PUBLISHED LIMITING MODEL | `published_void_fraction.homogeneous_equilibrium_slip_ratio` |
 | `VOID-ZIVI-1964` | PUBLISHED | `published_void_fraction.zivi_1964_slip_ratio` |
+| `VOID-ZIVI-1964-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
 | `FLOW-PHASE-VELOCITIES` | DEFINITIONAL | `compute_phase_velocities` |
 | `FLOW-SLIP-RATIO` | DEFINITIONAL | `compute_slip_ratio` |
 | `FLOW-MIXTURE-DENSITY` | DEFINITIONAL | `compute_mixture_density` |
 | `PRESS-ACCELERATION-MOMENTUM` | DISSERTATION / ENGINEERING | `SteadyLoopSolver.one_pass` |
+| `PRESS-ACCELERATION-ACHP-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
 | `PRESS-WORKSHEET-DRIVING-HEAD` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
 | `PRESS-DISTRIBUTED-RISER-GRADIENT` | ENGINEERING / REQUIRES_AUDIT | `SteadyLoopSolver._one_pass_distributed` |
 | `PRESS-HYDROSTATIC-SECTION` | PUBLISHED / DEFINITIONAL | `pressure_balance.hydrostatic_pressure_pa` |
@@ -70,6 +82,7 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 | `VOID-ZUBER-FINDLAY-1965-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.py`, future drift-flux adapter |
 | `REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.classify_horizontal_evaporator_regime_result` |
 | `REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE` | SOURCE_REQUIRED | `published_regimes.classify_vertical_riser_regime_result` |
+| `REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE` | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED | documentation-only |
 | `EXP-REGIME-AWARE-CLASSIFIERS` | EXPERIMENTAL / NO PRIMARY SOURCE | `experimental_regimes.py` |
 | `EXP-DRIFT-FLUX-LIKE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `drift_flux_void_fraction` |
 | `EXP-ANNULAR-CORE-VOID` | EXPERIMENTAL / NO PRIMARY SOURCE | `annular_core_void_fraction` |
@@ -822,6 +835,86 @@ S_{\rm ann}=\max(1.05,k_{\rm ann}S_{\rm Zivi})
 - Код: `two_phase_closures._resolve_two_phase_friction_response`.
 - Тесты: `tests/test_co2_result_fields.py`; `tests/test_baseline_compatibility.py`.
 
+## TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: вторичный источник `fluids` воспроизводит структуру MSH как комбинацию liquid-only и gas-only pressure drops по массовой сухости; точная release-запись должна быть сверена с полным первоисточником.
+- Переменные и размерности: `x` — массовая сухость; `dP_lo`, `dP_go`, `dP_tp` — перепады давления, Па, или градиенты давления в согласованной форме; Darcy/Fanning convention не считается аудированным по вторичному источнику.
+- Область применимости: audit guidance для будущей двухфазной pressure-drop модели; не runtime published-модель.
+- Источник: `fluids.two_phase.Muller_Steinhagen_Heck`, <https://fluids.readthedocs.io/fluids.two_phase.html>; первичный record: Müller-Steinhagen and Heck, 1986, DOI `10.1016/0255-2701(86)80008-3`; `docs/secondary_formula_candidates.md`; `docs/source_gate_manifest.json`.
+- Код: отсутствует; `published_friction.muller_steinhagen_heck_1986_pressure_gradient_pa_per_m` остаётся guard-функцией `SOURCE_REQUIRED`.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_source_gate_manifest.py`; `tests/test_two_phase_pressure_drop.py`.
+
+## TP-FRIEDEL-1979-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: вторичный источник `fluids` воспроизводит Friedel multiplier через сумму `E`, `F`, `H` и поправку с `Fr`/`We`; точные показатели, property conventions и ограничения должны быть сверены по первичному докладу.
+- Переменные и размерности: `x` — массовая сухость; `rho_l`, `rho_g`, `mu_l`, `mu_g`, `sigma`, `G`, `D` — насыщенные свойства и массовый поток в SI; multiplier безразмерен.
+- Область применимости: audit guidance для горизонтальных и вертикальных two-phase pressure-drop расчётов; не runtime published-модель.
+- Источник: `fluids.two_phase.Friedel`, <https://fluids.readthedocs.io/fluids.two_phase.html>; первичный record: Friedel 1979, European Two-Phase Flow Group Meeting, Ispra, paper E2; `docs/secondary_formula_candidates.md`; `docs/source_gate_manifest.json`.
+- Код: отсутствует; `published_friction.friedel_1979_pressure_gradient_pa_per_m` остаётся guard-функцией `SOURCE_REQUIRED`.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_source_gate_manifest.py`; `tests/test_two_phase_pressure_drop.py`.
+
+## VOID-ZIVI-1964-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: вторичный источник подтверждает Zivi slip/void-fraction structure для уже реализованной записи `VOID-ZIVI-1964`.
+- Переменные и размерности: `x` — массовая сухость; `rho_l`, `rho_g` — плотности фаз, кг/м3; `alpha` и `S` безразмерны.
+- Область применимости: secondary confirmation only; не расширяет область применимости `VOID-ZIVI-1964` и не является режимной картой.
+- Источник: `fluids.two_phase_voidage.Zivi`, <https://fluids.readthedocs.io/fluids.two_phase_voidage.html>; первичный record: Zivi 1964, DOI `10.1115/1.3687113`; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; runtime использует опубликованную запись `published_void_fraction.zivi_1964_slip_ratio`.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_void_fraction_models.py`.
+
+## PRESS-ACCELERATION-ACHP-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: ACHP записывает acceleration pressure drop как изменение mixture momentum через `G^2`, quality, specific volumes and void fraction at inlet/outlet.
+- Переменные и размерности: `G` — массовый поток, кг/(м2 с); `x` — массовая сухость; `v_f`, `v_g` — удельные объёмы, м3/кг; `epsilon` — пустотность; pressure drop, Па.
+- Область применимости: audit guidance для будущего распределённого ускорительного члена; void fraction должна быть согласована с hydrostatic and charge closures.
+- Источник: ACHP FluidCorrelations, <https://achp.sourceforge.net/ACHPComponents/FluidCorrelations.html>; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; текущий `PRESS-ACCELERATION-MOMENTUM` остаётся диссертационно-инженерной записью.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_pressure_balance.py`.
+
+## HTC-SHAH-EVAPORATION-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: ACHP воспроизводит Shah evaporation HTC as a correlation using convective number, boiling number, liquid Froude number and a liquid-phase heat-transfer coefficient.
+- Переменные и размерности: `q''` — heat flux, Вт/м2; `G` — массовый поток, кг/(м2 с); `D` — диаметр, м; `x` — массовая сухость; `h` — коэффициент теплоотдачи, Вт/(м2 К).
+- Область применимости: secondary HTC candidate для saturated evaporation; не dryout и не CHF.
+- Источник: ACHP FluidCorrelations, <https://achp.sourceforge.net/ACHPComponents/FluidCorrelations.html>; primary Shah correlation cited by ACHP; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; `boiling_heat_transfer.py` остаётся diagnostic-only for published HTC.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_boiling_diagnostics.py`.
+
+## HTC-CHEN-BENNETT-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: `ht` represents Chen-Bennett as a superposition `h_tp = S h_nb + F h_sp,l` with enhancement and suppression factors.
+- Переменные и размерности: `Te` — wall excess temperature, K; `q` — heat flux, Вт/м2; `G` — массовый поток, кг/(м2 с); `x` — массовая сухость; `D` — диаметр, м; `h` — Вт/(м2 К).
+- Область применимости: secondary HTC candidate only; current prescribed heat-input mode must not run it without wall/saturation assumptions.
+- Источник: `ht.boiling_flow.Chen_Bennett`, <https://ht.readthedocs.io/en/release/ht.boiling_flow.html>; Chen/Bennett primary records cited by `ht`; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; `HTC-CHEN-1962-SOURCE-CANDIDATE` remains source-candidate metadata, not released runtime HTC.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_boiling_diagnostics.py`; `tests/test_source_gate_manifest.py`.
+
+## HTC-LIU-WINTERTON-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: `ht` represents Liu-Winterton as a flow-boiling HTC candidate using liquid convection, nucleate boiling, pressure ratio and suppression/enhancement structure.
+- Переменные и размерности: `Te`, `P`, `Pc`, `MW`, `q`, `G`, `x`, `D` and phase properties in SI; heat-transfer coefficient, Вт/(м2 К).
+- Область применимости: secondary HTC candidate; requires wall superheat and pressure inputs not guaranteed by the current diagnostic layer.
+- Источник: `ht.boiling_flow.Liu_Winterton`, <https://ht.readthedocs.io/en/release/ht.boiling_flow.html>; Liu and Winterton 1991 primary record cited by `ht`; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; no runtime adapter is released.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_boiling_diagnostics.py`.
+
+## REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE
+
+- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED.
+- Математическая запись: `fluids` exposes the Taitel-Dukler horizontal/near-horizontal map through transition groups `X`, `T`, `F`, `K` and superficial velocities.
+- Переменные и размерности: gas/liquid mass flow rates, densities, viscosities, surface tension and diameter in SI; output regime label is categorical.
+- Область применимости: secondary candidate for horizontal or near-horizontal adiabatic flow-pattern checks; does not replace the vertical Taitel-Barnea-Dukler 1980 source gate.
+- Источник: `fluids.two_phase.Taitel_Dukler_regime`, <https://fluids.readthedocs.io/fluids.two_phase.html>; primary Taitel and Dukler 1976 record cited by `fluids`; `docs/secondary_formula_candidates.md`.
+- Код: отсутствует; `published_regimes.py` remains a source-gated placeholder for requested published regime maps.
+- Тесты: `tests/test_formula_registry.py`; `tests/test_regime_maps.py`; `tests/test_source_gate_manifest.py`.
+
 ## SCENARIO-MATRIX-STATUS
 
 - Статус: REGRESSION_DIAGNOSTIC.
@@ -842,6 +935,7 @@ Hy(f)-H=0
 
 - Новые модели со статусом `published`, `validated`, `academic` или `physical` нельзя подключать без записи в этом реестре.
 - Для снятия `SOURCE_REQUIRED` нужен полный первоисточник; DOI landing page, abstract, Crossref metadata, учебники, обзоры и пересказы формул не являются достаточным основанием для подключения модели как `published`.
+- Записи `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` не удовлетворяют source-gate release requirements и не могут использоваться selectable `published` runtime-режимами; они описаны в `docs/secondary_formula_candidates.md`.
 - Repository landing page без доступного full-text/`ORIGINAL` bitstream не считается полным первоисточником; это зафиксировано в `docs/source_audit_open_web_2026-07-04.md` и подтверждено в `docs/source_audit_open_web_2026-07-05.md`.
 - Если полный первоисточник предоставлен локально, он должен быть внесён в `docs/primary_source_inventory.md` с путём под `sources/primary/`, `SHA256`, страницами/уравнениями и решением аудита; сами PDF/сканы не коммитятся.
 - Эвристики без первоисточника должны иметь статус `EXPERIMENTAL / NO PRIMARY SOURCE`.

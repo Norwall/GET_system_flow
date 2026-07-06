@@ -17,9 +17,14 @@
 - Published HTC, dryout/CHF, Wojtan/Taitel regime maps, Zuber-Findlay
   drift-flux coefficients, MSH и Friedel остаются `SOURCE_REQUIRED` или
   `SOURCE_CANDIDATE`; runtime-корреляции для них не released.
+- Вторичные формульные кандидаты, найденные после основного release-candidate
+  прохода, зафиксированы как `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` в
+  `docs/secondary_formula_candidates.md`; они не меняют runtime status и не
+  снимают primary-source-only gates.
 
 Академический контекст синхронизирован с этим решением в
-`docs/get_co2_academic_reference.md`, `docs/physics_gap_matrix.md` и `plan.md`.
+`docs/get_co2_academic_reference.md`, `docs/physics_gap_matrix.md`,
+`docs/secondary_formula_candidates.md` и `plan.md`.
 
 ## Source-gate audit
 
@@ -35,6 +40,10 @@ PDF, сканы и извлеченный полный текст не комм�
 - обновления `docs/formula_registry.md` и `docs/source_gate_manifest.json`;
 - reference-тестов до снятия runtime guard.
 
+Secondary formula candidates могут использоваться только как audit guidance.
+Они не заменяют локальный полный первоисточник, SHA256 inventory и reference
+tests.
+
 ## Verification
 
 Release gate:
@@ -47,6 +56,18 @@ pytest -q
 
 ```text
 252 passed in 515.07s (0:08:35)
+```
+
+Focused source-gate / secondary-candidate check after documentation update:
+
+```powershell
+pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q
+```
+
+Результат:
+
+```text
+151 passed in 0.24s
 ```
 
 Профиль медленных тестов:

@@ -10,6 +10,11 @@
 
 Структурированный статус хранится в `docs/source_gate_manifest.json`.
 
+Дополнение от 2026-07-06: отдельный secondary-formula pass оформлен в
+`docs/secondary_formula_candidates.md`. Он фиксирует формулы из авторитетных
+вторичных источников как `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED`, но не
+меняет результаты endpoint-проверки ниже и не снимает `SOURCE_REQUIRED`.
+
 ## Метод проверки
 
 Проверялись только источники, достаточные для возможного снятия source-gate:
@@ -45,6 +50,9 @@ PowerShell `Invoke-WebRequest` и `curl.exe` в текущем Windows-окру�
   MSH/Friedel, `published_regimes.py` сохраняет `unknown_or_out_of_range` /
   `source_required`, а `boiling_heat_transfer.py` остаётся diagnostic-only.
 - `SOURCE_REQUIRED` не снимается ни для одной записи Checkpoint 5-6.
+- Secondary formula candidates после этой проверки используются только как
+  audit guidance; они не являются publisher full text, institutional bitstream
+  или локальным primary-source intake.
 - OSTI 1962 остаётся единственным full-text `source_candidate`, но не заменяет
   Kandlikar/Shah/Gungor-Winterton и не является released-моделью для текущего
   saturated loop solver.

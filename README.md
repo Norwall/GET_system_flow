@@ -172,6 +172,11 @@ published-кандидатов.
   оформлен как `HTC-CHEN-1962-SOURCE-CANDIDATE`: metadata доступны в
   результатах diagnostics, но saturated flow-boiling HTC, dryout и CHF
   по нему не рассчитываются до отдельного аудита применимости.
+- добавлен слой `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` в
+  `docs/secondary_formula_candidates.md`: формулы MSH/Friedel, ACHP
+  acceleration/Shah, ht Chen-Bennett/Liu-Winterton, secondary Zivi и
+  Taitel-Dukler 1976 horizontal map зафиксированы как audit guidance, но не
+  снимают `SOURCE_REQUIRED` и не становятся runtime `published` моделями.
 - добавлен `docs/physics_gap_matrix.md`: компактная карта runtime-физики,
   source-gate кандидатов, внешних источников и оставшихся академических
   ограничений.
@@ -219,6 +224,13 @@ Part I/II не снимают gate, потому что DSpace API не пока
 `10.2172/4636495` сохранён как `source_candidate`, но не подключён к runtime:
 его применимость к текущей постановке ещё не аудирована.
 
+Дополнительный академический поиск от 2026-07-06 зафиксировал вторичные
+формульные кандидаты в `docs/secondary_formula_candidates.md` и связал их с
+`docs/formula_registry.md` / `docs/source_gate_manifest.json`. Эти записи
+полезны для будущего переноса формул, но являются `NOT_RELEASED`: guard-функции
+MSH/Friedel остаются активными, `published_regime_map` остаётся source-gated,
+а HTC/dryout/CHF по-прежнему не рассчитываются.
+
 Полные первоисточники для будущего снятия gate ожидаются как локальные файлы в
 `sources/primary/`. PDF, сканы и извлечённые полные тексты из этой папки не
 коммитятся; tracked-инвентарь `docs/primary_source_inventory.md` должен хранить
@@ -234,6 +246,9 @@ Part I/II не снимают gate, потому что DSpace API не пока
   применимости и тестов;
 - `docs/source_gate_manifest.json` - машинно-проверяемые решения по
   неподключенным published-кандидатам;
+- `docs/secondary_formula_candidates.md` - формулы из авторитетных вторичных
+  источников, используемые только как audit guidance и future implementation
+  notes;
 - `docs/primary_source_inventory.md` - локальный инвентарь полных
   первоисточников из `sources/primary/`, используемых для снятия gate;
 - `docs/source_audit_checkpoint_5_6.md` и
@@ -252,6 +267,9 @@ Part I/II не снимают gate, потому что DSpace API не пока
 полному первоисточнику. `source_candidate` означает, что полный текст найден,
 но применимость к текущей постановке не аудирована; такой источник тоже не
 подключается к runtime автоматически.
+`SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` означает, что формула найдена во
+вторичном источнике высокого качества, но полный первоисточник или локальный
+аудит всё ещё нужны до runtime release.
 
 Checkpoint 6 split:
 

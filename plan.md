@@ -474,6 +474,14 @@ Gungor–Winterton. EPFL landing pages без `ORIGINAL`/full-text bitstream
 до перевода любой source-gate записи в `released`. Сами PDF/сканы не коммитятся;
 все активные Checkpoint 5-6 модели остаются `source_required`.
 
+Статус secondary-formula academic context от 2026-07-06: добавлен
+`docs/secondary_formula_candidates.md` и статус
+`SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` для формул, найденных в
+авторитетных вторичных источниках. MSH/Friedel, ACHP acceleration/Shah,
+ht Chen-Bennett/Liu-Winterton, secondary Zivi и Taitel-Dukler 1976 horizontal
+map записаны как audit guidance; они не снимают `SOURCE_REQUIRED`, не удаляют
+runtime guards и не считаются released `published`-физикой.
+
 ### Задачи
 
 - [x] Разделить closure models на:
@@ -862,6 +870,13 @@ candidate на базе коммита `974c1e3 Improve boiling onset source tra
 корреляции не подключались; `SOURCE_REQUIRED` и `SOURCE_CANDIDATE` ограничения
 остаются академически активными.
 
+Статус документационного обновления secondary-formula от 2026-07-06:
+`docs/secondary_formula_candidates.md`, `docs/formula_registry.md`,
+`docs/source_gate_manifest.json`, `docs/get_co2_academic_reference.md`,
+`README.md` и эта запись синхронизированы. Focused source-gate проверка:
+`pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q`
+прошла: 151 passed.
+
 ## 18. Критерии завершения всей доработки
 
 - [x] CO₂ Mathcad-compatible ветка воспроизводит старые baseline-тесты.
@@ -874,6 +889,9 @@ candidate на базе коммита `974c1e3 Improve boiling onset source tra
   `sources/primary/`, `docs/primary_source_inventory.md`,
   `docs/source_gate_manifest.json` и тесты требуют полный текст, SHA256,
   страницы/уравнения и reference-тесты до runtime-release.
+- [x] Для вторичных формульных находок задан отдельный academic layer:
+  `docs/secondary_formula_candidates.md` и статус
+  `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED`; эти записи не снимают source-gate.
 - [x] Solver различает физический отказ, численную несходимость, dryout и выход за диапазон свойств.
 - [x] Designer реально передаёт геометрию в solver.
 - [x] Designer/API и демонстрационный отчёт показывают source/failure/boiling/dryout/qcrit diagnostics.

@@ -9,7 +9,9 @@
     "checkpoint_audit_document": "docs/source_audit_checkpoint_5_6.md",
     "local_source_inventory_document": "docs/primary_source_inventory.md",
     "source_drop_directory": "sources/primary",
+    "secondary_formula_candidate_document": "docs/secondary_formula_candidates.md",
     "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
+    "secondary_formula_candidate_rule": "Secondary formula transcriptions from reputable libraries, reviews, or engineering documentation are audit guidance only; they do not release SOURCE_REQUIRED gates and cannot be selected as published runtime physics.",
     "local_source_file_policy": "Primary-source PDFs, scans, and extracted full text are local working evidence under sources/primary and are not committed. Released gates require SHA256, page/equation references, and an audit decision in docs/primary_source_inventory.md.",
     "released_requirements": [
       "evidence_status must be audited",
@@ -38,6 +40,20 @@
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
         "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context"
+      },
+      "secondary_formula_candidate": {
+        "registry_id": "TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE",
+        "secondary_source_url": "https://fluids.readthedocs.io/fluids.two_phase.html",
+        "secondary_formula_scope": "Muller_Steinhagen_Heck pressure-drop formula transcription for audit guidance only.",
+        "known_ambiguities": [
+          "Darcy/Fanning convention is not primary-source audited.",
+          "Liquid-only and gas-only reference pressure-gradient definitions must be checked against the full article.",
+          "Total/phase mass flux convention must be checked before implementation."
+        ],
+        "release_blockers": [
+          "Full primary article text is still required.",
+          "Reference-point tests and convention checks are still required."
+        ]
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -74,6 +90,20 @@
         "unpaywall": "not applicable without DOI",
         "openalex": "not checked as a releasable full-text source",
         "endpoint_check": "no publisher full-text endpoint identified; 2026-07-05 audit did not identify a releasable primary endpoint"
+      },
+      "secondary_formula_candidate": {
+        "registry_id": "TP-FRIEDEL-1979-SECONDARY-CANDIDATE",
+        "secondary_source_url": "https://fluids.readthedocs.io/fluids.two_phase.html",
+        "secondary_formula_scope": "Friedel pressure-drop multiplier transcription for audit guidance only.",
+        "known_ambiguities": [
+          "Primary conference paper was not found.",
+          "Exponent and dimensionless-group conventions must be checked against an archival primary scan.",
+          "The secondary source reports notable prediction error and unsupported high viscosity-ratio behavior."
+        ],
+        "release_blockers": [
+          "Full primary paper or archival scan is still required.",
+          "All dimensionless groups and applicability limits require primary-source audit."
+        ]
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -183,6 +213,19 @@
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
         "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
+      },
+      "secondary_formula_candidate": {
+        "registry_id": "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE",
+        "secondary_source_url": "https://fluids.readthedocs.io/fluids.two_phase.html",
+        "secondary_formula_scope": "Taitel-Dukler 1976 horizontal/near-horizontal map candidate only; not a substitute for the 1980 vertical upflow map.",
+        "known_ambiguities": [
+          "The secondary candidate is horizontal/near-horizontal, while this gate is for vertical upflow.",
+          "Vertical bubbly, slug, churn and annular transition equations remain unaudited."
+        ],
+        "release_blockers": [
+          "Full Taitel-Barnea-Dukler 1980 text is still required for vertical riser release.",
+          "The horizontal 1976 candidate would require a separate implementation scope and tests."
+        ]
       },
       "local_full_text_ref": "",
       "decision": "source_required",

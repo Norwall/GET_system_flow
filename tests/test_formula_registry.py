@@ -16,6 +16,8 @@ REGISTRY_PATH = PROJECT_ROOT / "docs" / "formula_registry.md"
 REGISTRY_TEXT = REGISTRY_PATH.read_text(encoding="utf-8")
 SOURCE_AUDIT_PATH = PROJECT_ROOT / "docs" / "source_audit_checkpoint_5_6.md"
 SOURCE_AUDIT_TEXT = SOURCE_AUDIT_PATH.read_text(encoding="utf-8")
+SECONDARY_CANDIDATES_PATH = PROJECT_ROOT / "docs" / "secondary_formula_candidates.md"
+SECONDARY_CANDIDATES_TEXT = SECONDARY_CANDIDATES_PATH.read_text(encoding="utf-8")
 
 EXPECTED_REGISTRY_IDS = (
     "PROP-MATHCAD-CO2-TABLE",
@@ -29,6 +31,9 @@ EXPECTED_REGISTRY_IDS = (
     "BAL-PREBOILING-FRACTION",
     "BAL-PREBOILING-ISHKOV-SUPERHEAT",
     "HTC-CHEN-1962-SOURCE-CANDIDATE",
+    "HTC-SHAH-EVAPORATION-SECONDARY-CANDIDATE",
+    "HTC-CHEN-BENNETT-SECONDARY-CANDIDATE",
+    "HTC-LIU-WINTERTON-SECONDARY-CANDIDATE",
     "QCRIT-DISSERTATION-SCAN",
     "QCRIT-DISSERTATION-F-ZERO",
     "FRIC-REYNOLDS",
@@ -44,15 +49,19 @@ EXPECTED_REGISTRY_IDS = (
     "TP-CHISHOLM-MULTIPLIER",
     "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
     "TP-FRIEDEL-1979-SOURCE-GATE",
+    "TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE",
+    "TP-FRIEDEL-1979-SECONDARY-CANDIDATE",
     "FLOW-MASS-QUALITY",
     "VOID-GENERIC-SLIP",
     "VOID-WORKSHEET-PHI2L",
     "VOID-HOMOGENEOUS-EQUILIBRIUM",
     "VOID-ZIVI-1964",
+    "VOID-ZIVI-1964-SECONDARY-CANDIDATE",
     "FLOW-PHASE-VELOCITIES",
     "FLOW-SLIP-RATIO",
     "FLOW-MIXTURE-DENSITY",
     "PRESS-ACCELERATION-MOMENTUM",
+    "PRESS-ACCELERATION-ACHP-SECONDARY-CANDIDATE",
     "PRESS-WORKSHEET-DRIVING-HEAD",
     "PRESS-DISTRIBUTED-RISER-GRADIENT",
     "PRESS-HYDROSTATIC-SECTION",
@@ -60,6 +69,7 @@ EXPECTED_REGISTRY_IDS = (
     "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
     "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
     "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
+    "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE",
     "EXP-REGIME-AWARE-CLASSIFIERS",
     "EXP-DRIFT-FLUX-LIKE-VOID",
     "EXP-ANNULAR-CORE-VOID",
@@ -93,6 +103,17 @@ SOURCE_REQUIRED_IDS = (
 
 SOURCE_CANDIDATE_IDS = (
     "HTC-CHEN-1962-SOURCE-CANDIDATE",
+)
+
+SECONDARY_CANDIDATE_IDS = (
+    "HTC-SHAH-EVAPORATION-SECONDARY-CANDIDATE",
+    "HTC-CHEN-BENNETT-SECONDARY-CANDIDATE",
+    "HTC-LIU-WINTERTON-SECONDARY-CANDIDATE",
+    "TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE",
+    "TP-FRIEDEL-1979-SECONDARY-CANDIDATE",
+    "VOID-ZIVI-1964-SECONDARY-CANDIDATE",
+    "PRESS-ACCELERATION-ACHP-SECONDARY-CANDIDATE",
+    "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE",
 )
 
 SOURCE_REQUIRED_PRIMARY_RECORDS = {
@@ -160,6 +181,11 @@ def test_published_closure_models_do_not_depend_on_experimental_registry_entries
         registry_ids = closure_model_formula_registry_ids(model)
         assert not any(registry_id.startswith("EXP-") for registry_id in registry_ids)
         assert all("EXPERIMENTAL / NO PRIMARY SOURCE" not in registry_sections[registry_id] for registry_id in registry_ids)
+        assert not any(registry_id in SECONDARY_CANDIDATE_IDS for registry_id in registry_ids)
+        assert all(
+            "SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED" not in registry_sections[registry_id]
+            for registry_id in registry_ids
+        )
 
 
 def test_regime_aware_alias_uses_experimental_registry_ids() -> None:
@@ -192,6 +218,28 @@ def test_source_candidates_are_marked_not_released(
     assert "SOURCE_CANDIDATE / NOT_RELEASED" in registry_sections[entry_id]
 
 
+@pytest.mark.parametrize("entry_id", SECONDARY_CANDIDATE_IDS)
+def test_secondary_formula_candidates_are_marked_not_released(
+    entry_id: str,
+    registry_sections: dict[str, str],
+) -> None:
+    section = registry_sections[entry_id]
+
+    assert "- Статус: SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED." in section
+    assert "docs/secondary_formula_candidates.md" in section
+    assert "<https://" in section
+    assert "Код: отсутствует" in section
+    assert entry_id in SECONDARY_CANDIDATES_TEXT
+
+
+def test_secondary_formula_candidates_do_not_satisfy_release_policy() -> None:
+    assert SECONDARY_CANDIDATES_PATH.exists()
+    assert "не снимают `SOURCE_REQUIRED`" in SECONDARY_CANDIDATES_TEXT
+    assert "не дают права подключать модель как" in SECONDARY_CANDIDATES_TEXT
+    assert "SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED" in REGISTRY_TEXT
+    assert "не могут использоваться selectable `published` runtime-режимами" in REGISTRY_TEXT
+
+
 @pytest.mark.parametrize("entry_id", SOURCE_REQUIRED_IDS)
 def test_source_required_entries_are_linked_to_primary_source_audit(
     entry_id: str,
@@ -213,6 +261,34 @@ def test_source_required_policy_is_primary_source_only() -> None:
     assert "docs/source_audit_open_web_2026-07-05.md" in REGISTRY_TEXT
     assert "docs/source_audit_open_web_2026-07-05.md" in SOURCE_AUDIT_TEXT
     assert "Crossref, DOI landing page, abstract" in SOURCE_AUDIT_TEXT
+
+
+def test_registry_status_vocabulary_is_controlled() -> None:
+    allowed_statuses = {
+        "DEFINITIONAL",
+        "DISSERTATION / ENGINEERING",
+        "DISSERTATION / MATHCAD_COMPATIBLE",
+        "DISSERTATION / NUMERICAL_SEARCH",
+        "DISSERTATION / OPT_IN",
+        "DISSERTATION",
+        "ENGINEERING / REQUIRES_AUDIT",
+        "EXPERIMENTAL / NO PRIMARY SOURCE",
+        "MATHCAD_COMPATIBLE / DISSERTATION",
+        "MATHCAD_COMPATIBLE / REQUIRES_AUDIT",
+        "MATHCAD_COMPATIBLE",
+        "OPTIONAL_ADAPTER",
+        "PUBLISHED / DEFINITIONAL",
+        "PUBLISHED LIMITING MODEL",
+        "PUBLISHED",
+        "REGRESSION_DIAGNOSTIC",
+        "SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED",
+        "SOURCE_CANDIDATE / NOT_RELEASED",
+        "SOURCE_REQUIRED",
+        "TEST_ONLY",
+        "USER_SUPPLIED_BOUNDARY",
+    }
+    statuses = set(re.findall(r"^- Статус: (.+?)\.$", REGISTRY_TEXT, flags=re.MULTILINE))
+    assert statuses <= allowed_statuses
 
 
 def test_regime_classifier_registry_points_to_experimental_layer(

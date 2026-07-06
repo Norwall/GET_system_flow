@@ -3,6 +3,7 @@
 Дата проверки: 2026-07-03.
 Повторная проверка политики: 2026-07-04.
 Контрольная endpoint-проверка: 2026-07-05.
+Дополнительный secondary-formula context: 2026-07-06.
 Open-web проверка доступности: `docs/source_audit_open_web_2026-07-05.md`
 (предыдущий проход: `docs/source_audit_open_web_2026-07-04.md`).
 Структурированный manifest: `docs/source_gate_manifest.json`.
@@ -55,6 +56,24 @@ evidence-базы и не коммитится, кроме `sources/primary/READ
 `docs/source_gate_manifest.json`, численные reference-тесты и снятие guard в
 runtime-коде.
 
+## Вторичные формульные кандидаты 2026-07-06
+
+Если полный первоисточник не найден, вторичная формула может быть занесена
+только как `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED`. Такой статус
+используется для audit guidance и не является release-доказательством.
+
+Текущий secondary pass оформлен в `docs/secondary_formula_candidates.md` и
+связан с `docs/formula_registry.md` / `docs/source_gate_manifest.json`.
+Найдены вторичные формульные кандидаты для MSH, Friedel, Zivi, ACHP
+acceleration pressure drop, Shah evaporation, Chen-Bennett, Liu-Winterton и
+Taitel-Dukler 1976 horizontal map. При этом:
+
+- MSH/Friedel guard-функции остаются активными;
+- Taitel-Dukler 1976 horizontal map не заменяет вертикальный
+  Taitel-Barnea-Dukler 1980 gate;
+- Shah/Chen-Bennett/Liu-Winterton не являются dryout/CHF prediction;
+- runtime-код не меняется и ни один `SOURCE_REQUIRED` gate не снимается.
+
 ## Подтвержденные библиографические записи
 
 | Модель | Первичная запись | Статус доступа |
@@ -96,6 +115,9 @@ runtime-коде.
 - Chen 1962 / OSTI `10.2172/4636495` учитывается как отдельный
   `source_candidate`: metadata доступны для диагностики, но расчётные HTC,
   dryout и CHF correlation остаются не выпущенными.
+- `docs/secondary_formula_candidates.md` добавляет только context для будущего
+  аудита. Записи `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` не считаются
+  достаточным основанием для снятия guard.
 
 ## Что нужно для снятия source-gate
 

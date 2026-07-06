@@ -2125,6 +2125,7 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
 | primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
+| secondary formula candidates | `docs/secondary_formula_candidates.md`; `docs/source_gate_manifest.json`; `docs/formula_registry.md` | формулы из авторитетных вторичных источников помогают аудиту, но не снимают primary-source-only gate | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED |
 | physics gap matrix | `docs/physics_gap_matrix.md` | сводный локальный документ по активной физике, источникам и незакрытым gap | ACADEMIC CONTEXT |
 | release-candidate status | `docs/release_candidate_status.md` | source-gated release-candidate решение и полный pytest от 2026-07-06 | ACADEMIC / RELEASE CONTEXT |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
@@ -2242,6 +2243,38 @@ Chen 1962 / OSTI `10.2172/4636495` теперь отражён в metadata ка�
 перенесены в `docs/formula_registry.md` как released runtime-модель. Поэтому
 выбор `heat_transfer_model="chen_1962_source_candidate"` должен оставаться
 source-gated diagnostic branch, а не расчётом HTC, dryout или CHF.
+
+## 18.10. Вторичные формульные кандидаты
+
+После дополнительного академического поиска введён отдельный слой
+`SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED`. Он нужен для случаев, когда
+полный первоисточник пока не найден, но формула воспроизведена в авторитетной
+вторичной документации или библиотеке с библиографической ссылкой на
+первоисточник. Этот слой описан в `docs/secondary_formula_candidates.md`,
+связан с `docs/formula_registry.md` и частично отражён в
+`docs/source_gate_manifest.json`.
+
+Найденные вторичные кандидаты:
+
+- Müller-Steinhagen-Heck и Friedel pressure-drop formulas в `fluids`;
+- Zivi void-fraction secondary confirmation в `fluids.two_phase_voidage`;
+- acceleration pressure-drop formulation в ACHP;
+- Shah evaporation HTC в ACHP;
+- Chen-Bennett и Liu-Winterton HTC в `ht`;
+- Taitel-Dukler 1976 horizontal / near-horizontal map в `fluids`.
+
+Эти записи не снимают `SOURCE_REQUIRED`. Для MSH/Friedel guard-функции в
+`published_friction.py` остаются активными, а `model_source_status` должен
+оставаться `source_required`, если активная расчётная цепочка зависит от
+неаудированной source-gate модели. Особенно важно, что Taitel-Dukler 1976
+horizontal candidate не заменяет вертикальную карту Taitel-Barnea-Dukler 1980,
+а Shah/Chen-Bennett/Liu-Winterton не являются dryout или CHF prediction.
+
+Формульные кандидаты, которые пока не найдены на переносимом уровне:
+Wojtan-Ursenbacher-Thome Part I transition equations, Wojtan-Ursenbacher-Thome
+Part II heat-transfer/dryout equations, Taitel-Barnea-Dukler 1980 vertical
+transition equations, Kandlikar 1990 and Gungor-Winterton 1986 complete HTC
+formula transcriptions. Они остаются bibliographic/source-gate objects.
 
 # 19. Область корректного применения
 
