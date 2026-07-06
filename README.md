@@ -102,6 +102,11 @@ print(result["fluid"], result["property_backend"], result["converged"])
 В текущей версии закрыты Checkpoint 0-10 из `plan.md` в реализованной части
 аудита модели:
 
+Текущий стабилизированный статус: source-gated release candidate от 2026-07-06,
+зафиксированный в `docs/release_candidate_status.md`. Он подтверждает полный
+`pytest -q`, но не снимает `SOURCE_REQUIRED` ограничения с неподключённых
+published-кандидатов.
+
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
   оставлено как alias для совместимости;
@@ -235,6 +240,9 @@ Part I/II не снимают gate, потому что DSpace API не пока
   `docs/source_audit_open_web_2026-07-05.md` - аудит первоисточников;
 - `docs/physics_gap_matrix.md` - краткая матрица активной физики, внешних
   источников и незакрытых source-gate ограничений;
+- `docs/release_candidate_status.md` - текущий source-gated release-candidate
+  статус, результаты полного pytest и план ускорения тестов без изменения
+  физики;
 - `docs/get_co2_academic_reference.md` - академическое описание модели,
   допущений, статусов и ограничений.
 

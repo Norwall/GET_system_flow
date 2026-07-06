@@ -2,13 +2,15 @@
 title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
-date: "5 июля 2026 г."
+date: "6 июля 2026 г."
 toc-title: "Содержание"
 ---
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по рабочему дереву проекта после выполнения Checkpoint 4, source-strict части Checkpoint 5, structural split Checkpoint 6, безопасного scaffold Checkpoint 7, NH₃-ветки Checkpoint 8, critical-load слоя Checkpoint 9, сценарной матрицы Checkpoint 10, source-gate аудита Checkpoint 5-6, wall/soil update Checkpoint 7 и локального primary-source intake update: добавлены явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), быстрый root-scan набор сценариев с фиксированными статусами отказов, а также локальный inventory-процесс `sources/primary/` + `docs/primary_source_inventory.md` для будущего снятия source-gate. Базовая зафиксированная версия репозитория имеет идентификатор a75164a85a15; дополнительно учтены находящиеся в рабочем дереве модули геометрического конструктора, REST API, web-интерфейса, source-strict published closures, source-tagged regime diagnostics, CoolProp reference CSV для CO₂/NH₃ и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по source-gated release-candidate состоянию проекта от 2026-07-06: базовый стабилизированный коммит — `974c1e3 Improve boiling onset source tracing`, а текущий документальный статус вынесен в `docs/release_candidate_status.md`.
+
+К release-candidate состоянию относятся: явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), быстрый root-scan набор сценариев с фиксированными статусами отказов, локальный inventory-процесс `sources/primary/` + `docs/primary_source_inventory.md`, opt-in ветка `boiling_onset_model="ishkov_superheat"` и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
 После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model`, флаг `allow_property_extrapolation`, слои грунта и эффективную линейную проводимость wall/soil boundary. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics, `wall_soil_*` fields и `qcrit_status`. Это является интерфейсной, граничной и отчётной доработкой: она не добавляет published HTC/dryout корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
@@ -19,6 +21,12 @@ toc-title: "Содержание"
 `docs/physics_gap_matrix.md` и runtime metadata для Chen 1962 / OSTI
 `10.2172/4636495` как `source_candidate`: полный текст найден, но HTC,
 dryout и CHF по нему не рассчитываются до отдельного аудита применимости.
+
+Стабилизационный проход от 2026-07-06 не снимает ни один source-gate и не
+подключает новые published-корреляции. Его академическая роль — зафиксировать,
+что текущее состояние является source-gated release candidate: активная
+runtime-физика отделена от `SOURCE_REQUIRED`/`SOURCE_CANDIDATE` записей, а
+полный `pytest -q` проходит на текущем дереве.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -80,7 +88,9 @@ q_\ell=G_{\rm eff}(T_{\rm soil}-t_k).
 - аудит расхождений между Python-кодом, Mathcad, диссертацией и литературой;
 - open-web source-gate аудит и manifest решений по неподключённым published-кандидатам;
 - компактную матрицу активной физики и незакрытых source-gate gap в
-  `docs/physics_gap_matrix.md`.
+  `docs/physics_gap_matrix.md`;
+- release-candidate статус, результаты полного pytest и план ускорения тестов
+  без изменения физики в `docs/release_candidate_status.md`.
 
 # 1. Назначение и предмет моделирования
 
@@ -2031,27 +2041,18 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 - `pytest tests/test_scenario_matrix.py -q` — 18 passed;
 - `pytest tests/test_refrigerant_loop_model.py tests/test_segmented_geometry.py tests/test_qcrit_solver.py tests/test_scenario_matrix.py -q` — 31 passed.
 
-После локального primary-source intake update от 2026-07-05 коллекция тестов
-составляет 242 теста. Одиночный `pytest -q` в текущем окружении дошёл примерно
-до 59% и завершился по timeout 360 s, поэтому фактическая верификация выполнена
-по чанкам:
+После release-candidate стабилизации от 2026-07-06 коллекция тестов составляет
+252 теста. Полный прогон на текущем дереве выполнен без снятия source-gate:
 
-- `pytest -q tests/test_source_gate_manifest.py` — 10 passed;
-- `pytest -q tests/test_source_gate_manifest.py tests/test_formula_registry.py tests/test_regime_maps.py tests/test_boiling_diagnostics.py` — 130 passed;
-- `pytest -q tests/test_refrigerant_loop_model.py tests/test_scenario_matrix.py` — 20 passed;
-- `pytest -q tests/test_two_phase_pressure_drop.py tests/test_void_fraction_models.py` — 12 passed;
-- `pytest -q tests/test_baseline_compatibility.py` — 8 passed за 140.30 s;
-- `pytest -q tests/test_co2_model_regression.py tests/test_co2_model_sweep.py tests/test_co2_function_matrix.py tests/test_co2_properties_baseline.py` — 11 passed;
-- `pytest -q tests/test_co2_result_fields.py tests/test_get_designer_api.py tests/test_get_designer_geometry.py` — 17 passed;
-- `pytest -q tests/test_mathcad_log_audit.py tests/test_nh3_loop_solver.py tests/test_nh3_properties.py tests/test_pressure_balance.py` — 18 passed;
-- `pytest -q tests/test_qcrit_solver.py` — 6 passed;
-- `pytest -q tests/test_refrigerant_properties.py` — 14 passed;
-- `pytest -q tests/test_segmented_geometry.py` — 6 passed.
+- `pytest -q` — 252 passed in 515.07 s;
+- `pytest -q --durations=25` — 252 passed in 515.29 s, самые тяжёлые проверки
+  зафиксированы в `docs/release_candidate_status.md`;
+- `pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q`
+  — 123 passed.
 
-Такой chunked-прогон покрывает весь собранный набор без снятия source-gate и
-сохраняет отдельную проверку тяжёлой Mathcad-compatible baseline-ветки.
-Targeted-наборы ниже остаются полезными для быстрой локальной проверки
-отдельных подсистем.
+Этот полный прогон заменяет прежний chunked-status как release gate. Targeted
+наборы ниже остаются полезными для быстрой локальной проверки отдельных
+подсистем, но не заменяют полный `pytest -q` при выпуске.
 
 После добавления Checkpoint 7 scaffold дополнительно выполнены targeted-проверки:
 
@@ -2125,6 +2126,7 @@ Targeted-наборы ниже остаются полезными для быс
 | primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
 | physics gap matrix | `docs/physics_gap_matrix.md` | сводный локальный документ по активной физике, источникам и незакрытым gap | ACADEMIC CONTEXT |
+| release-candidate status | `docs/release_candidate_status.md` | source-gated release-candidate решение и полный pytest от 2026-07-06 | ACADEMIC / RELEASE CONTEXT |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
 | гидростатика по участку | pressure_balance | \(\rho g \Delta z\) | PUBLISHED / DEFINITIONAL |
@@ -2318,6 +2320,9 @@ wall/soil boundary inputs при `wall_coupled`, выбранную модель
 - designer/API и демонстрационный Markdown-отчёт показывают source/failure/boiling/dryout/qcrit diagnostics пользователю, а не оставляют их скрытыми в Python-словаре.
 - `docs/physics_gap_matrix.md` кратко связывает runtime-физику, внешние
   источники и незакрытые source-gate gap.
+- `docs/release_candidate_status.md` фиксирует source-gated release-candidate
+  решение, результат полного `pytest -q` и отдельный план ускорения тестов без
+  изменения физики.
 
 Научные ограничения:
 
@@ -2331,7 +2336,9 @@ wall/soil boundary inputs при `wall_coupled`, выбранную модель
 - отсутствующая распределённая физика грунта и локальные сопротивления произвольной геометрии;
 - обнаруженные вопросы к legacy-логарифму трения и ограниченная поддержка произвольной многосегментной геометрии конструктора.
 
-Поэтому текущую версию корректно характеризовать как исследовательский инженерный расчётный инструмент и платформу для последующей научной верификации, а не как завершённую универсальную модель ГЕТ.
+Поэтому текущую версию корректно характеризовать как source-gated release
+candidate исследовательского инженерного расчётного инструмента и платформу для
+последующей научной верификации, а не как завершённую универсальную модель ГЕТ.
 
 # Приложение А. Табличные свойства CO₂
 
@@ -2535,3 +2542,6 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 29. A correlation for boiling heat transfer to saturated fluids in convective flow. Technical report, 1962. OSTI ID 4636495. DOI: [10.2172/4636495](https://doi.org/10.2172/4636495). Full-text PURL: [https://www.osti.gov/servlets/purl/4636495](https://www.osti.gov/servlets/purl/4636495).
 
 30. Локальный инвентарь полных первоисточников для source-gate release. Локальный документ проекта: [docs/primary_source_inventory.md](primary_source_inventory.md); некоммитимая рабочая папка: `sources/primary/`.
+
+31. Release-candidate статус проекта. Локальный документ проекта:
+[docs/release_candidate_status.md](release_candidate_status.md).

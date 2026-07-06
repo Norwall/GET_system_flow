@@ -5,6 +5,10 @@
 abstract или чужой пересказ формулы не являются достаточным основанием для
 переноса корреляции в расчёт.
 
+Текущее стабилизированное состояние зафиксировано отдельно в
+`docs/release_candidate_status.md`: это source-gated release candidate, а не
+снятие `SOURCE_REQUIRED` ограничений.
+
 | Область | Runtime-статус | Источник | Gap / gate |
 | --- | --- | --- | --- |
 | Свойства насыщения CO2 из Mathcad | Released default для совместимой CO2-ветки | `CO2.xmcd`; табличный backend `MathcadCO2SaturationProperties` | Ограниченный диапазон таблиц; экстраполяция запрещена по умолчанию. |
@@ -19,6 +23,7 @@ abstract или чужой пересказ формулы не являются
 | Dryout/CHF | Not evaluated | Candidate sources tracked in source-gate docs | Численная несходимость solver не трактуется как dryout/CHF criterion. |
 | Critical loads | Released как границы текущего steady solver | `critical_loads.py`; диссертационный предел `f=0` | Это не published CHF/dryout и не экспериментальная валидация. |
 | Scenario/API/UI | Released metadata transport | Scenario schema, REST API, web UI, tests | UI показывает source-status и onset controls, но не заявляет validation. |
+| Release-candidate snapshot | Source-gated release candidate | `docs/release_candidate_status.md`; полный `pytest -q` от 2026-07-06 | Статус подтверждает прохождение тестов и активные gates, но не добавляет новую физику. |
 
 ## Внешние источники, используемые или отслеживаемые
 

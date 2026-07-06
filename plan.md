@@ -455,7 +455,8 @@ Friedel 1979 остаётся без найденной первичной DOI-�
 `SOURCE_REQUIRED` явно закреплено правило полного первоисточника. DOI landing
 page, Crossref metadata, abstract, учебник, обзор или пересказ формулы не
 снимают source-gate. Реестр формул и `docs/source_audit_checkpoint_5_6.md`
-связаны тестами; полный прогон `pytest -q` прошёл: 225 passed.
+связаны тестами; актуальный полный release-candidate прогон зафиксирован ниже
+как 252 passed.
 
 Статус open-web academic context от 2026-07-04: добавлены
 `docs/source_audit_open_web_2026-07-04.md` и
@@ -854,6 +855,13 @@ boiling/dryout diagnostics и `qcrit_status` без запуска дорого�
 `docs/primary_source_inventory.md`, а manifest и тесты запрещают release без
 локального SHA256/audit trail.
 
+Статус release-candidate стабилизации от 2026-07-06: текущее состояние
+зафиксировано в `docs/release_candidate_status.md` как source-gated release
+candidate на базе коммита `974c1e3 Improve boiling onset source tracing`.
+Полный прогон `pytest -q` прошёл: 252 passed in 515.07 s. Новые published
+корреляции не подключались; `SOURCE_REQUIRED` и `SOURCE_CANDIDATE` ограничения
+остаются академически активными.
+
 ## 18. Критерии завершения всей доработки
 
 - [x] CO₂ Mathcad-compatible ветка воспроизводит старые baseline-тесты.
@@ -870,3 +878,6 @@ boiling/dryout diagnostics и `qcrit_status` без запуска дорого�
 - [x] Designer реально передаёт геометрию в solver.
 - [x] Designer/API и демонстрационный отчёт показывают source/failure/boiling/dryout/qcrit diagnostics.
 - [x] Тесты покрывают CO₂, NH₃, свойства, трение, пустотность, гидростатику, режимы, `qcrit` и ошибочные входы.
+- [x] Release-candidate статус, академический контекст и полный pytest
+  зафиксированы в `docs/release_candidate_status.md` и
+  `docs/get_co2_academic_reference.md`.
