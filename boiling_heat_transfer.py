@@ -7,6 +7,7 @@ from typing import Any
 
 PRESCRIBED_HEAT_INPUT = "prescribed_heat_input"
 WALL_COUPLED = "wall_coupled"
+CHEN_1962_SOURCE_CANDIDATE = "chen_1962_source_candidate"
 
 _HEAT_TRANSFER_MODEL_ALIASES = {
     PRESCRIBED_HEAT_INPUT: PRESCRIBED_HEAT_INPUT,
@@ -15,6 +16,9 @@ _HEAT_TRANSFER_MODEL_ALIASES = {
     "fixed_heat_input": PRESCRIBED_HEAT_INPUT,
     WALL_COUPLED: WALL_COUPLED,
     "wall_soil_coupled": WALL_COUPLED,
+    CHEN_1962_SOURCE_CANDIDATE: CHEN_1962_SOURCE_CANDIDATE,
+    "chen_1962": CHEN_1962_SOURCE_CANDIDATE,
+    "chen": CHEN_1962_SOURCE_CANDIDATE,
 }
 
 _HTC_SOURCE_WARNING = (
@@ -25,6 +29,48 @@ _DRYOUT_SOURCE_WARNING = (
     "Dryout/CHF diagnostic requires a source-specific correlation and is not evaluated "
     "from solver convergence."
 )
+_CHEN_1962_SOURCE = (
+    "J. C. Chen, A correlation for boiling heat transfer to saturated fluids in convective flow, "
+    "OSTI ID 4636495, DOI 10.2172/4636495; source candidate, not runtime-released."
+)
+_CHEN_1962_WARNING = (
+    "Chen 1962 saturated convective boiling HTC is recorded as an OSTI source candidate, "
+    "but equations, variables, limits, and validation cases are not released into runtime."
+)
+
+
+@dataclass(frozen=True)
+class HeatTransferSourceCandidate:
+    model: str
+    source_status: str
+    source: str
+    primary_record: str
+    local_full_text_ref: str
+    blocking_reason: str
+    required_audit_checks: tuple[str, ...]
+
+    def to_result_fields(self) -> dict[str, Any]:
+        return {
+            "boiling_heat_transfer_candidate": self.model,
+            "boiling_heat_transfer_source": self.source,
+            "boiling_heat_transfer_source_status": self.source_status,
+        }
+
+
+def chen_1962_source_candidate() -> HeatTransferSourceCandidate:
+    return HeatTransferSourceCandidate(
+        model=CHEN_1962_SOURCE_CANDIDATE,
+        source_status="source_candidate_not_released",
+        source=_CHEN_1962_SOURCE,
+        primary_record="https://www.osti.gov/biblio/4636495",
+        local_full_text_ref="https://www.osti.gov/servlets/purl/4636495",
+        blocking_reason=_CHEN_1962_WARNING,
+        required_audit_checks=(
+            "Audit the full report equations, constants, variables, and applicability range.",
+            "Add reference HTC values and boundary-condition tests before release.",
+            "Decide whether the correlation is diagnostic-only or an active HTC model.",
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -57,6 +103,9 @@ class BoilingDiagnostics:
     boiling_heat_transfer_status: str
     boiling_heat_flux_w_m2: float | None = None
     boiling_heat_transfer_limit: str = "not_evaluated_source_required"
+    boiling_heat_transfer_candidate: str = ""
+    boiling_heat_transfer_source: str = ""
+    boiling_heat_transfer_source_status: str = ""
     dryout_limit: str = "not_evaluated_source_required"
     hydrodynamic_limit: str = "not_active"
     property_limit: str = "not_active"
@@ -76,6 +125,9 @@ class BoilingDiagnostics:
             "boiling_heat_transfer_status": self.boiling_heat_transfer_status,
             "boiling_heat_flux_w_m2": self.boiling_heat_flux_w_m2,
             "boiling_heat_transfer_limit": self.boiling_heat_transfer_limit,
+            "boiling_heat_transfer_candidate": self.boiling_heat_transfer_candidate,
+            "boiling_heat_transfer_source": self.boiling_heat_transfer_source,
+            "boiling_heat_transfer_source_status": self.boiling_heat_transfer_source_status,
             "dryout_limit": self.dryout_limit,
             "hydrodynamic_limit": self.hydrodynamic_limit,
             "property_limit": self.property_limit,
@@ -96,7 +148,7 @@ def normalize_heat_transfer_model(model: str) -> str:
     try:
         return _HEAT_TRANSFER_MODEL_ALIASES[key]
     except KeyError as exc:
-        valid = ", ".join(sorted({PRESCRIBED_HEAT_INPUT, WALL_COUPLED}))
+        valid = ", ".join(sorted({PRESCRIBED_HEAT_INPUT, WALL_COUPLED, CHEN_1962_SOURCE_CANDIDATE}))
         raise ValueError(f"Unknown heat_transfer_model {model!r}; valid values are: {valid}.") from exc
 
 
@@ -182,6 +234,21 @@ def diagnostics_for_solver_status(
             ),
         )
 
+    if heat_transfer_model == CHEN_1962_SOURCE_CANDIDATE:
+        candidate = chen_1962_source_candidate()
+        warnings = (*warnings, candidate.blocking_reason)
+        return BoilingDiagnostics(
+            heat_transfer_model=heat_transfer_model,
+            boiling_heat_transfer_status="source_candidate_source_required_not_evaluated_solver_not_converged",
+            boiling_heat_transfer_limit="not_evaluated_source_required",
+            hydrodynamic_limit=hydrodynamic_limit,
+            property_limit=property_limit,
+            numerical_failure=numerical_failure,
+            failure_class=failure_class,
+            warnings=warnings,
+            **candidate.to_result_fields(),
+        )
+
     return BoilingDiagnostics(
         heat_transfer_model=heat_transfer_model,
         boiling_heat_transfer_status=boiling_status,
@@ -218,6 +285,12 @@ def diagnose_prescribed_heat_input(
         status = "no_boiling_region"
         hydrodynamic_limit = "no_boiling_region"
         failure_class = "hydrodynamic_limit" if not near_critical_warning else failure_class
+    candidate_fields: dict[str, Any] = {}
+    if heat_transfer_model == CHEN_1962_SOURCE_CANDIDATE:
+        candidate = chen_1962_source_candidate()
+        status = "source_candidate_source_required_not_released"
+        warnings = (*warnings, candidate.blocking_reason)
+        candidate_fields = candidate.to_result_fields()
 
     return BoilingDiagnostics(
         heat_transfer_model=heat_transfer_model,
@@ -232,6 +305,7 @@ def diagnose_prescribed_heat_input(
             wall_soil_qtr_w_m=heat_flux_w_m2 * perimeter_m if wall_soil_boundary is not None else None,
             tcon_c=tcon_c,
         ),
+        **candidate_fields,
     )
 
 
@@ -285,9 +359,12 @@ def _wall_soil_result_fields(
 
 __all__ = [
     "BoilingDiagnostics",
+    "CHEN_1962_SOURCE_CANDIDATE",
+    "HeatTransferSourceCandidate",
     "PRESCRIBED_HEAT_INPUT",
     "WALL_COUPLED",
     "WallSoilBoundary",
+    "chen_1962_source_candidate",
     "diagnose_prescribed_heat_input",
     "diagnostics_for_solver_status",
     "failure_class_from_solver_status",

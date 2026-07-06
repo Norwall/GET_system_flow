@@ -7,6 +7,7 @@ import numpy as np
 from scipy.optimize import root_scalar
 
 from boiling_heat_transfer import (
+    CHEN_1962_SOURCE_CANDIDATE,
     WALL_COUPLED,
     WallSoilBoundary,
     diagnose_prescribed_heat_input,
@@ -74,6 +75,50 @@ def _write_regime_metadata(
     confidence_values[index] = classification.confidence
 
 
+BOILING_ONSET_MATHCAD_BASELINE = "mathcad_baseline"
+BOILING_ONSET_ISHKOV_SUPERHEAT = "ishkov_superheat"
+_BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP = "_ishkov_superheat_fixed_condenser_drop"
+
+_BOILING_ONSET_ALIASES = {
+    BOILING_ONSET_MATHCAD_BASELINE: BOILING_ONSET_MATHCAD_BASELINE,
+    "worksheet_compatible": BOILING_ONSET_MATHCAD_BASELINE,
+    "mathcad": BOILING_ONSET_MATHCAD_BASELINE,
+    "legacy": BOILING_ONSET_MATHCAD_BASELINE,
+    BOILING_ONSET_ISHKOV_SUPERHEAT: BOILING_ONSET_ISHKOV_SUPERHEAT,
+    "ishkov": BOILING_ONSET_ISHKOV_SUPERHEAT,
+    "ishkov_superheat_onset": BOILING_ONSET_ISHKOV_SUPERHEAT,
+    _BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP: _BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP,
+}
+
+_BOILING_ONSET_SOURCES = {
+    BOILING_ONSET_MATHCAD_BASELINE: "CO2.xmcd; Ishkov dissertation simplified preboiling balance",
+    BOILING_ONSET_ISHKOV_SUPERHEAT: (
+        "Ishkov dissertation eq. (3.3) superheat-corrected boiling onset; "
+        "condenser pressure-drop term iterated from the current pass"
+    ),
+    _BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP: (
+        "Ishkov dissertation eq. (3.3) superheat-corrected boiling onset; "
+        "fixed condenser pressure-drop value for solver iteration"
+    ),
+}
+
+
+def normalize_boiling_onset_model(model: str) -> str:
+    key = str(model).strip().lower()
+    try:
+        return _BOILING_ONSET_ALIASES[key]
+    except KeyError as exc:
+        valid = ", ".join(sorted({BOILING_ONSET_MATHCAD_BASELINE, BOILING_ONSET_ISHKOV_SUPERHEAT}))
+        raise ValueError(f"Unknown boiling_onset_model {model!r}; valid values are: {valid}.") from exc
+
+
+def public_boiling_onset_model(model: str) -> str:
+    normalized = normalize_boiling_onset_model(model)
+    if normalized == _BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP:
+        return BOILING_ONSET_ISHKOV_SUPERHEAT
+    return normalized
+
+
 @dataclass(frozen=True)
 class SteadyLoopInputs:
     H: float
@@ -87,6 +132,9 @@ class SteadyLoopInputs:
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
     wall_soil_boundary: WallSoilBoundary | None = None
+    boiling_onset_model: str = BOILING_ONSET_MATHCAD_BASELINE
+    onset_superheat_k: float = 0.0
+    onset_condenser_pressure_drop_pa: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -200,6 +248,8 @@ class SteadyLoopSolver:
         )
         if "source_required" in boiling_status_text:
             has_source_required = True
+            if boiling_diagnostics.heat_transfer_model == CHEN_1962_SOURCE_CANDIDATE:
+                has_non_diagnostic_source_required = True
             reasons.append(
                 "boiling_heat_transfer requires a primary-source saturated flow-boiling HTC correlation; "
                 "current output is diagnostic-only."
@@ -286,6 +336,12 @@ class SteadyLoopSolver:
     def effective_friction_model(self, inputs: SteadyLoopInputs) -> str:
         return normalize_friction_model(inputs.friction_model)
 
+    def effective_boiling_onset_model(self, inputs: SteadyLoopInputs) -> str:
+        return normalize_boiling_onset_model(inputs.boiling_onset_model)
+
+    def boiling_onset_source(self, inputs: SteadyLoopInputs) -> str:
+        return _BOILING_ONSET_SOURCES[self.effective_boiling_onset_model(inputs)]
+
     def geometry_source(self, inputs: SteadyLoopInputs) -> str:
         return inputs.geometry.geometry_source if inputs.geometry is not None else self.geometry.geometry_source
 
@@ -298,8 +354,21 @@ class SteadyLoopSolver:
 
     def _effective_heat_inputs(self, inputs: SteadyLoopInputs) -> SteadyLoopInputs:
         heat_transfer_model = normalize_heat_transfer_model(inputs.heat_transfer_model)
+        boiling_onset_model = normalize_boiling_onset_model(inputs.boiling_onset_model)
+        onset_superheat_k = float(inputs.onset_superheat_k)
+        onset_condenser_pressure_drop_pa = float(inputs.onset_condenser_pressure_drop_pa)
+        if not np.isfinite(onset_superheat_k) or onset_superheat_k < 0.0:
+            raise ValueError("onset_superheat_k must be a non-negative finite value.")
+        if not np.isfinite(onset_condenser_pressure_drop_pa) or onset_condenser_pressure_drop_pa < 0.0:
+            raise ValueError("onset_condenser_pressure_drop_pa must be a non-negative finite value.")
         if heat_transfer_model != WALL_COUPLED:
-            return replace(inputs, heat_transfer_model=heat_transfer_model)
+            return replace(
+                inputs,
+                heat_transfer_model=heat_transfer_model,
+                boiling_onset_model=boiling_onset_model,
+                onset_superheat_k=onset_superheat_k,
+                onset_condenser_pressure_drop_pa=onset_condenser_pressure_drop_pa,
+            )
         qtr_w_m = wall_coupled_heat_input_w_m(
             inputs.wall_soil_boundary,
             tcon_c=inputs.tcon,
@@ -308,6 +377,9 @@ class SteadyLoopSolver:
             inputs,
             qtr=float(qtr_w_m),
             heat_transfer_model=heat_transfer_model,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
+            onset_condenser_pressure_drop_pa=onset_condenser_pressure_drop_pa,
         )
 
     def _section_geometry_fields(self, section) -> dict[str, float | str]:
@@ -391,6 +463,91 @@ class SteadyLoopSolver:
             driving_pressure_pa=float(driving_pressure_pa),
         )
 
+    def _preboiling_onset_fields(
+        self,
+        *,
+        inputs: SteadyLoopInputs,
+        state,
+        circulation_factor: float,
+    ) -> dict[str, float | str]:
+        model = self.effective_boiling_onset_model(inputs)
+        liquid_density_kg_m3 = state.v_l_m3_per_kg ** -1
+        if model == BOILING_ONSET_MATHCAD_BASELINE:
+            temperature_lift_k = (9.81 * inputs.H * liquid_density_kg_m3) / state.dp_sat_dT_pa_per_k
+            condenser_pressure_drop_pa = 0.0
+        elif model in {BOILING_ONSET_ISHKOV_SUPERHEAT, _BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP}:
+            condenser_pressure_drop_pa = max(0.0, float(inputs.onset_condenser_pressure_drop_pa))
+            temperature_lift_k = (
+                (9.81 * inputs.H * liquid_density_kg_m3 - condenser_pressure_drop_pa)
+                / state.dp_sat_dT_pa_per_k
+            ) + float(inputs.onset_superheat_k)
+        else:
+            raise ValueError(f"Unknown normalized boiling_onset_model {model!r}.")
+
+        raw_fraction = (
+            temperature_lift_k
+            * (1.0 + circulation_factor)
+            * state.cp_l_j_per_kgk
+            / state.latent_heat_j_per_kg
+        )
+        if raw_fraction < 0.0:
+            preboiling_status = "boiling_at_inlet"
+            effective_fraction = 0.0
+        elif raw_fraction >= 1.0:
+            preboiling_status = "no_boiling"
+            effective_fraction = raw_fraction
+        else:
+            preboiling_status = "valid"
+            effective_fraction = raw_fraction
+
+        return {
+            "preboiling_length_fraction": float(effective_fraction),
+            "raw_preboiling_length_fraction": float(raw_fraction),
+            "preboiling_status": preboiling_status,
+            "boiling_onset_model": public_boiling_onset_model(model),
+            "onset_superheat_k": float(inputs.onset_superheat_k),
+            "onset_condenser_pressure_drop_pa": float(condenser_pressure_drop_pa),
+            "boiling_onset_source": _BOILING_ONSET_SOURCES[model],
+        }
+
+    def _one_pass_with_iterated_boiling_onset(
+        self,
+        *,
+        inputs: SteadyLoopInputs,
+        circulation_factor: float,
+        ngrid: int,
+    ) -> Optional[SteadyPassResult]:
+        condenser_pressure_drop_pa = 0.0
+        pass_result: SteadyPassResult | None = None
+        for _ in range(4):
+            pass_result = self.one_pass(
+                inputs=replace(
+                    inputs,
+                    boiling_onset_model=_BOILING_ONSET_ISHKOV_FIXED_CONDENSER_DROP,
+                    onset_condenser_pressure_drop_pa=condenser_pressure_drop_pa,
+                ),
+                circulation_factor=circulation_factor,
+                ngrid=ngrid,
+            )
+            if pass_result is None:
+                return None
+            updated_pressure_drop_pa = float(pass_result.outlet_section_pressure_drop_pa)
+            if abs(updated_pressure_drop_pa - condenser_pressure_drop_pa) <= max(
+                1.0e-3,
+                1.0e-4 * max(abs(updated_pressure_drop_pa), 1.0),
+            ):
+                return replace(
+                    pass_result,
+                    boiling_onset_source=_BOILING_ONSET_SOURCES[BOILING_ONSET_ISHKOV_SUPERHEAT],
+                )
+            condenser_pressure_drop_pa = updated_pressure_drop_pa
+        if pass_result is None:
+            return None
+        return replace(
+            pass_result,
+            boiling_onset_source=_BOILING_ONSET_SOURCES[BOILING_ONSET_ISHKOV_SUPERHEAT],
+        )
+
     def one_pass(
         self,
         inputs: SteadyLoopInputs,
@@ -414,11 +571,19 @@ class SteadyLoopSolver:
         state = self.properties.state_at_temperature(inputs.tcon)
         total_heat_w = inputs.qtr * inputs.Li
 
-        preboiling_length_fraction = (
-            ((9.81 * inputs.H) * (state.v_l_m3_per_kg ** -1))
-            * (1.0 + circulation_factor)
-            * state.cp_l_j_per_kgk
-        ) / (state.dp_sat_dT_pa_per_k * state.latent_heat_j_per_kg)
+        if self.effective_boiling_onset_model(inputs) == BOILING_ONSET_ISHKOV_SUPERHEAT:
+            return self._one_pass_with_iterated_boiling_onset(
+                inputs=inputs,
+                circulation_factor=circulation_factor,
+                ngrid=ngrid,
+            )
+
+        onset_fields = self._preboiling_onset_fields(
+            inputs=inputs,
+            state=state,
+            circulation_factor=circulation_factor,
+        )
+        preboiling_length_fraction = float(onset_fields["preboiling_length_fraction"])
         if (not np.isfinite(preboiling_length_fraction)) or preboiling_length_fraction >= 1.0 or circulation_factor < 0.0:
             return None
 
@@ -430,6 +595,7 @@ class SteadyLoopSolver:
                 reference_state=state,
                 total_heat_w=total_heat_w,
                 preboiling_length_fraction=float(preboiling_length_fraction),
+                onset_fields=onset_fields,
             )
 
         preboiling_evaporator_length_m = preboiling_length_fraction * inputs.Li
@@ -1014,6 +1180,12 @@ class SteadyLoopSolver:
             outlet_selected_friction_model=outlet_closure_state.selected_friction_model,
             driving_pressure_pa=float(driving_pressure_pa),
             effective_density_difference_kg_m3=float(effective_density_difference_kg_m3),
+            boiling_onset_model=str(onset_fields["boiling_onset_model"]),
+            onset_superheat_k=float(onset_fields["onset_superheat_k"]),
+            onset_condenser_pressure_drop_pa=float(onset_fields["onset_condenser_pressure_drop_pa"]),
+            raw_preboiling_length_fraction=float(onset_fields["raw_preboiling_length_fraction"]),
+            preboiling_status=str(onset_fields["preboiling_status"]),
+            boiling_onset_source=str(onset_fields["boiling_onset_source"]),
             evaporator_dominant_flow_regime=evaporator_dominant_flow_regime,
             riser_dominant_flow_regime="",
             evaporator_flow_regime_summary=evaporator_flow_regime_summary,
@@ -1035,6 +1207,7 @@ class SteadyLoopSolver:
         reference_state,
         total_heat_w: float,
         preboiling_length_fraction: float,
+        onset_fields: dict[str, float | str],
     ) -> Optional[SteadyPassResult]:
         preboiling_evaporator_length_m = preboiling_length_fraction * inputs.Li
         preboiling_path_length_m = self.geometry.inlet_section_length_m + preboiling_evaporator_length_m
@@ -1937,6 +2110,12 @@ class SteadyLoopSolver:
             outlet_selected_friction_model=outlet_closure_state.selected_friction_model,
             driving_pressure_pa=float(driving_pressure_pa),
             effective_density_difference_kg_m3=float(effective_density_difference_kg_m3),
+            boiling_onset_model=str(onset_fields["boiling_onset_model"]),
+            onset_superheat_k=float(onset_fields["onset_superheat_k"]),
+            onset_condenser_pressure_drop_pa=float(onset_fields["onset_condenser_pressure_drop_pa"]),
+            raw_preboiling_length_fraction=float(onset_fields["raw_preboiling_length_fraction"]),
+            preboiling_status=str(onset_fields["preboiling_status"]),
+            boiling_onset_source=str(onset_fields["boiling_onset_source"]),
             evaporator_dominant_flow_regime=evaporator_dominant_flow_regime,
             riser_dominant_flow_regime=riser_dominant_flow_regime,
             evaporator_flow_regime_summary=evaporator_flow_regime_summary,
@@ -2120,6 +2299,13 @@ class SteadyLoopSolver:
         pass_result: SteadyPassResult | None = None,
     ) -> dict:
         property_fields = self.property_result_fields(inputs)
+        try:
+            normalized_boiling_onset_model = normalize_boiling_onset_model(inputs.boiling_onset_model)
+            boiling_onset_model = public_boiling_onset_model(normalized_boiling_onset_model)
+            boiling_onset_source = _BOILING_ONSET_SOURCES[normalized_boiling_onset_model]
+        except ValueError:
+            boiling_onset_model = str(inputs.boiling_onset_model)
+            boiling_onset_source = ""
         near_critical_warning = property_fields.get("near_critical_warning", "")
         wall_soil_qtr_w_m = None
         if heat_transfer_model == WALL_COUPLED and inputs.wall_soil_boundary is not None:
@@ -2164,6 +2350,14 @@ class SteadyLoopSolver:
             "regime_model_source_status": self.regime_model_source_status(inputs),
             "friction_model": self.effective_friction_model(inputs),
             "geometry_source": geometry_source,
+            "boiling_onset_model": boiling_onset_model,
+            "onset_superheat_k": float(inputs.onset_superheat_k),
+            "onset_condenser_pressure_drop_pa": float(inputs.onset_condenser_pressure_drop_pa),
+            "raw_preboiling_length_fraction": (
+                None if pass_result is None else pass_result.raw_preboiling_length_fraction
+            ),
+            "preboiling_status": "not_evaluated" if pass_result is None else pass_result.preboiling_status,
+            "boiling_onset_source": boiling_onset_source,
             **boiling_diagnostics.to_result_fields(),
         }
 

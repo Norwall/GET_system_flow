@@ -70,6 +70,22 @@ result = model.run(
 )
 ```
 
+Начало кипения по умолчанию остаётся MathCAD-совместимым:
+`boiling_onset_model="mathcad_baseline"`. Для явной диссертационной поправки
+по перегреву можно включить opt-in ветку:
+
+```python
+result = model.run(
+    H=2.5,
+    qtr=76.68,
+    Li=200.0,
+    tcon=0.0,
+    boiling_onset_model="ishkov_superheat",
+    onset_superheat_k=1.0,
+)
+print(result["preboiling_status"], result["boiling_onset_source"])
+```
+
 Для расчетов через общий интерфейс свойств CO2/NH3 используйте универсальный
 фасад:
 
@@ -141,6 +157,19 @@ print(result["fluid"], result["property_backend"], result["converged"])
   `regime_model`, `friction_model`, `heat_transfer_model` и показывают
   `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout
   и `qcrit`-статусы без запуска дорогого `qcrit`-sweep.
+- добавлена opt-in модель начала кипения `ishkov_superheat`: она использует
+  диссертационную форму с внешним перегревом, итерационно учитывает перепад
+  давления конденсатора из текущего steady-pass и возвращает
+  `boiling_onset_model`, `onset_superheat_k`,
+  `onset_condenser_pressure_drop_pa`, `raw_preboiling_length_fraction`,
+  `preboiling_status` и `boiling_onset_source`.
+- найденный внешний полный текст Chen 1962 / OSTI `10.2172/4636495`
+  оформлен как `HTC-CHEN-1962-SOURCE-CANDIDATE`: metadata доступны в
+  результатах diagnostics, но saturated flow-boiling HTC, dryout и CHF
+  по нему не рассчитываются до отдельного аудита применимости.
+- добавлен `docs/physics_gap_matrix.md`: компактная карта runtime-физики,
+  source-gate кандидатов, внешних источников и оставшихся академических
+  ограничений.
 
 Сегментная геометрия сейчас ограничена одним участком каждого типа:
 `evaporator`, `riser`, `condenser`, `downcomer`. Произвольные connector-сегменты,
@@ -204,6 +233,8 @@ Part I/II не снимают gate, потому что DSpace API не пока
   первоисточников из `sources/primary/`, используемых для снятия gate;
 - `docs/source_audit_checkpoint_5_6.md` и
   `docs/source_audit_open_web_2026-07-05.md` - аудит первоисточников;
+- `docs/physics_gap_matrix.md` - краткая матрица активной физики, внешних
+  источников и незакрытых source-gate ограничений;
 - `docs/get_co2_academic_reference.md` - академическое описание модели,
   допущений, статусов и ограничений.
 
@@ -299,6 +330,12 @@ Source-gate документация и академический manifest:
 pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q
 ```
 
+Начало кипения и source-gated диагностика теплообмена:
+
+```powershell
+pytest tests/test_boiling_onset_model.py tests/test_boiling_diagnostics.py -q
+```
+
 Только тяжелые тесты:
 
 ```powershell
@@ -316,6 +353,10 @@ pytest -q -m slow
 - Boiling/dryout diagnostics пока не являются прогнозом heat-transfer crisis:
   Kandlikar, Shah, Gungor-Winterton, dryout и CHF-корреляции не подключены без
   сверки первоисточника.
+- `boiling_onset_model="ishkov_superheat"` является opt-in уточнением начала
+  кипения по диссертационной постановке с пользовательским перегревом. Оно не
+  является самостоятельной экспериментальной калибровкой и не снимает
+  source-gate для HTC/dryout/CHF.
 - Свойства CO2 заданы таблично и интерполируются; расчеты вне области исходных
   таблиц нужно трактовать осторожно.
 - NH3 через CoolProp доступен в общем loop solver; qcrit для него считается тем

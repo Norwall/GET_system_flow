@@ -8,7 +8,7 @@ from scipy.optimize import root_scalar
 
 from boiling_heat_transfer import WALL_COUPLED, WallSoilBoundary, normalize_heat_transfer_model
 from co2_geometry import LoopGeometry
-from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver
+from co2_steady_solver import SteadyLoopInputs, SteadyLoopSolver, normalize_boiling_onset_model
 from refrigerant_properties import PropertyRangeError
 
 
@@ -42,6 +42,8 @@ class CriticalLoadConfig:
     geometry: LoopGeometry | None = None
     heat_transfer_model: str = "prescribed_heat_input"
     wall_soil_boundary: WallSoilBoundary | None = None
+    boiling_onset_model: str = "mathcad_baseline"
+    onset_superheat_k: float = 0.0
     qtr_min_w_m: float = 0.0
     qtr_max_w_m: float = 150.0
     qtr_step_w_m: float = 1.0
@@ -69,6 +71,9 @@ class CriticalLoadConfig:
             raise ValueError("qtr_max_w_m must be greater than qtr_min_w_m.")
         if self.qtr_step_w_m <= 0.0:
             raise ValueError("qtr_step_w_m must be positive.")
+        normalize_boiling_onset_model(self.boiling_onset_model)
+        if not math.isfinite(self.onset_superheat_k) or self.onset_superheat_k < 0.0:
+            raise ValueError("onset_superheat_k must be a non-negative finite value.")
         if self.boundary_tolerance_w_m <= 0.0:
             raise ValueError("boundary_tolerance_w_m must be positive.")
         if self.fmin <= 0.0 or self.fmax <= self.fmin:
@@ -95,6 +100,8 @@ class CriticalLoadConfig:
             geometry=self.geometry,
             heat_transfer_model=self.heat_transfer_model,
             wall_soil_boundary=self.wall_soil_boundary,
+            boiling_onset_model=self.boiling_onset_model,
+            onset_superheat_k=self.onset_superheat_k,
         )
 
 
@@ -199,6 +206,8 @@ class CriticalLoadReport:
             "mode": self.config.mode,
             "closure_model": self.config.closure_model,
             "friction_model": self.config.friction_model,
+            "boiling_onset_model": self.config.boiling_onset_model,
+            "onset_superheat_k": self.config.onset_superheat_k,
             "qtr_min_w_m": self.config.qtr_min_w_m,
             "qtr_max_w_m": self.config.qtr_max_w_m,
             "qtr_step_w_m": self.config.qtr_step_w_m,
@@ -515,6 +524,8 @@ def solve_critical_loads(
     geometry: LoopGeometry | None = None,
     heat_transfer_model: str = "prescribed_heat_input",
     wall_soil_boundary: WallSoilBoundary | None = None,
+    boiling_onset_model: str = "mathcad_baseline",
+    onset_superheat_k: float = 0.0,
     qtr_min_w_m: float = 0.0,
     qtr_max_w_m: float = 150.0,
     qtr_step_w_m: float = 1.0,
@@ -535,6 +546,8 @@ def solve_critical_loads(
         geometry=geometry,
         heat_transfer_model=heat_transfer_model,
         wall_soil_boundary=wall_soil_boundary,
+        boiling_onset_model=boiling_onset_model,
+        onset_superheat_k=onset_superheat_k,
         qtr_min_w_m=qtr_min_w_m,
         qtr_max_w_m=qtr_max_w_m,
         qtr_step_w_m=qtr_step_w_m,

@@ -12,6 +12,14 @@ toc-title: "Содержание"
 
 После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model`, флаг `allow_property_extrapolation`, слои грунта и эффективную линейную проводимость wall/soil boundary. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics, `wall_soil_*` fields и `qcrit_status`. Это является интерфейсной, граничной и отчётной доработкой: она не добавляет published HTC/dryout корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
+Текущее обновление добавляет явный source-traceable слой для начала кипения:
+по умолчанию сохраняется Mathcad-compatible `mathcad_baseline`, а opt-in
+режим `ishkov_superheat` использует диссертационную форму с внешним перегревом
+и итерационным учётом перепада давления конденсатора. Также добавлен
+`docs/physics_gap_matrix.md` и runtime metadata для Chen 1962 / OSTI
+`10.2172/4636495` как `source_candidate`: полный текст найден, но HTC,
+dryout и CHF по нему не рассчитываются до отдельного аудита применимости.
+
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
 В коде предусмотрены два способа расчёта состояния контура:
@@ -69,8 +77,10 @@ q_\ell=G_{\rm eff}(T_{\rm soil}-t_k).
 - источники табличных данных и формул;
 - результаты программной верификации;
 - разграничение верификации, валидации и регрессионного тестирования;
-- аудит расхождений между Python-кодом, Mathcad, диссертацией и литературой.
-- open-web source-gate аудит и manifest решений по неподключённым published-кандидатам.
+- аудит расхождений между Python-кодом, Mathcad, диссертацией и литературой;
+- open-web source-gate аудит и manifest решений по неподключённым published-кандидатам;
+- компактную матрицу активной физики и незакрытых source-gate gap в
+  `docs/physics_gap_matrix.md`.
 
 # 1. Назначение и предмет моделирования
 
@@ -572,7 +582,33 @@ L_{\rm pre,path}=H+L_{\rm inlet}+L_{\rm pre}.
 
 Если \(y_n\geq1\), кипящий участок отсутствует и пробный режим отклоняется. Если \(f<0\), проход также считается невалидным.
 
-В коде не присутствует явный член \(\Delta p_{\rm con}\), входящий в более общую формулу (2.36) диссертации и в формулу (2) статьи [5]. Параметр перегрева \(dt_{\rm ex}\), предложенный в [5], также не реализован.
+По умолчанию solver сохраняет именно эту Mathcad-compatible форму:
+`boiling_onset_model="mathcad_baseline"`. Для обратной совместимости она не
+учитывает явный член \(\Delta p_{\rm con}\) и внешний перегрев.
+
+Опциональная ветка `boiling_onset_model="ishkov_superheat"` реализует более
+полную диссертационную постановку начала кипения:
+
+\[
+y_{\max}=
+\left(
+\frac{\rho_l gH_{\rm con}-\Delta p_{\rm con}}
+{dp_s/dT}
++\Delta T_{\rm ex}
+\right)
+\frac{c_{p,l}G_l}{U},
+\qquad
+\frac{G_l}{U}=\frac{1+f}{r_k}.
+\tag{6.9a}
+\]
+
+В runtime \(\Delta T_{\rm ex}\) задаётся пользователем как
+`onset_superheat_k`, а \(\Delta p_{\rm con}\) берётся из текущего
+steady-pass как `outlet_section_pressure_drop_pa` и итерационно уточняется
+внутри расчёта начала кипения. Эта ветка имеет статус
+`DISSERTATION / OPT_IN`: она улучшает прослеживаемость диссертационной формулы,
+но не является самостоятельной экспериментальной калибровкой и не заменяет
+published HTC/dryout/CHF correlation.
 
 ## 6.4. Догрев жидкости
 
@@ -1701,6 +1737,12 @@ SteadyPassResult содержит интегральные расходы, пу�
 |---|---|
 | fff | параметр циркуляции \(f\) |
 | yn | доля испарителя до начала кипения \(y_n\) |
+| boiling_onset_model | выбранная модель начала кипения: `mathcad_baseline` или `ishkov_superheat` |
+| onset_superheat_k | внешний перегрев \(\Delta T_{\rm ex}\), используемый opt-in веткой начала кипения |
+| onset_condenser_pressure_drop_pa | перепад давления конденсаторного/выходного участка, учтённый в opt-in ветке |
+| raw_preboiling_length_fraction | необрезанная расчётная доля до начала кипения до классификации статуса |
+| preboiling_status | `valid`, `no_boiling`, `boiling_at_inlet` или `not_evaluated` |
+| boiling_onset_source | строка источника для выбранной модели начала кипения |
 | GG_out_kg_s | выходной расход пара |
 | GL_out_kg_s | выходной расход жидкости |
 | GL_in_kg_s | входной расход жидкости |
@@ -1752,6 +1794,9 @@ SteadyPassResult содержит интегральные расходы, пу�
 | boiling_heat_flux_w_m2 | средний \(q''=q_\ell/P_h\), диагностический пересчёт |
 | boiling_heat_transfer_status | статус диагностики теплообмена |
 | boiling_heat_transfer_limit | статус ограничения теплоотдачи, сейчас source-required |
+| boiling_heat_transfer_candidate | source-candidate heat-transfer модель, если выбрана диагностическая ветка-кандидат |
+| boiling_heat_transfer_source | библиографическая строка для source-candidate heat-transfer модели |
+| boiling_heat_transfer_source_status | статус источника heat-transfer candidate, например `source_candidate_not_released` |
 | dryout_limit | статус dryout/CHF ограничения, сейчас source-required |
 | qcrit_status | статус отдельного отчёта `critical_loads`; в обычном `SteadyLoopResult` по умолчанию `not_evaluated` |
 | qcrit_model | модель qcrit-отчёта; в `critical_loads` используется `dissertation_scan_plus_f_zero`, в одиночном steady-run — `not_evaluated` |
@@ -2031,7 +2076,8 @@ Targeted-наборы ниже остаются полезными для быс
 Ограничения переноса этого вывода на текущий код после Checkpoint 10:
 
 1. экспериментальный хладагент — аммиак, но новая NH₃-ветка пока проверена программно через CoolProp, а не по экспериментальным рядам;
-2. параметр перегрева в Python отсутствует;
+2. параметр перегрева теперь доступен как opt-in `onset_superheat_k`, но его
+   значение не откалибровано по экспериментальным рядам текущего Python-кода;
 3. текущие режимы distributed_steady и experimental_regime_aware появились позже;
 4. тесты не загружают экспериментальные ряды и не вычисляют метрики ошибки;
 5. геометрия и теплообмен экспериментального стенда не воспроизводятся полностью.
@@ -2047,6 +2093,7 @@ Targeted-наборы ниже остаются полезными для быс
 | \(q_\ell=G_{\rm eff}(T_{\rm soil}-t_k)\) | wall_coupled boundary | пользовательская эффективная wall/soil boundary condition | USER_SUPPLIED_BOUNDARY |
 | расходы (6.3)–(6.5) | solver | [1], (2.75) | DISSERTATION |
 | \(y_n\), (6.7) | solver | [1], (2.77) | DISSERTATION |
+| `ishkov_superheat` onset | solver opt-in | [1], eq. (3.3); `docs/formula_registry.md` | DISSERTATION / OPT_IN |
 | общий интерфейс свойств | refrigerant_properties | API-инвариант проекта | ENGINEERING |
 | CO₂ Mathcad table backend | MathcadCO2SaturationProperties | CO2.xmcd [2], справочные таблицы [13] | MATHCAD |
 | CO₂ CoolProp HEOS | CoolPropSaturationProperties(CO2) | CoolProp [24], Span-Wagner [25] | PUBLISHED BACKEND |
@@ -2071,12 +2118,13 @@ Targeted-наборы ниже остаются полезными для быс
 | режимные градиенты | closures | источник не установлен | HEURISTIC |
 | горизонтальная опубликованная карта | source-gate, не расчётная модель | Wojtan et al. [11] | SOURCE_REQUIRED |
 | вертикальная опубликованная карта | source-gate, не расчётная модель | Taitel et al. [10] | SOURCE_REQUIRED |
-| saturated flow boiling HTC | не реализована | Kandlikar/Shah/Gungor-Winterton требуют сверки | SOURCE REQUIRED |
+| saturated flow boiling HTC | не реализована; Chen 1962 хранится только как metadata candidate | Kandlikar/Shah/Gungor-Winterton требуют сверки; Chen OSTI [29] требует отдельного аудита применимости | SOURCE REQUIRED / SOURCE_CANDIDATE |
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
 | primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
+| physics gap matrix | `docs/physics_gap_matrix.md` | сводный локальный документ по активной физике, источникам и незакрытым gap | ACADEMIC CONTEXT |
 | локальное насыщение | distributed solver | \(p_s(T)\), [1, 13, 14] | ENGINEERING |
 | явный баланс давления | pressure_balance | интегральный баланс замкнутого контура | PUBLISHED / DEFINITIONAL |
 | гидростатика по участку | pressure_balance | \(\rho g \Delta z\) | PUBLISHED / DEFINITIONAL |
@@ -2177,6 +2225,22 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 
 Рекомендация: после физического аудита выполнить локальный и глобальный анализ чувствительности и сопоставление с экспериментом.
 
+## 18.9. Начало кипения, перегрев и Chen source-candidate
+
+`boiling_onset_model="ishkov_superheat"` добавляет явный пользовательский
+перегрев и итерационный перепад давления конденсатора в расчёт положения
+начала кипения. Это меняет длину однофазного участка и, следовательно,
+гидравлическую рабочую точку, но не вводит коэффициент теплоотдачи стенка-жидкость
+и не проверяет локальный wall superheat по published flow-boiling correlation.
+
+Chen 1962 / OSTI `10.2172/4636495` теперь отражён в metadata как
+`HTC-CHEN-1962-SOURCE-CANDIDATE`, потому что официальный полный текст найден.
+Однако применимость к текущей постановке ГЕТ, переменные, ограничения,
+константы, reference cases и соглашения по насыщенному кипению ещё не
+перенесены в `docs/formula_registry.md` как released runtime-модель. Поэтому
+выбор `heat_transfer_model="chen_1962_source_candidate"` должен оставаться
+source-gated diagnostic branch, а не расчётом HTC, dryout или CHF.
+
 # 19. Область корректного применения
 
 Результаты допустимо использовать для:
@@ -2219,7 +2283,12 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 `model_source_status` на `source_complete`. Для этого требуется полный
 первоисточник, запись в реестре формул и тесты численных контрольных точек.
 
-Boiling/dryout поля результата допустимо использовать как diagnostic metadata: они показывают средний \(q''\), предупреждения по near-critical области, wall/soil boundary inputs при `wall_coupled` и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя использовать как расчёт допустимой тепловой нагрузки или published-прогноз температуры стенки.
+Boiling/dryout поля результата допустимо использовать как diagnostic metadata:
+они показывают средний \(q''\), предупреждения по near-critical области,
+wall/soil boundary inputs при `wall_coupled`, выбранную модель начала кипения
+и факт, что HTC/dryout/CHF correlation ещё требует первоисточника. Их нельзя
+использовать как расчёт допустимой тепловой нагрузки или published-прогноз
+температуры стенки.
 
 # 20. Заключение
 
@@ -2238,11 +2307,17 @@ Boiling/dryout поля результата допустимо использо
 - общий property backend для CO₂/NH₃;
 - CoolProp reference CSV и тесты NH₃ loop solver;
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
+- opt-in `ishkov_superheat` onset model с явным источником, пользовательским
+  перегревом и отчётным перепадом давления конденсатора;
+- Chen 1962 / OSTI source-candidate metadata без преждевременного выпуска HTC,
+  dryout или CHF correlation;
 - пользовательская `wall_coupled` boundary condition для пересчёта температуры грунтового слоя и эффективной линейной проводимости в \(q_\ell\);
 - агрегированный `model_source_status` и список `source_gate_reasons`, которые не дают перепутать published fallback closure с полностью реализованной published-физикой;
 - отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
 - быстрый слой `scenario_matrix.py`, который проверяет CO₂/NH₃, геометрию, нагрузку, near-critical область, invalid inputs и backend failures через структурированные статусы;
 - designer/API и демонстрационный Markdown-отчёт показывают source/failure/boiling/dryout/qcrit diagnostics пользователю, а не оставляют их скрытыми в Python-словаре.
+- `docs/physics_gap_matrix.md` кратко связывает runtime-физику, внешние
+  источники и незакрытые source-gate gap.
 
 Научные ограничения:
 

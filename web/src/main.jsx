@@ -26,6 +26,7 @@ const PROPERTY_BACKENDS = ["mathcad_table", "coolprop", "refprop"];
 const REGIME_MODELS = ["experimental_regime_aware", "published_regime_map"];
 const FRICTION_MODELS = ["mathcad_compat", "colebrook_white", "churchill_explicit", "laminar_only"];
 const HEAT_TRANSFER_MODELS = ["prescribed_heat_input", "wall_coupled"];
+const BOILING_ONSET_MODELS = ["mathcad_baseline", "ishkov_superheat"];
 
 const KIND_LABELS = {
   evaporator: "Evaporator",
@@ -86,6 +87,8 @@ const fallbackScenario = {
     regime_model: "experimental_regime_aware",
     friction_model: "mathcad_compat",
     heat_transfer_model: "prescribed_heat_input",
+    boiling_onset_model: "mathcad_baseline",
+    onset_superheat_K: 0,
     allow_property_extrapolation: false,
   },
 };
@@ -377,6 +380,19 @@ function App() {
             options={HEAT_TRANSFER_MODELS}
             onChange={(value) => updateScenario((next) => (next.solver.heat_transfer_model = value))}
           />
+          <SelectInput
+            label="Onset"
+            value={scenario.solver.boiling_onset_model ?? "mathcad_baseline"}
+            options={BOILING_ONSET_MODELS}
+            onChange={(value) => updateScenario((next) => (next.solver.boiling_onset_model = value))}
+          />
+          {scenario.solver.boiling_onset_model === "ishkov_superheat" ? (
+            <NumberInput
+              label="Superheat, K"
+              value={scenario.solver.onset_superheat_K ?? 0}
+              onChange={(value) => updateScenario((next) => (next.solver.onset_superheat_K = value))}
+            />
+          ) : null}
           {scenario.solver.heat_transfer_model === "wall_coupled" ? (
             <>
               <PanelTitle title="Soil" />
@@ -550,6 +566,10 @@ function App() {
               <Metric label="Regime src" value={textValue(serverResult.regime_model_source_status)} />
               <Metric label="Friction" value={textValue(serverResult.friction_model)} />
               <Metric label="Boundary" value={textValue(serverResult.thermal_boundary_model)} />
+              <Metric label="Onset" value={textValue(serverResult.boiling_onset_model)} />
+              <Metric label="Preboil" value={textValue(serverResult.preboiling_status)} />
+              <Metric label="Superheat" value={`${format(serverResult.onset_superheat_k)} K`} />
+              <Metric label="Onset dP" value={`${format(serverResult.onset_condenser_pressure_drop_pa)} Pa`} />
               <PanelTitle title="Limits" />
               <Metric label="Wall qtr" value={`${format(serverResult.wall_soil_qtr_w_m)} W/m`} />
               <Metric label="Heat flux" value={`${format(serverResult.boiling_heat_flux_w_m2)} W/m2`} />

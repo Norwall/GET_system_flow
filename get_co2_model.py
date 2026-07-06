@@ -149,6 +149,8 @@ class CO2MathcadModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
     ) -> Optional[Dict[str, float]]:
         """Совместимый фасад над отдельным steady-state solver."""
         pass_result = self.steady_solver.one_pass(
@@ -164,6 +166,8 @@ class CO2MathcadModel:
                 geometry=geometry,
                 heat_transfer_model=heat_transfer_model,
                 wall_soil_boundary=wall_soil_boundary,
+                boiling_onset_model=boiling_onset_model,
+                onset_superheat_k=onset_superheat_k,
             ),
             circulation_factor=f,
             ngrid=ngrid,
@@ -172,38 +176,38 @@ class CO2MathcadModel:
             return None
         return pass_result.to_dict()
 
-    def hy_minus_H(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None) -> float:
+    def hy_minus_H(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None, boiling_onset_model: str = "mathcad_baseline", onset_superheat_k: float = 0.0) -> float:
         """Невязка главного циркуляционного баланса для пробного значения ``f``."""
         return self.steady_solver.head_residual(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary, boiling_onset_model=boiling_onset_model, onset_superheat_k=onset_superheat_k),
             circulation_factor=f,
         )
 
-    def solve_f(self, H: float, qtr: float, Li: float, tcon: float, fmin: float = 1e-6, fmax: float = 200.0, nsamp: int = 220, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None) -> Optional[float]:
+    def solve_f(self, H: float, qtr: float, Li: float, tcon: float, fmin: float = 1e-6, fmax: float = 200.0, nsamp: int = 220, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None, boiling_onset_model: str = "mathcad_baseline", onset_superheat_k: float = 0.0) -> Optional[float]:
         """Подбирает параметр циркуляции ``f`` из условия Hy(f) = H."""
         root_search = self.steady_solver.find_circulation_factor(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary, boiling_onset_model=boiling_onset_model, onset_superheat_k=onset_superheat_k),
             fmin=fmin,
             fmax=fmax,
             nsamp=nsamp,
         )
         return root_search.circulation_factor
 
-    def solve_tmm(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None) -> Optional[float]:
+    def solve_tmm(self, H: float, qtr: float, Li: float, tcon: float, f: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None, boiling_onset_model: str = "mathcad_baseline", onset_superheat_k: float = 0.0) -> Optional[float]:
         """Восстанавливает вспомогательную температуру насыщения из рабочего листа."""
         auxiliary_temperature_c, _ = self.steady_solver.solve_auxiliary_temperature(
-            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary),
+            inputs=SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary, boiling_onset_model=boiling_onset_model, onset_superheat_k=onset_superheat_k),
             circulation_factor=f,
         )
         return auxiliary_temperature_c
 
-    def run_result(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None) -> SteadyLoopResult:
+    def run_result(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None, boiling_onset_model: str = "mathcad_baseline", onset_superheat_k: float = 0.0) -> SteadyLoopResult:
         """Возвращает структурированный результат расчета с диагностикой решателя."""
         return self.steady_solver.solve(
-            SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary)
+            SteadyLoopInputs(H=H, qtr=qtr, Li=Li, tcon=tcon, mode=mode, closure_model=closure_model, regime_model=regime_model, friction_model=friction_model, geometry=geometry, heat_transfer_model=heat_transfer_model, wall_soil_boundary=wall_soil_boundary, boiling_onset_model=boiling_onset_model, onset_superheat_k=onset_superheat_k)
         )
 
-    def run(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None) -> Dict[str, float | bool | str | tuple[float, float] | None]:
+    def run(self, H: float, qtr: float, Li: float, tcon: float, mode: str = "worksheet_compatible", closure_model: str = "worksheet_compatible", regime_model: str = "experimental_regime_aware", friction_model: str = "mathcad_compat", geometry: LoopGeometry | None = None, heat_transfer_model: str = "prescribed_heat_input", wall_soil_boundary: WallSoilBoundary | None = None, boiling_onset_model: str = "mathcad_baseline", onset_superheat_k: float = 0.0) -> Dict[str, float | bool | str | tuple[float, float] | None]:
         """Совместимый пользовательский API поверх нового результата-датакласса."""
         return self.run_result(
             H=H,
@@ -217,6 +221,8 @@ class CO2MathcadModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
             wall_soil_boundary=wall_soil_boundary,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
         ).to_dict()
 
     def critical_loads(
@@ -231,6 +237,8 @@ class CO2MathcadModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
         qtr_min_w_m: float = 0.0,
         qtr_max_w_m: float = 150.0,
         qtr_step_w_m: float = 1.0,
@@ -254,6 +262,8 @@ class CO2MathcadModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
             wall_soil_boundary=wall_soil_boundary,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
             qtr_min_w_m=qtr_min_w_m,
             qtr_max_w_m=qtr_max_w_m,
             qtr_step_w_m=qtr_step_w_m,

@@ -74,6 +74,7 @@ runtime-коде.
 | `VOID-ZUBER-FINDLAY-1965-SOURCE-GATE` | будущий drift-flux adapter | Не подключать published drift-flux ветку. `C0`, `Vgj` и соглашения по средним величинам остаются source-gated. |
 | `REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE` | `published_regimes.classify_horizontal_evaporator_regime_result` | Оставить `unknown_or_out_of_range/source_required`. Не переносить transition criteria и dryout boundaries без полного первоисточника. |
 | `REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE` | `published_regimes.classify_vertical_riser_regime_result` | Оставить `unknown_or_out_of_range/source_required`. Не переносить transition equations без полного первоисточника. |
+| `HTC-CHEN-1962-SOURCE-CANDIDATE` | `boiling_heat_transfer.chen_1962_source_candidate` | Оставить `SOURCE_CANDIDATE / NOT_RELEASED`. OSTI полный текст найден, но уравнения, переменные, ограничения применимости и reference tests не аудированы для runtime HTC/dryout/CHF. |
 
 ## Решение для кода
 
@@ -92,6 +93,9 @@ runtime-коде.
   published fallback closure не маскирует тот факт, что режимные карты,
   Zuber-Findlay drift-flux, boiling HTC и dryout/CHF ещё требуют полного
   первоисточника.
+- Chen 1962 / OSTI `10.2172/4636495` учитывается как отдельный
+  `source_candidate`: metadata доступны для диагностики, но расчётные HTC,
+  dryout и CHF correlation остаются не выпущенными.
 
 ## Что нужно для снятия source-gate
 

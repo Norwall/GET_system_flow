@@ -16,6 +16,7 @@ from co2_geometry import (
     LoopGeometry,
     RiserSection,
 )
+from co2_steady_solver import normalize_boiling_onset_model
 
 
 VALID_SEGMENT_KINDS = {
@@ -64,6 +65,18 @@ VALID_HEAT_TRANSFER_MODELS = {
     "fixed_heat_input",
     "wall_coupled",
     "wall_soil_coupled",
+    "chen_1962_source_candidate",
+    "chen_1962",
+    "chen",
+}
+VALID_BOILING_ONSET_MODELS = {
+    "mathcad_baseline",
+    "worksheet_compatible",
+    "mathcad",
+    "legacy",
+    "ishkov_superheat",
+    "ishkov",
+    "ishkov_superheat_onset",
 }
 
 DEFAULT_SCENARIO_DIR = Path("artifacts") / "scenarios"
@@ -126,6 +139,8 @@ class SolverConfig:
     regime_model: str = "experimental_regime_aware"
     friction_model: str = "mathcad_compat"
     heat_transfer_model: str = "prescribed_heat_input"
+    boiling_onset_model: str = "mathcad_baseline"
+    onset_superheat_K: float = 0.0
     allow_property_extrapolation: bool = False
 
 
@@ -238,6 +253,8 @@ class DerivedGeometry:
             "geometry": self.to_loop_geometry(),
             "heat_transfer_model": scenario.solver.heat_transfer_model,
             "wall_soil_boundary": wall_soil_boundary,
+            "boiling_onset_model": scenario.solver.boiling_onset_model,
+            "onset_superheat_k": scenario.solver.onset_superheat_K,
         }
 
 
@@ -328,6 +345,8 @@ def scenario_to_dict(scenario: GETScenario) -> dict[str, Any]:
             "regime_model": scenario.solver.regime_model,
             "friction_model": scenario.solver.friction_model,
             "heat_transfer_model": scenario.solver.heat_transfer_model,
+            "boiling_onset_model": scenario.solver.boiling_onset_model,
+            "onset_superheat_K": scenario.solver.onset_superheat_K,
             "allow_property_extrapolation": scenario.solver.allow_property_extrapolation,
         },
     }
@@ -413,6 +432,12 @@ def validate_scenario(scenario: GETScenario) -> None:
         raise ScenarioValidationError(f"Unsupported friction model: {scenario.solver.friction_model!r}.")
     if scenario.solver.heat_transfer_model not in VALID_HEAT_TRANSFER_MODELS:
         raise ScenarioValidationError(f"Unsupported heat-transfer model: {scenario.solver.heat_transfer_model!r}.")
+    try:
+        normalize_boiling_onset_model(scenario.solver.boiling_onset_model)
+    except ValueError as exc:
+        raise ScenarioValidationError(str(exc)) from exc
+    if not math.isfinite(scenario.solver.onset_superheat_K) or scenario.solver.onset_superheat_K < 0.0:
+        raise ScenarioValidationError("onset_superheat_K must be a non-negative finite value.")
     if normalize_heat_transfer_model(scenario.solver.heat_transfer_model) == WALL_COUPLED:
         if scenario.soil.effective_conductance_W_mK is None:
             raise ScenarioValidationError("wall_coupled requires soil.effective_conductance_W_mK.")
@@ -681,6 +706,8 @@ def _solver_from_dict(data: Mapping[str, Any]) -> SolverConfig:
         regime_model=_optional_str(data, "regime_model", "experimental_regime_aware"),
         friction_model=_optional_str(data, "friction_model", "mathcad_compat"),
         heat_transfer_model=_optional_str(data, "heat_transfer_model", "prescribed_heat_input"),
+        boiling_onset_model=_optional_str(data, "boiling_onset_model", "mathcad_baseline"),
+        onset_superheat_K=_float_or_default(_optional_float(data, "onset_superheat_K", 0.0), 0.0),
         allow_property_extrapolation=_optional_bool(data, "allow_property_extrapolation", False),
     )
 

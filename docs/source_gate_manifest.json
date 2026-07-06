@@ -311,7 +311,7 @@
       ]
     },
     {
-      "registry_id": null,
+      "registry_id": "HTC-CHEN-1962-SOURCE-CANDIDATE",
       "candidate_id": "HTC-OSTI-1962-SOURCE-CANDIDATE",
       "model": "1962 OSTI saturated convective boiling heat-transfer report",
       "target_code": "future boiling_heat_transfer source-candidate adapter",

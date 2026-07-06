@@ -224,14 +224,15 @@ def test_epfl_landing_pages_do_not_release_wojtan_gates(manifest_entries: list[d
 def test_osti_full_text_is_candidate_not_active_model(manifest_entries: list[dict]) -> None:
     osti = _entry_by_candidate_id(manifest_entries, "HTC-OSTI-1962-SOURCE-CANDIDATE")
 
-    assert osti["registry_id"] is None
+    assert osti["registry_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
     assert osti["evidence_status"] == "full_text_available"
     assert osti["decision"] == "source_candidate"
     assert osti["local_full_text_ref"] == "https://www.osti.gov/servlets/purl/4636495"
     assert "Content-Length 1533908" in osti["access_evidence"]["endpoint_check"]
     assert "HTTP 200" in osti["access_evidence"]["endpoint_check"]
     assert "10.2172/4636495" in OPEN_WEB_AUDIT_TEXT
-    assert "10.2172/4636495" not in FORMULA_REGISTRY_TEXT
+    assert "10.2172/4636495" in FORMULA_REGISTRY_TEXT
+    assert "SOURCE_CANDIDATE / NOT_RELEASED" in FORMULA_REGISTRY_TEXT
 
 
 def test_user_and_academic_docs_reference_open_web_audit_context() -> None:

@@ -99,6 +99,8 @@ def build_report(checks: dict, scenarios: pd.DataFrame, sweep: pd.DataFrame) -> 
         'model_source_status',
         'regime_model',
         'regime_model_source_status',
+        'boiling_onset_model',
+        'preboiling_status',
         'failure_class',
         'boiling_heat_transfer_status',
         'boiling_heat_transfer_limit',

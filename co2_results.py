@@ -115,6 +115,12 @@ class SteadyPassResult:
     outlet_slip_ratio: float
     driving_pressure_pa: float
     effective_density_difference_kg_m3: float
+    boiling_onset_model: str = "mathcad_baseline"
+    onset_superheat_k: float = 0.0
+    onset_condenser_pressure_drop_pa: float = 0.0
+    raw_preboiling_length_fraction: float = 0.0
+    preboiling_status: str = "valid"
+    boiling_onset_source: str = "CO2.xmcd; Ishkov dissertation simplified onset balance"
     outlet_selected_void_fraction_model: str = ""
     outlet_selected_friction_model: str = ""
     evaporator_dominant_flow_regime: str = ""
@@ -140,6 +146,12 @@ class SteadyPassResult:
             "preboiling_path_length_m": self.preboiling_path_length_m,
             "boiling_length_m": self.boiling_length_m,
             "boiling_onset_position_m": self.boiling_onset_position_m,
+            "boiling_onset_model": self.boiling_onset_model,
+            "onset_superheat_k": self.onset_superheat_k,
+            "onset_condenser_pressure_drop_pa": self.onset_condenser_pressure_drop_pa,
+            "raw_preboiling_length_fraction": self.raw_preboiling_length_fraction,
+            "preboiling_status": self.preboiling_status,
+            "boiling_onset_source": self.boiling_onset_source,
             "n_control_volumes": self.evaporator_profile.n_points if self.evaporator_profile is not None else 0,
             "n_riser_points": self.riser_profile.n_points if self.riser_profile is not None else 0,
             "n_section_states": len(self.section_states),
@@ -261,7 +273,16 @@ class SteadyLoopResult:
     boiling_heat_transfer_status: str = "not_evaluated"
     boiling_heat_flux_w_m2: float | None = None
     boiling_heat_transfer_limit: str = "not_evaluated_source_required"
+    boiling_heat_transfer_candidate: str = ""
+    boiling_heat_transfer_source: str = ""
+    boiling_heat_transfer_source_status: str = ""
     dryout_limit: str = "not_evaluated_source_required"
+    boiling_onset_model: str = "mathcad_baseline"
+    onset_superheat_k: float = 0.0
+    onset_condenser_pressure_drop_pa: float = 0.0
+    raw_preboiling_length_fraction: float | None = None
+    preboiling_status: str = "not_evaluated"
+    boiling_onset_source: str = "CO2.xmcd; Ishkov dissertation simplified onset balance"
     hydrodynamic_limit: str = "not_active"
     property_limit: str = "not_active"
     numerical_failure: str = "not_active"
@@ -308,7 +329,16 @@ class SteadyLoopResult:
             "boiling_heat_transfer_status": self.boiling_heat_transfer_status,
             "boiling_heat_flux_w_m2": self.boiling_heat_flux_w_m2,
             "boiling_heat_transfer_limit": self.boiling_heat_transfer_limit,
+            "boiling_heat_transfer_candidate": self.boiling_heat_transfer_candidate,
+            "boiling_heat_transfer_source": self.boiling_heat_transfer_source,
+            "boiling_heat_transfer_source_status": self.boiling_heat_transfer_source_status,
             "dryout_limit": self.dryout_limit,
+            "boiling_onset_model": self.boiling_onset_model,
+            "onset_superheat_k": self.onset_superheat_k,
+            "onset_condenser_pressure_drop_pa": self.onset_condenser_pressure_drop_pa,
+            "raw_preboiling_length_fraction": self.raw_preboiling_length_fraction,
+            "preboiling_status": self.preboiling_status,
+            "boiling_onset_source": self.boiling_onset_source,
             "hydrodynamic_limit": self.hydrodynamic_limit,
             "property_limit": self.property_limit,
             "numerical_failure": self.numerical_failure,

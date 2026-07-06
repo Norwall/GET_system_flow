@@ -37,6 +37,8 @@ Repository landing page без доступного full-text/`ORIGINAL` bitstre
 | `HEAT-WALL-SOIL-EFFECTIVE-CONDUCTANCE` | USER_SUPPLIED_BOUNDARY | `boiling_heat_transfer.WallSoilBoundary` |
 | `BAL-VAPOR-GENERATION` | DISSERTATION | `SteadyLoopSolver.one_pass` |
 | `BAL-PREBOILING-FRACTION` | DISSERTATION / MATHCAD_COMPATIBLE | `SteadyLoopSolver.one_pass` |
+| `BAL-PREBOILING-ISHKOV-SUPERHEAT` | DISSERTATION / OPT_IN | `SteadyLoopSolver._preboiling_onset_fields` |
+| `HTC-CHEN-1962-SOURCE-CANDIDATE` | SOURCE_CANDIDATE / NOT_RELEASED | `boiling_heat_transfer.chen_1962_source_candidate` |
 | `QCRIT-DISSERTATION-SCAN` | DISSERTATION / NUMERICAL_SEARCH | `critical_loads.find_critical_loads` |
 | `QCRIT-DISSERTATION-F-ZERO` | DISSERTATION | `critical_loads.CriticalLoadSolver.f_zero_residual` |
 | `FRIC-REYNOLDS` | PUBLISHED | `co2_steady_solver`, `two_phase_closures` |
@@ -221,6 +223,36 @@ y_n =
 - Источник: `CO2.xmcd`; уравнения диссертации; `docs/get_co2_academic_reference.md`.
 - Код: `co2_steady_solver.SteadyLoopSolver.one_pass`.
 - Тесты: `tests/test_baseline_compatibility.py`; `tests/test_co2_model_regression.py`.
+
+## BAL-PREBOILING-ISHKOV-SUPERHEAT
+
+- Статус: DISSERTATION / OPT_IN.
+- Математическая запись: runtime использует `G_l/U = (1+f)/(h_g-h_l)` в форме ниже.
+
+```math
+y_{\max} =
+\left(
+\frac{\rho_l g H_{\rm con}-\Delta p_{\rm con}}
+{dp_s/dT}
++\Delta T_{\rm ex}
+\right)
+\frac{c_{p,l}G_l}{U}
+```
+- Переменные и размерности: `y_max`, безразмерная доля; `rho_l`, кг/м3; `Delta p_con`, Па; `Delta T_ex`, K; `c_p`, Дж/(кг K); `U`, Вт.
+- Область применимости: opt-in `boiling_onset_model="ishkov_superheat"`; default `mathcad_baseline` не меняется.
+- Источник: Ishkov dissertation eq. (3.3); `CO2.xmcd`; `docs/get_co2_academic_reference.md`; `docs/physics_gap_matrix.md`.
+- Код: `co2_steady_solver.SteadyLoopSolver._preboiling_onset_fields`; `boiling_onset_model="ishkov_superheat"`.
+- Тесты: `tests/test_boiling_onset_model.py`; `tests/test_get_designer_geometry.py`.
+
+## HTC-CHEN-1962-SOURCE-CANDIDATE
+
+- Статус: SOURCE_CANDIDATE / NOT_RELEASED.
+- Математическая запись: correlation is not transcribed into runtime; this entry records source-candidate metadata and keeps source gate active.
+- Переменные и размерности: expected future saturated flow-boiling HTC inputs include heat flux, mass flux, quality, diameter, fluid properties, and wall/saturation assumptions.
+- Область применимости: diagnostic/source-candidate branch `heat_transfer_model="chen_1962_source_candidate"`; no HTC, dryout, or CHF is computed.
+- Источник: J. C. Chen, A correlation for boiling heat transfer to saturated fluids in convective flow, OSTI ID 4636495, DOI `10.2172/4636495`, <https://www.osti.gov/biblio/4636495>, full-text candidate <https://www.osti.gov/servlets/purl/4636495>; `docs/source_gate_manifest.json`; `docs/source_audit_open_web_2026-07-05.md`.
+- Код: `boiling_heat_transfer.chen_1962_source_candidate`; `boiling_heat_transfer.diagnose_prescribed_heat_input`.
+- Тесты: `tests/test_boiling_diagnostics.py`; `tests/test_source_gate_manifest.py`; `tests/test_formula_registry.py`.
 
 ## QCRIT-DISSERTATION-SCAN
 

@@ -54,6 +54,8 @@ class RefrigerantLoopModel:
         geometry: LoopGeometry | None,
         heat_transfer_model: str,
         wall_soil_boundary: WallSoilBoundary | None,
+        boiling_onset_model: str,
+        onset_superheat_k: float,
     ) -> SteadyLoopInputs:
         return SteadyLoopInputs(
             H=H,
@@ -67,6 +69,8 @@ class RefrigerantLoopModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
             wall_soil_boundary=wall_soil_boundary,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
         )
 
     def run_result(
@@ -82,6 +86,8 @@ class RefrigerantLoopModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
     ) -> SteadyLoopResult:
         """Return a structured result for the configured refrigerant."""
 
@@ -98,6 +104,8 @@ class RefrigerantLoopModel:
                 geometry=geometry,
                 heat_transfer_model=heat_transfer_model,
                 wall_soil_boundary=wall_soil_boundary,
+                boiling_onset_model=boiling_onset_model,
+                onset_superheat_k=onset_superheat_k,
             )
         )
 
@@ -114,6 +122,8 @@ class RefrigerantLoopModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
     ) -> dict[str, Any]:
         """Return a dictionary result for compatibility with reporting code."""
 
@@ -129,6 +139,8 @@ class RefrigerantLoopModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
             wall_soil_boundary=wall_soil_boundary,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
         ).to_dict()
 
     def solve_f(
@@ -147,6 +159,8 @@ class RefrigerantLoopModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
     ) -> float | None:
         """Return the circulation factor if the head-balance root is bracketed."""
 
@@ -163,6 +177,8 @@ class RefrigerantLoopModel:
                 geometry=geometry,
                 heat_transfer_model=heat_transfer_model,
                 wall_soil_boundary=wall_soil_boundary,
+                boiling_onset_model=boiling_onset_model,
+                onset_superheat_k=onset_superheat_k,
             ),
             fmin=fmin,
             fmax=fmax,
@@ -182,6 +198,8 @@ class RefrigerantLoopModel:
         geometry: LoopGeometry | None = None,
         heat_transfer_model: str = "prescribed_heat_input",
         wall_soil_boundary: WallSoilBoundary | None = None,
+        boiling_onset_model: str = "mathcad_baseline",
+        onset_superheat_k: float = 0.0,
         qtr_min_w_m: float = 0.0,
         qtr_max_w_m: float = 150.0,
         qtr_step_w_m: float = 1.0,
@@ -205,6 +223,8 @@ class RefrigerantLoopModel:
             geometry=geometry,
             heat_transfer_model=heat_transfer_model,
             wall_soil_boundary=wall_soil_boundary,
+            boiling_onset_model=boiling_onset_model,
+            onset_superheat_k=onset_superheat_k,
             qtr_min_w_m=qtr_min_w_m,
             qtr_max_w_m=qtr_max_w_m,
             qtr_step_w_m=qtr_step_w_m,

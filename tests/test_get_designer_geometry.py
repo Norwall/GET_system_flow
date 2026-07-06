@@ -97,6 +97,8 @@ def test_solver_config_round_trip_includes_refrigerant_controls() -> None:
             regime_model="published_regime_map",
             friction_model="colebrook_white",
             heat_transfer_model="prescribed_heat_input",
+            boiling_onset_model="ishkov_superheat",
+            onset_superheat_K=1.5,
             allow_property_extrapolation=True,
         ),
     )
@@ -110,10 +112,14 @@ def test_solver_config_round_trip_includes_refrigerant_controls() -> None:
     assert payload["solver"]["regime_model"] == "published_regime_map"
     assert payload["solver"]["friction_model"] == "colebrook_white"
     assert payload["solver"]["heat_transfer_model"] == "prescribed_heat_input"
+    assert payload["solver"]["boiling_onset_model"] == "ishkov_superheat"
+    assert payload["solver"]["onset_superheat_K"] == pytest.approx(1.5)
     assert payload["solver"]["allow_property_extrapolation"] is True
     assert inputs["regime_model"] == "published_regime_map"
     assert inputs["friction_model"] == "colebrook_white"
     assert inputs["heat_transfer_model"] == "prescribed_heat_input"
+    assert inputs["boiling_onset_model"] == "ishkov_superheat"
+    assert inputs["onset_superheat_k"] == pytest.approx(1.5)
 
 
 def test_wall_coupled_scenario_derives_heat_input_from_soil_boundary() -> None:
@@ -197,6 +203,26 @@ def test_accepts_explicit_experimental_regime_aware_closure() -> None:
     )
 
     validate_scenario(scenario)
+
+
+def test_rejects_negative_onset_superheat() -> None:
+    scenario = _profile_scenario()
+    scenario = GETScenario(
+        scenario_id=scenario.scenario_id,
+        name=scenario.name,
+        nodes=scenario.nodes,
+        segments=scenario.segments,
+        thermal=scenario.thermal,
+        solver=SolverConfig(
+            tcon_C=scenario.solver.tcon_C,
+            mode=scenario.solver.mode,
+            closure_model=scenario.solver.closure_model,
+            onset_superheat_K=-0.1,
+        ),
+    )
+
+    with pytest.raises(ScenarioValidationError, match="onset_superheat_K"):
+        validate_scenario(scenario)
 
 
 def test_requires_evaporator_segment() -> None:

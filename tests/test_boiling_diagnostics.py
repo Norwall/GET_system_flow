@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from boiling_heat_transfer import WallSoilBoundary, diagnostics_for_solver_status
+from boiling_heat_transfer import (
+    CHEN_1962_SOURCE_CANDIDATE,
+    WallSoilBoundary,
+    chen_1962_source_candidate,
+    diagnostics_for_solver_status,
+    normalize_heat_transfer_model,
+)
 from get_co2_model import CO2MathcadModel
 
 
@@ -104,6 +110,30 @@ def test_unknown_heat_transfer_model_is_validation_error(co2_model: CO2MathcadMo
     assert result["solver_status"] == "validation_error"
     assert "Unknown heat_transfer_model" in result["failure_reason"]
     assert result["failure_class"] == "validation_error"
+
+
+def test_chen_1962_candidate_is_source_gated_not_runtime_released(
+    co2_model: CO2MathcadModel,
+) -> None:
+    candidate = chen_1962_source_candidate()
+    result = co2_model.run(
+        2.5,
+        76.68,
+        200.0,
+        0.0,
+        heat_transfer_model="chen_1962",
+    )
+
+    assert normalize_heat_transfer_model("chen_1962") == CHEN_1962_SOURCE_CANDIDATE
+    assert result["converged"] is True
+    assert result["heat_transfer_model"] == CHEN_1962_SOURCE_CANDIDATE
+    assert result["boiling_heat_transfer_status"] == "source_candidate_source_required_not_released"
+    assert result["boiling_heat_transfer_limit"] == "not_evaluated_source_required"
+    assert result["boiling_heat_transfer_candidate"] == CHEN_1962_SOURCE_CANDIDATE
+    assert "10.2172/4636495" in result["boiling_heat_transfer_source"]
+    assert result["boiling_heat_transfer_source_status"] == "source_candidate_not_released"
+    assert candidate.local_full_text_ref.endswith("/4636495")
+    assert result["model_source_status"] == "mixed"
 
 
 def test_dryout_diagnostic_does_not_replace_solver_convergence_failure(

@@ -27,6 +27,8 @@ EXPECTED_REGISTRY_IDS = (
     "HEAT-WALL-SOIL-EFFECTIVE-CONDUCTANCE",
     "BAL-VAPOR-GENERATION",
     "BAL-PREBOILING-FRACTION",
+    "BAL-PREBOILING-ISHKOV-SUPERHEAT",
+    "HTC-CHEN-1962-SOURCE-CANDIDATE",
     "QCRIT-DISSERTATION-SCAN",
     "QCRIT-DISSERTATION-F-ZERO",
     "FRIC-REYNOLDS",
@@ -87,6 +89,10 @@ SOURCE_REQUIRED_IDS = (
     "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
     "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
     "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
+)
+
+SOURCE_CANDIDATE_IDS = (
+    "HTC-CHEN-1962-SOURCE-CANDIDATE",
 )
 
 SOURCE_REQUIRED_PRIMARY_RECORDS = {
@@ -176,6 +182,14 @@ def test_pending_published_correlations_are_marked_source_required(
     registry_sections: dict[str, str],
 ) -> None:
     assert "- Статус: SOURCE_REQUIRED." in registry_sections[entry_id]
+
+
+@pytest.mark.parametrize("entry_id", SOURCE_CANDIDATE_IDS)
+def test_source_candidates_are_marked_not_released(
+    entry_id: str,
+    registry_sections: dict[str, str],
+) -> None:
+    assert "SOURCE_CANDIDATE / NOT_RELEASED" in registry_sections[entry_id]
 
 
 @pytest.mark.parametrize("entry_id", SOURCE_REQUIRED_IDS)

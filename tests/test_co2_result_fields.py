@@ -44,6 +44,10 @@ def test_run_exposes_structured_diagnostics_and_alias_fields(co2_model: CO2Mathc
     assert result["n_section_states"] == 5
     assert result["n_control_volumes"] == 1200
     assert result["boiling_onset_position_m"] == pytest.approx(result["preboiling_evaporator_length_m"])
+    assert result["boiling_onset_model"] == "mathcad_baseline"
+    assert result["onset_superheat_k"] == pytest.approx(0.0)
+    assert result["raw_preboiling_length_fraction"] == pytest.approx(result["yn"])
+    assert result["preboiling_status"] == "valid"
     assert result["preboiling_evaporator_length_m"] + result["boiling_length_m"] == pytest.approx(200.0)
     assert result["section_state_names"] == "downcomer,riser,evaporator_preboiling,evaporator_boiling,condenser"
 
