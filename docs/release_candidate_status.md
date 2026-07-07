@@ -1,8 +1,10 @@
 # Release-candidate status
 
 Дата стабилизационного прохода: 2026-07-06.
+Документальный source-gate refresh: 2026-07-07.
 
 Базовый коммит: `974c1e3 Improve boiling onset source tracing`.
+Source-gate pipeline commit: `bda8cac Improve source-gate physics pipeline`.
 
 ## Решение по статусу
 
@@ -21,17 +23,27 @@
   прохода, зафиксированы как `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` в
   `docs/secondary_formula_candidates.md`; они не меняют runtime status и не
   снимают primary-source-only gates.
+- `source_gate_pipeline.py`, `python -m source_gate_pipeline --pretty` и
+  `/api/source-gates` теперь дают машинный план закрытия: `current_blocking_stage`,
+  `release_criteria`, milestone groups и `next_priorities`.
 
 Академический контекст синхронизирован с этим решением в
 `docs/get_co2_academic_reference.md`, `docs/physics_gap_matrix.md`,
-`docs/secondary_formula_candidates.md`, `docs/milestone_closure_pipeline.md`
-`docs/source_gate_unresolved_questions.md` и `plan.md`.
+`docs/secondary_formula_candidates.md`, `docs/milestone_closure_pipeline.md`,
+`docs/source_gate_unresolved_questions.md`,
+`docs/chen_1962_formula_audit_2026-07-06.md`,
+`docs/dissertation_formula_audit_2026-07-06.md` и `plan.md`.
 
 ## Source-gate audit
 
-Локальных полных первоисточников для снятия gates в этом проходе нет.
-Tracked `sources/primary/README.md` только описывает правила drop directory;
-PDF, сканы и извлеченный полный текст не коммитятся.
+Локальные full-text candidates теперь есть для Chen/OSTI 1962, EPFL TH2978 и
+EPFL TH3337, но их решения в `docs/primary_source_inventory.md` остаются
+`candidate_only`. Они дают audit guidance и page/equation maps, но не снимают
+runtime gates. Для MSH, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler,
+Wojtan/Thome journal Part I/II, Kandlikar и Gungor-Winterton локальный
+релизный full text по-прежнему отсутствует. Tracked `sources/primary/README.md`
+только описывает правила drop directory; PDF, сканы и извлеченный полный текст
+не коммитятся.
 
 Снятие любого `SOURCE_REQUIRED` gate по-прежнему требует:
 
@@ -44,6 +56,20 @@ PDF, сканы и извлеченный полный текст не комм�
 Secondary formula candidates могут использоваться только как audit guidance.
 Они не заменяют локальный полный первоисточник, SHA256 inventory и reference
 tests.
+
+Текущий `python -m source_gate_pipeline --pretty` summary:
+
+| Release state | Count |
+| --- | ---: |
+| `candidate_local_intake_ready` | 1 |
+| `blocked_primary_source_required_secondary_available` | 3 |
+| `blocked_primary_source_required_dissertation_candidate_available` | 2 |
+| `blocked_primary_source_required` | 3 |
+
+Первый приоритет pipeline - `HTC-CHEN-1962-SOURCE-CANDIDATE`: локальный OSTI PDF
+принят и SHA256 совпадает, но `audit_formulas_and_limits` остаётся
+`in_progress`, а runtime adapter/reference tests/release manifest остаются
+`blocked`.
 
 ## Verification
 

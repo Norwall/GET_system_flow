@@ -2124,7 +2124,10 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
 | primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
+| source-gate closure pipeline | `source_gate_pipeline.py`; `/api/source-gates`; `docs/milestone_closure_pipeline.md`; `docs/source_gate_unresolved_questions.md` | machine-readable `current_blocking_stage`, `release_criteria`, milestone groups and next priorities; planning layer only | ACADEMIC POLICY / API |
 | OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
+| Chen 1962 formula audit | `docs/chen_1962_formula_audit_2026-07-06.md` | Eq. (9)/(18) text-layer structure recorded; Eq. (17), graphical `F/S`, SI mapping and reference tests remain blockers | SOURCE_CANDIDATE AUDIT |
+| EPFL dissertation formula audit | `docs/dissertation_formula_audit_2026-07-06.md`; local TH2978/TH3337 inventory [30] | TH3337 gives candidate formulas for Friedel/MSH and WUT dryout boundaries; TH2978 text extraction needs OCR/manual audit | CANDIDATE_ONLY |
 | secondary formula candidates | `docs/secondary_formula_candidates.md`; `docs/source_gate_manifest.json`; `docs/formula_registry.md` | формулы из авторитетных вторичных источников помогают аудиту, но не снимают primary-source-only gate | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED |
 | physics gap matrix | `docs/physics_gap_matrix.md` | сводный локальный документ по активной физике, источникам и незакрытым gap | ACADEMIC CONTEXT |
 | release-candidate status | `docs/release_candidate_status.md` | source-gated release-candidate решение и полный pytest от 2026-07-06 | ACADEMIC / RELEASE CONTEXT |
@@ -2275,6 +2278,50 @@ Wojtan-Ursenbacher-Thome Part I transition equations, Wojtan-Ursenbacher-Thome
 Part II heat-transfer/dryout equations, Taitel-Barnea-Dukler 1980 vertical
 transition equations, Kandlikar 1990 and Gungor-Winterton 1986 complete HTC
 formula transcriptions. Они остаются bibliographic/source-gate objects.
+
+## 18.11. Source-gate closure pipeline и локальные audit candidates
+
+После source-audit pass добавлен машинный слой `source_gate_pipeline.py`.
+Он не является физической моделью и не даёт коэффициенты для runtime. Его роль -
+сделать научный backlog проверяемым: каждый source-gate получает
+`current_blocking_stage`, `release_criteria`, `action_pipeline`,
+`audit_documents`, acquisition hints и `next_priorities`. Тот же отчёт доступен
+как JSON через `/api/source-gates`, поэтому UI или внешний клиент могут показать
+не просто общий `source_required`, а конкретное недостающее доказательство:
+полный текст, SHA256 inventory, formula/scope audit, runtime adapter, reference
+tests или released manifest decision.
+
+Текущее состояние отчёта `python -m source_gate_pipeline --pretty`:
+
+| Release state | Count | Meaning |
+| --- | ---: | --- |
+| `candidate_local_intake_ready` | 1 | Chen/OSTI 1962 local PDF принят, но formula/scope audit и reference tests не закрыты. |
+| `blocked_primary_source_required_secondary_available` | 3 | MSH, Friedel и Taitel-Dukler имеют secondary guidance, но primary full text отсутствует. |
+| `blocked_primary_source_required_dissertation_candidate_available` | 2 | WUT Part I/II имеют EPFL dissertation guidance, но journal gates или dissertation-specific release path не закрыты. |
+| `blocked_primary_source_required` | 3 | Zuber-Findlay, Kandlikar и Gungor-Winterton требуют acquisition of authorized full text. |
+
+Локальные full-text candidates сейчас делятся на три категории:
+
+- `HTC-CHEN-1962-SOURCE-CANDIDATE`: OSTI PDF локально принят и записан в
+  `docs/primary_source_inventory.md`; `docs/chen_1962_formula_audit_2026-07-06.md`
+  фиксирует структуру Eq. (9) и Eq. (18), но Eq. (17), графические функции
+  `F(X_tt)`/`S(Re_tp)`, SI mapping и reference HTC tests остаются blockers.
+- `DISS-MORENO-QUIBEN-2005-EPFL-TH3337`: локальный dissertation candidate даёт
+  page-level guidance для Friedel Eqs. (4.40)-(4.47), MSH Eqs. (4.53)-(4.56),
+  pressure-drop flow-pattern skeleton и WUT dryout boundaries `xdi`/`xde`.
+  Это `candidate_only` evidence: оно помогает сверке, но не release MSH/Friedel
+  gates без первичной статьи или отдельного dissertation-release решения.
+- `DISS-WOJTAN-2004-EPFL-TH2978`: локальный dissertation candidate подтверждает
+  WUT/Thome context, но equation text layer частично custom-encoded. Для release
+  WUT Part I/II нужен target journal full text или OCR/manual audit с explicit
+  release decision и reference tests.
+
+Практическое следствие для интерпретации результатов: `model_source_status` и
+`source_gate_reasons` остаются runtime diagnostic fields. Они не превращают
+source-gated branch в released published physics. Снятие любого gate по-прежнему
+требует полного первоисточника или явно принятого dissertation-specific release
+path, страницы/уравнения, SI mapping, domain limits, reference tests и обновлённый
+`docs/source_gate_manifest.json`.
 
 # 19. Область корректного применения
 
@@ -2578,3 +2625,14 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 
 31. Release-candidate статус проекта. Локальный документ проекта:
 [docs/release_candidate_status.md](release_candidate_status.md).
+
+32. Source-gate closure pipeline и unresolved questions register. Локальные
+документы проекта: [docs/milestone_closure_pipeline.md](milestone_closure_pipeline.md),
+[docs/source_gate_unresolved_questions.md](source_gate_unresolved_questions.md);
+машинный отчёт: `python -m source_gate_pipeline --pretty`; API:
+`/api/source-gates`.
+
+33. Candidate-only formula audits по локальным full-text источникам. Локальные
+документы проекта:
+[docs/chen_1962_formula_audit_2026-07-06.md](chen_1962_formula_audit_2026-07-06.md),
+[docs/dissertation_formula_audit_2026-07-06.md](dissertation_formula_audit_2026-07-06.md).

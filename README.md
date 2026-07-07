@@ -186,6 +186,10 @@ to find the next required proof.
   acceleration/Shah, ht Chen-Bennett/Liu-Winterton, secondary Zivi и
   Taitel-Dukler 1976 horizontal map зафиксированы как audit guidance, но не
   снимают `SOURCE_REQUIRED` и не становятся runtime `published` моделями.
+- добавлен машинный source-gate pipeline: `source_gate_pipeline.py`,
+  `python -m source_gate_pipeline --pretty` и `/api/source-gates` показывают
+  `current_blocking_stage`, `release_criteria`, группы milestones и ближайшие
+  приоритеты по каждому незакрытому источнику.
 - добавлен `docs/physics_gap_matrix.md`: компактная карта runtime-физики,
   source-gate кандидатов, внешних источников и оставшихся академических
   ограничений.
@@ -240,6 +244,13 @@ Part I/II не снимают gate, потому что DSpace API не пока
 MSH/Friedel остаются активными, `published_regime_map` остаётся source-gated,
 а HTC/dryout/CHF по-прежнему не рассчитываются.
 
+Локальный candidate-only аудит первоисточников разнесён по отдельным документам:
+`docs/chen_1962_formula_audit_2026-07-06.md` фиксирует OSTI/Chen 1962 как
+HTC-кандидат с незакрытыми Eq. (17), `F/S`, SI mapping и reference-test
+вопросами; `docs/dissertation_formula_audit_2026-07-06.md` фиксирует EPFL
+TH2978/TH3337 как audit guidance для WUT, MSH и Friedel, но не снимает
+журнальные source-gates.
+
 Полные первоисточники для будущего снятия gate ожидаются как локальные файлы в
 `sources/primary/`. PDF, сканы и извлечённые полные тексты из этой папки не
 коммитятся; tracked-инвентарь `docs/primary_source_inventory.md` должен хранить
@@ -262,6 +273,12 @@ MSH/Friedel остаются активными, `published_regime_map` оста
   первоисточников из `sources/primary/`, используемых для снятия gate;
 - `docs/source_audit_checkpoint_5_6.md` и
   `docs/source_audit_open_web_2026-07-05.md` - аудит первоисточников;
+- `docs/source_audit_followup_2026-07-06.md` - follow-up по Crossref,
+  endpoints, OSTI и EPFL dissertation candidates;
+- `docs/chen_1962_formula_audit_2026-07-06.md` - page/equation audit для
+  локального Chen/OSTI HTC source-candidate;
+- `docs/dissertation_formula_audit_2026-07-06.md` - page-level candidate map
+  по EPFL TH2978/TH3337 для будущего аудита WUT, MSH и Friedel;
 - `docs/physics_gap_matrix.md` - краткая матрица активной физики, внешних
   источников и незакрытых source-gate ограничений;
 - `docs/milestone_closure_pipeline.md` - рабочий порядок закрытия оставшихся
@@ -366,7 +383,7 @@ pytest tests/test_scenario_matrix.py -q
 Source-gate документация и академический manifest:
 
 ```powershell
-pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q
+pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py tests/test_source_gate_pipeline.py tests/test_get_designer_api.py -q
 ```
 
 Начало кипения и source-gated диагностика теплообмена:

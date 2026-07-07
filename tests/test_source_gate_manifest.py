@@ -479,6 +479,11 @@ def test_user_and_academic_docs_reference_open_web_audit_context() -> None:
         assert "docs/source_audit_open_web_2026-07-04.md" in text
         assert "docs/source_gate_manifest.json" in text
         assert "docs/primary_source_inventory.md" in text
+        assert "docs/chen_1962_formula_audit_2026-07-06.md" in text
+        assert "docs/dissertation_formula_audit_2026-07-06.md" in text
+        assert "source_gate_pipeline.py" in text
+        assert "current_blocking_stage" in text
+        assert "release_criteria" in text
         assert "sources/primary" in text
         assert "OSTI" in text
         assert "10.2172/4636495" in text
@@ -492,6 +497,10 @@ def test_user_and_academic_docs_reference_open_web_audit_context() -> None:
     assert "Минимальная цепочка интерпретации" in ACADEMIC_REFERENCE_TEXT
     assert "OSTI `10.2172/4636495`" in ACADEMIC_REFERENCE_TEXT
     assert "source_candidate" in ACADEMIC_REFERENCE_TEXT
+    assert "Source-gate closure pipeline" in ACADEMIC_REFERENCE_TEXT
+    assert "candidate_local_intake_ready" in ACADEMIC_REFERENCE_TEXT
+    assert "DISS-MORENO-QUIBEN-2005-EPFL-TH3337" in ACADEMIC_REFERENCE_TEXT
+    assert "DISS-WOJTAN-2004-EPFL-TH2978" in ACADEMIC_REFERENCE_TEXT
 
 
 def test_friction_source_gate_guards_remain_active() -> None:
