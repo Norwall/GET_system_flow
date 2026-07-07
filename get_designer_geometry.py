@@ -612,6 +612,51 @@ def run_scenario(scenario: GETScenario) -> Any:
         raise ScenarioValidationError(str(exc)) from exc
 
 
+def critical_loads_from_scenario(scenario: GETScenario, **options: Any) -> Any:
+    from refrigerant_loop_model import RefrigerantLoopModel
+    from refrigerant_properties import BackendUnavailableError
+
+    inputs = solver_inputs_from_scenario(scenario)
+    geometry = inputs["geometry"]
+    allowed_options = {
+        "qtr_min_w_m",
+        "qtr_max_w_m",
+        "qtr_step_w_m",
+        "boundary_tolerance_w_m",
+        "fmin",
+        "fmax",
+        "nsamp",
+        "ngrid",
+    }
+    unexpected = sorted(set(options) - allowed_options)
+    if unexpected:
+        raise ScenarioValidationError(f"Unsupported critical-load option(s): {unexpected!r}.")
+    try:
+        model = RefrigerantLoopModel(
+            fluid=scenario.solver.fluid,
+            property_backend=scenario.solver.property_backend,
+            geometry=geometry,
+            allow_property_extrapolation=scenario.solver.allow_property_extrapolation,
+        )
+        return model.critical_loads(
+            H=inputs["H"],
+            Li=inputs["Li"],
+            tcon=inputs["tcon"],
+            mode=inputs["mode"],
+            closure_model=inputs["closure_model"],
+            regime_model=inputs["regime_model"],
+            friction_model=inputs["friction_model"],
+            geometry=geometry,
+            heat_transfer_model=inputs["heat_transfer_model"],
+            wall_soil_boundary=inputs["wall_soil_boundary"],
+            boiling_onset_model=inputs["boiling_onset_model"],
+            onset_superheat_k=inputs["onset_superheat_k"],
+            **options,
+        )
+    except (BackendUnavailableError, ValueError) as exc:
+        raise ScenarioValidationError(str(exc)) from exc
+
+
 def save_scenario(scenario: GETScenario, directory: Path = DEFAULT_SCENARIO_DIR) -> Path:
     validate_scenario(scenario)
     directory.mkdir(parents=True, exist_ok=True)

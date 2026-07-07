@@ -107,6 +107,15 @@ print(result["fluid"], result["property_backend"], result["converged"])
 `pytest -q`, но не снимает `SOURCE_REQUIRED` ограничения с неподключённых
 published-кандидатов.
 
+Рабочий pipeline закрытия оставшихся source-gates зафиксирован в
+`docs/milestone_closure_pipeline.md`; он синхронизирован с
+`python -m source_gate_pipeline --pretty` и `/api/source-gates`. Реестр
+незакрытых формульных, область-применимости и тестовых вопросов ведётся в
+`docs/source_gate_unresolved_questions.md`.
+Source-gate JSON records include `current_blocking_stage` and structured
+`release_criteria` for every source, so clients do not need to parse Markdown
+to find the next required proof.
+
 - зафиксированы baseline-тесты MathCAD-совместимой ветки;
 - режим `regime_aware` переименован в `experimental_regime_aware`, а старое имя
   оставлено как alias для совместимости;
@@ -255,6 +264,10 @@ MSH/Friedel остаются активными, `published_regime_map` оста
   `docs/source_audit_open_web_2026-07-05.md` - аудит первоисточников;
 - `docs/physics_gap_matrix.md` - краткая матрица активной физики, внешних
   источников и незакрытых source-gate ограничений;
+- `docs/milestone_closure_pipeline.md` - рабочий порядок закрытия оставшихся
+  source-gates, сгруппированный по пути снятия блокировок;
+- `docs/source_gate_unresolved_questions.md` - проверяемый реестр незакрытых
+  формульных, scope и test-proof вопросов по каждому gate;
 - `docs/release_candidate_status.md` - текущий source-gated release-candidate
   статус, результаты полного pytest и план ускорения тестов без изменения
   физики;

@@ -22,6 +22,9 @@ from get_designer_geometry import (
 )
 
 
+pytestmark = [pytest.mark.slow, pytest.mark.distributed]
+
+
 def _manual_geometry(
     *,
     diameter_m: float = 2.0 * 1.325e-2,

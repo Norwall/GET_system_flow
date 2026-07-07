@@ -45,6 +45,7 @@ py-modules = [
     "refrigerant_loop_model",
     "refrigerant_properties",
     "scenario_matrix",
+    "source_gate_pipeline",
     "get_co2_model",
     "two_phase_closures",
     "two_phase_regimes",

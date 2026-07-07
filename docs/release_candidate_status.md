@@ -24,7 +24,8 @@
 
 Академический контекст синхронизирован с этим решением в
 `docs/get_co2_academic_reference.md`, `docs/physics_gap_matrix.md`,
-`docs/secondary_formula_candidates.md` и `plan.md`.
+`docs/secondary_formula_candidates.md`, `docs/milestone_closure_pipeline.md`
+`docs/source_gate_unresolved_questions.md` и `plan.md`.
 
 ## Source-gate audit
 

@@ -8,6 +8,7 @@ from refrigerant_loop_model import RefrigerantLoopModel
 from refrigerant_properties import CoolPropSaturationProperties
 
 
+@pytest.mark.slow
 def test_nh3_loop_solver_converges_on_nominal_coolprop_case() -> None:
     model = RefrigerantLoopModel(fluid="Ammonia", property_backend="coolprop")
     data = model.run(H=2.5, qtr=76.68, Li=200.0, tcon=0.0)
@@ -24,6 +25,8 @@ def test_nh3_loop_solver_converges_on_nominal_coolprop_case() -> None:
     assert data["outlet_mass_quality"] > 0.0
 
 
+@pytest.mark.slow
+@pytest.mark.distributed
 def test_same_geometry_object_solves_co2_and_nh3_with_different_results() -> None:
     geometry = LoopGeometry().with_default_sections(evaporator_length_m=200.0, riser_height_m=2.5)
     co2_model = RefrigerantLoopModel(fluid="CO2", property_backend="coolprop", geometry=geometry)
@@ -46,6 +49,7 @@ def test_nh3_rejects_mathcad_table_backend() -> None:
         RefrigerantLoopModel(fluid="R717", property_backend="mathcad_table")
 
 
+@pytest.mark.slow
 def test_nh3_high_heat_load_reports_structured_no_root_status() -> None:
     model = RefrigerantLoopModel(fluid="NH3", property_backend="coolprop")
     data = model.run(H=2.5, qtr=120.0, Li=200.0, tcon=0.0)
@@ -65,6 +69,7 @@ def test_nh3_high_heat_load_reports_structured_no_root_status() -> None:
         ("upper_temperature_grid_point", 76.68, 40.0, 0.67702933296906),
     ],
 )
+@pytest.mark.slow
 def test_nh3_additional_scenarios_are_structured(
     name: str,
     qtr: float,

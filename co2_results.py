@@ -276,6 +276,18 @@ class SteadyLoopResult:
     boiling_heat_transfer_candidate: str = ""
     boiling_heat_transfer_source: str = ""
     boiling_heat_transfer_source_status: str = ""
+    boiling_heat_transfer_required_audit_checks: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_audit_id: str = ""
+    boiling_heat_transfer_audit_source_status: str = ""
+    boiling_heat_transfer_audit_local_full_text: str = ""
+    boiling_heat_transfer_audit_sha256: str = ""
+    boiling_heat_transfer_formula_audit_document: str = ""
+    boiling_heat_transfer_audited_pages: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_equation_page_map: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_applicability: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_equation_structure: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_validation_notes: tuple[str, ...] | list[str] = ()
+    boiling_heat_transfer_release_blockers: tuple[str, ...] | list[str] = ()
     dryout_limit: str = "not_evaluated_source_required"
     boiling_onset_model: str = "mathcad_baseline"
     onset_superheat_k: float = 0.0
@@ -332,6 +344,22 @@ class SteadyLoopResult:
             "boiling_heat_transfer_candidate": self.boiling_heat_transfer_candidate,
             "boiling_heat_transfer_source": self.boiling_heat_transfer_source,
             "boiling_heat_transfer_source_status": self.boiling_heat_transfer_source_status,
+            "boiling_heat_transfer_required_audit_checks": list(
+                self.boiling_heat_transfer_required_audit_checks
+            ),
+            "boiling_heat_transfer_audit_id": self.boiling_heat_transfer_audit_id,
+            "boiling_heat_transfer_audit_source_status": self.boiling_heat_transfer_audit_source_status,
+            "boiling_heat_transfer_audit_local_full_text": self.boiling_heat_transfer_audit_local_full_text,
+            "boiling_heat_transfer_audit_sha256": self.boiling_heat_transfer_audit_sha256,
+            "boiling_heat_transfer_formula_audit_document": self.boiling_heat_transfer_formula_audit_document,
+            "boiling_heat_transfer_audited_pages": list(self.boiling_heat_transfer_audited_pages),
+            "boiling_heat_transfer_equation_page_map": list(self.boiling_heat_transfer_equation_page_map),
+            "boiling_heat_transfer_applicability": list(self.boiling_heat_transfer_applicability),
+            "boiling_heat_transfer_equation_structure": list(
+                self.boiling_heat_transfer_equation_structure
+            ),
+            "boiling_heat_transfer_validation_notes": list(self.boiling_heat_transfer_validation_notes),
+            "boiling_heat_transfer_release_blockers": list(self.boiling_heat_transfer_release_blockers),
             "dryout_limit": self.dryout_limit,
             "boiling_onset_model": self.boiling_onset_model,
             "onset_superheat_k": self.onset_superheat_k,

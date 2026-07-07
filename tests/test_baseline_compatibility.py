@@ -165,6 +165,8 @@ def test_regime_aware_is_alias_for_experimental_regime_aware() -> None:
     assert closure_model_scientific_status("experimental_regime_aware") == "experimental"
 
 
+@pytest.mark.slow
+@pytest.mark.distributed
 def test_experimental_regime_aware_preserves_legacy_regime_aware_numerics() -> None:
     model = CO2MathcadModel()
 
@@ -206,6 +208,8 @@ def test_experimental_regime_aware_preserves_legacy_regime_aware_numerics() -> N
         assert explicit[key] == pytest.approx(legacy[key], rel=0.0, abs=0.0)
 
 
+@pytest.mark.slow
+@pytest.mark.distributed
 def test_closure_scientific_status_is_exposed_for_baseline_modes() -> None:
     model = CO2MathcadModel()
 
@@ -233,6 +237,8 @@ def test_closure_scientific_status_is_exposed_for_baseline_modes() -> None:
 
 
 @pytest.mark.parametrize("case", BASELINE_MODE_CASES, ids=[case["name"] for case in BASELINE_MODE_CASES])
+@pytest.mark.slow
+@pytest.mark.distributed
 def test_current_mode_baselines_are_fixed(case, co2_model: CO2MathcadModel) -> None:
     result = co2_model.run(
         2.5,

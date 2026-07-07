@@ -8,6 +8,8 @@ abstract или чужой пересказ формулы не являются
 Текущее стабилизированное состояние зафиксировано отдельно в
 `docs/release_candidate_status.md`: это source-gated release candidate, а не
 снятие `SOURCE_REQUIRED` ограничений.
+Полный порядок закрытия оставшихся source-gates зафиксирован в
+`docs/milestone_closure_pipeline.md`.
 
 | Область | Runtime-статус | Источник | Gap / gate |
 | --- | --- | --- | --- |

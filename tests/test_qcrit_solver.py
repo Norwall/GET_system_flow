@@ -93,6 +93,7 @@ def test_fake_scan_keeps_property_limits_separate(status: str) -> None:
     assert {point.status for point in report.scan_points} == {status}
 
 
+@pytest.mark.slow
 def test_co2_mathcad_qcrit_smoke_uses_f_zero_limit_not_old_heatmap_name() -> None:
     model = CO2MathcadModel()
     steady = model.run(2.5, 76.68, 200.0, 0.0)

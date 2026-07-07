@@ -117,6 +117,42 @@ def test_api_derives_and_saves_scenarios(tmp_path) -> None:
     assert list_response.json()["scenarios"][0]["scenario_id"] == "api-case"
 
 
+def test_api_reports_source_gate_pipeline(tmp_path) -> None:
+    pytest.importorskip("fastapi.testclient")
+    from fastapi.testclient import TestClient
+
+    from get_designer_api import create_app
+
+    client = TestClient(create_app(tmp_path))
+
+    response = client.get("/api/source-gates")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "summary" in payload
+    assert "policy_documents" in payload
+    assert "source_gates" in payload
+    assert "milestone_groups" in payload
+    assert "next_priorities" in payload
+    assert "docs/source_gate_unresolved_questions.md" in payload["policy_documents"]
+    assert payload["next_priorities"][0]["source_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
+    chen_gate = next(
+        gate
+        for gate in payload["source_gates"]
+        if gate["source_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
+    )
+    assert chen_gate["current_blocking_stage"] == "audit_formulas_and_limits"
+    assert any(
+        criterion["criterion_id"] == "reference_tests"
+        and criterion["status"] == "blocked"
+        for criterion in chen_gate["release_criteria"]
+    )
+    groups = {group["group_id"]: group for group in payload["milestone_groups"]}
+    assert groups["local_candidate_audit"]["source_ids"] == [
+        "HTC-CHEN-1962-SOURCE-CANDIDATE"
+    ]
+
+
 def test_api_run_returns_source_and_limit_diagnostics(tmp_path) -> None:
     pytest.importorskip("fastapi.testclient")
     from fastapi.testclient import TestClient
@@ -160,3 +196,30 @@ def test_api_run_wall_coupled_returns_derived_boundary_fields(tmp_path) -> None:
     assert result["qtr"] == pytest.approx(50.0)
     assert result["thermal_boundary_model"] == "wall_soil_effective_conductance"
     assert result["wall_soil_qtr_w_m"] == pytest.approx(50.0)
+
+
+def test_api_critical_loads_is_explicit_endpoint(tmp_path) -> None:
+    pytest.importorskip("fastapi.testclient")
+    from fastapi.testclient import TestClient
+
+    from get_designer_api import create_app
+
+    client = TestClient(create_app(tmp_path))
+    payload = scenario_to_dict(_api_run_scenario())
+    payload["critical_loads"] = {
+        "qtr_min_w_m": 0.0,
+        "qtr_max_w_m": 12.0,
+        "qtr_step_w_m": 6.0,
+        "boundary_tolerance_w_m": 1.0,
+        "nsamp": 6,
+        "ngrid": 12,
+    }
+
+    response = client.post("/api/critical-loads", json=payload)
+
+    assert response.status_code == 200
+    report = response.json()["critical_loads"]
+    assert report["qcrit_model"] == "dissertation_scan_plus_f_zero"
+    assert report["qcrit_status"] in {"evaluated", "partial", "failed"}
+    assert report["qtr_max_w_m"] == pytest.approx(12.0)
+    assert report["n_scan_points"] > 0

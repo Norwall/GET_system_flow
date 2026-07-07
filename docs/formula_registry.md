@@ -260,11 +260,11 @@ y_{\max} =
 ## HTC-CHEN-1962-SOURCE-CANDIDATE
 
 - Статус: SOURCE_CANDIDATE / NOT_RELEASED.
-- Математическая запись: correlation is not transcribed into runtime; this entry records source-candidate metadata and keeps source gate active.
-- Переменные и размерности: expected future saturated flow-boiling HTC inputs include heat flux, mass flux, quality, diameter, fluid properties, and wall/saturation assumptions.
-- Область применимости: diagnostic/source-candidate branch `heat_transfer_model="chen_1962_source_candidate"`; no HTC, dryout, or CHF is computed.
-- Источник: J. C. Chen, A correlation for boiling heat transfer to saturated fluids in convective flow, OSTI ID 4636495, DOI `10.2172/4636495`, <https://www.osti.gov/biblio/4636495>, full-text candidate <https://www.osti.gov/servlets/purl/4636495>; `docs/source_gate_manifest.json`; `docs/source_audit_open_web_2026-07-05.md`.
-- Код: `boiling_heat_transfer.chen_1962_source_candidate`; `boiling_heat_transfer.diagnose_prescribed_heat_input`.
+- Математическая запись: runtime correlation is still not released. Local audit of Chen 1962 pages 4, 6, 10-19, 20-25 and 32-33 is recorded in `docs/chen_1962_formula_audit_2026-07-06.md`. The candidate structure is additive: total HTC is the sum of micro-convective and macro-convective contributions. The text layer verifies the Eq. (9) structure as `h_mac = 0.023 * Re_L^0.8 * Pr_L^0.4 * k_L/D * F`, pending visual scan confirmation. Eq. (18) is `h = h_mic + h_mac`, also pending visual confirmation. The micro branch is based on Forster-Zuber pool boiling with suppression factor `S`; Eq. (17) remains unreleased because OCR around the combined micro-convective expression is degraded. `F` depends on the Martinelli parameter and `S` on local two-phase Reynolds number. The report gives `F` and `S` graphically in Figures 7 and 8, so numeric runtime use requires digitization or authoritative tabulation.
+- Переменные и размерности: expected future saturated flow-boiling HTC inputs include heat flux, mass flux, quality, diameter, saturated liquid/vapor properties, wall/saturation temperature difference and pressure/superheat definitions. SI mapping is not released.
+- Область применимости: Chen page 6 limits the source to saturated two-phase non-metallic fluids in vertical axial, stable convective flow without slug flow, liquid deficiency, or critical heat flux; pages 18-19 summarize annular/annular-mist use and an approximate 1-70% vapor-quality range. Current diagnostic/source-candidate branch `heat_transfer_model="chen_1962_source_candidate"` computes no HTC, dryout, or CHF.
+- Источник: J. C. Chen, A correlation for boiling heat transfer to saturated fluids in convective flow, OSTI ID 4636495, DOI `10.2172/4636495`, <https://www.osti.gov/biblio/4636495>, full-text <https://www.osti.gov/servlets/purl/4636495>; local candidate `sources/primary/chen_1962_osti_4636495.pdf`, SHA256 `5DDE91B1FE38B2CE6E4977AEE2A25A61BBEDC83C5A7214802496754E4989017E`; `docs/chen_1962_formula_audit_2026-07-06.md`; `docs/source_gate_manifest.json`; `docs/source_audit_open_web_2026-07-05.md`; `docs/source_audit_followup_2026-07-06.md`; `docs/primary_source_inventory.md`.
+- Код: `boiling_heat_transfer.chen_1962_audit_record`; `boiling_heat_transfer.chen_1962_source_candidate`; `boiling_heat_transfer.diagnose_prescribed_heat_input`.
 - Тесты: `tests/test_boiling_diagnostics.py`; `tests/test_source_gate_manifest.py`; `tests/test_formula_registry.py`.
 
 ## QCRIT-DISSERTATION-SCAN
@@ -489,6 +489,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 
 ## TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE
 
+- Dissertation audit candidate: Moreno Quiben TH3337 pages 53-66 and 109-125 are mapped in `docs/dissertation_formula_audit_2026-07-06.md`; this is `candidate_only` evidence and does not release the MSH source gate. The TH3337 text layer gives candidate Eqs. (4.53)-(4.56): `(dp/dz)_frict = F*(1-x)^(1/3) + B*x^3`, `F = A + 2*(B-A)*x`, `A = (dp/dz)_L0`, and `B = (dp/dz)_G0`.
 - Статус: SOURCE_REQUIRED.
 - Математическая запись: не реализована в расчёте. Полная формула, определения жидкостного и газового опорных градиентов давления, соглашение по полному массовому потоку и соглашение по коэффициенту трения Darcy/Fanning должны быть переписаны только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; гидравлический диаметр, м; friction factor безразмерен.
@@ -499,6 +500,7 @@ X^2=\frac{(dp_f/dz)_l}{(dp_f/dz)_g}
 
 ## TP-FRIEDEL-1979-SOURCE-GATE
 
+- Dissertation audit candidate: Moreno Quiben TH3337 pages 64-65 and 146 are mapped in `docs/dissertation_formula_audit_2026-07-06.md`; this is `candidate_only` evidence and does not release the Friedel source gate. The TH3337 text layer gives candidate Eqs. (4.40)-(4.47): `Delta p_frict = Delta p_L0 * phi_f0^2`, `phi_f0^2 = E + 3.24*F*H/(Fr_H^0.045*We_L^0.035)`, and definitions for `Fr_H`, `E`, `F`, `H`, `We_L`, and `rho_h`.
 - Статус: SOURCE_REQUIRED.
 - Математическая запись: не реализована в расчёте. Формула Friedel, коэффициенты, безразмерные комплексы и области применимости должны быть внесены только после проверки полного первичного текста доклада.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость `x`, безразмерная; градиенты давления, Па/м; массовый поток, кг/(м2 с); плотности, кг/м3; вязкости, Па с; поверхностное натяжение, Н/м; гидравлический диаметр, м; безразмерные комплексы.
@@ -757,6 +759,7 @@ H_y=\frac{\Delta p_\Sigma}{g(\rho_l-\rho_{m,out})}
 
 ## REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE
 
+- Dissertation audit candidate: Wojtan TH2978 is recorded in `docs/dissertation_formula_audit_2026-07-06.md`; page 1 confirms the thesis, but equation text extraction is incomplete and requires OCR/manual audit before any WUT map release.
 - Статус: SOURCE_REQUIRED.
 - Математическая запись: опубликованная горизонтальная diabatic flow-boiling map не реализована. Transition criteria, dryout boundaries, dimensionless groups и область применимости должны быть перенесены только после проверки полного первоисточника.
 - Переменные и размерности: ожидаемые величины для будущей сверки — массовая сухость, массовый поток, heat flux, диаметр, свойства фаз, поверхностное натяжение и безразмерные комплексы карты.

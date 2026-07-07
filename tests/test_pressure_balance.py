@@ -32,6 +32,8 @@ def test_worksheet_pressure_balance_is_explicit_and_backward_compatible(co2_mode
     assert result_dict["pressure_balance_total_acceleration_pa"] == pytest.approx(pass_result.acceleration_pressure_drop_pa)
 
 
+@pytest.mark.slow
+@pytest.mark.distributed
 def test_distributed_pressure_balance_separates_riser_hydrostatic_from_resistance(
     co2_model: CO2MathcadModel,
 ) -> None:
@@ -103,4 +105,3 @@ def test_friction_model_dispatcher_exposes_published_and_test_models() -> None:
 
     with pytest.raises(ValueError, match="Unsupported friction_model"):
         friction_factor_from_model(1.0e5, relative_roughness, "not_a_model")
-

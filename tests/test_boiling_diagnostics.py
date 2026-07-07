@@ -4,7 +4,9 @@ import pytest
 
 from boiling_heat_transfer import (
     CHEN_1962_SOURCE_CANDIDATE,
+    Chen1962AuditRecord,
     WallSoilBoundary,
+    chen_1962_audit_record,
     chen_1962_source_candidate,
     diagnostics_for_solver_status,
     normalize_heat_transfer_model,
@@ -115,6 +117,7 @@ def test_unknown_heat_transfer_model_is_validation_error(co2_model: CO2MathcadMo
 def test_chen_1962_candidate_is_source_gated_not_runtime_released(
     co2_model: CO2MathcadModel,
 ) -> None:
+    audit_record = chen_1962_audit_record()
     candidate = chen_1962_source_candidate()
     result = co2_model.run(
         2.5,
@@ -133,7 +136,42 @@ def test_chen_1962_candidate_is_source_gated_not_runtime_released(
     assert "10.2172/4636495" in result["boiling_heat_transfer_source"]
     assert result["boiling_heat_transfer_source_status"] == "source_candidate_not_released"
     assert candidate.local_full_text_ref.endswith("/4636495")
+    assert isinstance(audit_record, Chen1962AuditRecord)
+    assert audit_record.local_full_text_ref == "sources/primary/chen_1962_osti_4636495.pdf"
+    assert audit_record.formula_audit_document == "docs/chen_1962_formula_audit_2026-07-06.md"
+    assert result["boiling_heat_transfer_required_audit_checks"] == list(candidate.required_audit_checks)
+    assert result["boiling_heat_transfer_audit_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
+    assert result["boiling_heat_transfer_audit_source_status"] == "candidate_only"
+    assert result["boiling_heat_transfer_audit_sha256"] == audit_record.local_sha256
+    assert result["boiling_heat_transfer_formula_audit_document"] == audit_record.formula_audit_document
+    assert "6" in result["boiling_heat_transfer_audited_pages"]
+    assert "10-19" in result["boiling_heat_transfer_audited_pages"]
+    assert "20-25" in result["boiling_heat_transfer_audited_pages"]
+    assert any("Eq. (9)" in item for item in result["boiling_heat_transfer_equation_page_map"])
+    assert any("Eq. (17) remains OCR-degraded" in item for item in result["boiling_heat_transfer_equation_page_map"])
+    assert any("Eq. (18)" in item for item in result["boiling_heat_transfer_equation_page_map"])
+    assert any("Figs. 7 and 8" in item for item in result["boiling_heat_transfer_equation_page_map"])
+    assert any("Vertical axial flow" in item for item in result["boiling_heat_transfer_applicability"])
+    assert any("h_mac = 0.023" in item for item in result["boiling_heat_transfer_equation_structure"])
+    assert any("h = h_mic + h_mac" in item for item in result["boiling_heat_transfer_equation_structure"])
+    assert any("Forster-Zuber" in item for item in result["boiling_heat_transfer_equation_structure"])
+    assert any("Eq. (17)" in item for item in result["boiling_heat_transfer_release_blockers"])
+    assert any("Figures 7 and 8" in item for item in result["boiling_heat_transfer_release_blockers"])
     assert result["model_source_status"] == "mixed"
+
+
+def test_chen_1962_solver_failure_keeps_audit_metadata() -> None:
+    diagnostics = diagnostics_for_solver_status(
+        heat_transfer_model=CHEN_1962_SOURCE_CANDIDATE,
+        solver_status="no_root_bracket",
+    )
+
+    result = diagnostics.to_result_fields()
+
+    assert result["boiling_heat_transfer_status"].startswith("source_candidate_source_required")
+    assert result["boiling_heat_transfer_audit_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
+    assert result["boiling_heat_transfer_audit_local_full_text"].endswith("chen_1962_osti_4636495.pdf")
+    assert any("dryout or CHF" in item for item in result["boiling_heat_transfer_release_blockers"])
 
 
 def test_dryout_diagnostic_does_not_replace_solver_convergence_failure(

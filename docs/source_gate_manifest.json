@@ -4,10 +4,15 @@
     "primary_source_only": true,
     "audit_document": "docs/source_audit_open_web_2026-07-05.md",
     "previous_audit_documents": [
-      "docs/source_audit_open_web_2026-07-04.md"
+      "docs/source_audit_open_web_2026-07-04.md",
+      "docs/source_audit_followup_2026-07-06.md",
+      "docs/dissertation_formula_audit_2026-07-06.md",
+      "docs/chen_1962_formula_audit_2026-07-06.md"
     ],
     "checkpoint_audit_document": "docs/source_audit_checkpoint_5_6.md",
     "local_source_inventory_document": "docs/primary_source_inventory.md",
+    "milestone_closure_pipeline_document": "docs/milestone_closure_pipeline.md",
+    "unresolved_questions_document": "docs/source_gate_unresolved_questions.md",
     "source_drop_directory": "sources/primary",
     "secondary_formula_candidate_document": "docs/secondary_formula_candidates.md",
     "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
@@ -55,6 +60,18 @@
           "Reference-point tests and convention checks are still required."
         ]
       },
+      "dissertation_candidates": [
+        {
+          "candidate_id": "DISS-MORENO-QUIBEN-2005-EPFL-TH3337",
+          "local_full_text_ref": "sources/primary/moreno_quiben_2005_epfl_th3337.pdf",
+          "repository_record": "https://infoscience.epfl.ch/handle/20.500.14299/215783",
+          "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/005ec5e9-6a5a-49e9-812b-e31d942503b2/content",
+          "sha256": "B3FD9477D189C7720836C222BFD927BED34AD9E99CB4D1C188102423E26D1A77",
+          "scope": "EPFL doctoral thesis on two-phase pressure drops during evaporation in horizontal tubes; audit guidance for pressure-drop definitions and correlation comparison.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; decision remains candidate_only.",
+          "release_rule": "Does not release MSH runtime gate without page/equation audit and reference tests."
+        }
+      ],
       "local_full_text_ref": "",
       "decision": "source_required",
       "blocking_reasons": [
@@ -105,6 +122,18 @@
           "All dimensionless groups and applicability limits require primary-source audit."
         ]
       },
+      "dissertation_candidates": [
+        {
+          "candidate_id": "DISS-MORENO-QUIBEN-2005-EPFL-TH3337",
+          "local_full_text_ref": "sources/primary/moreno_quiben_2005_epfl_th3337.pdf",
+          "repository_record": "https://infoscience.epfl.ch/handle/20.500.14299/215783",
+          "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/005ec5e9-6a5a-49e9-812b-e31d942503b2/content",
+          "sha256": "B3FD9477D189C7720836C222BFD927BED34AD9E99CB4D1C188102423E26D1A77",
+          "scope": "EPFL doctoral thesis includes two-phase pressure-drop model review and Friedel context for audit guidance.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; decision remains candidate_only.",
+          "release_rule": "Does not release Friedel runtime gate without archival Friedel primary paper or a separate audited dissertation-based release decision and tests."
+        }
+      ],
       "local_full_text_ref": "",
       "decision": "source_required",
       "blocking_reasons": [
@@ -139,7 +168,7 @@
         "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
-        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck followed 301 to HTTPS and returned HTTP 403 Cloudflare challenge"
       },
       "local_full_text_ref": "",
       "decision": "source_required",
@@ -176,8 +205,20 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
         "openalex": "green landing page at EPFL, no PDF URL",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream"
       },
+      "dissertation_candidates": [
+        {
+          "candidate_id": "DISS-WOJTAN-2004-EPFL-TH2978",
+          "local_full_text_ref": "sources/primary/wojtan_2004_epfl_th2978.pdf",
+          "repository_record": "https://infoscience.epfl.ch/handle/20.500.14299/212227",
+          "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/285f44f3-559e-4d9d-ada4-233895ecd47e/content",
+          "sha256": "0F17826CA107DD8744E8AFA914E11FB422D5BC551589ACE5492B04F5669075D5",
+          "scope": "EPFL doctoral thesis by Leszek Wojtan on void fraction and heat transfer during evaporation in horizontal tubes; audit guidance for WUT map/HTC context.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; text extraction is incomplete and requires OCR/manual audit before release.",
+          "release_rule": "Does not release WUT Part I journal gate until transition criteria are audited with page/equation references and tests."
+        }
+      ],
       "local_full_text_ref": "",
       "decision": "source_required",
       "blocking_reasons": [
@@ -209,10 +250,10 @@
       },
       "evidence_status": "metadata_only",
       "access_evidence": {
-        "crossref": "confirmed DOI, title, journal, pages, and Wiley PDF URLs",
+        "crossref": "confirmed DOI, title, journal, pages, Wiley PDF/TDM URLs, and 41 references; 2026-07-06 Crossref record was indexed 2026-07-04 and deposited 2025-10-07",
         "unpaywall": "closed; no repository copy",
         "openalex": "closed",
-        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
+        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck returned HTTP 403 Cloudflare challenge"
       },
       "secondary_formula_candidate": {
         "registry_id": "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE",
@@ -334,8 +375,20 @@
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
         "openalex": "not used as a release source",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; EPFL DSpace API showed only LICENSE bundle and no ORIGINAL/full-text bitstream"
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream"
       },
+      "dissertation_candidates": [
+        {
+          "candidate_id": "DISS-WOJTAN-2004-EPFL-TH2978",
+          "local_full_text_ref": "sources/primary/wojtan_2004_epfl_th2978.pdf",
+          "repository_record": "https://infoscience.epfl.ch/handle/20.500.14299/212227",
+          "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/285f44f3-559e-4d9d-ada4-233895ecd47e/content",
+          "sha256": "0F17826CA107DD8744E8AFA914E11FB422D5BC551589ACE5492B04F5669075D5",
+          "scope": "EPFL doctoral thesis by Leszek Wojtan on void fraction and heat transfer during evaporation in horizontal tubes; audit guidance for WUT Part II heat-transfer context.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; text extraction is incomplete and requires OCR/manual audit before release.",
+          "release_rule": "Does not release WUT Part II journal gate until heat-transfer/dryout equations are audited with page/equation references and tests."
+        }
+      ],
       "local_full_text_ref": "",
       "decision": "source_required",
       "blocking_reasons": [
@@ -372,21 +425,31 @@
         "openalex": "not used as a release source",
         "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908; 2026-07-05 HEAD recheck returned HTTP 200 application/pdf with Content-Length 1533908"
       },
-      "local_full_text_ref": "https://www.osti.gov/servlets/purl/4636495",
+      "local_full_text_ref": "sources/primary/chen_1962_osti_4636495.pdf",
+      "source_candidate_audit_document": "docs/chen_1962_formula_audit_2026-07-06.md",
       "decision": "source_candidate",
       "blocking_reasons": [
-        "This report is not one of the originally selected Kandlikar/Shah/Gungor-Winterton correlations.",
-        "Applicability to the current refrigerant loop, prescribed heat input, and available wall-boundary data has not been audited."
+        "F and S functions are graphical in Figures 7 and 8 and have not been digitized or authoritatively tabulated.",
+        "Eq. (17) micro-convective expression remains OCR-degraded and requires visual transcription from the scan.",
+        "Original variables, imperial units, pressure/superheat definitions, and property-evaluation conventions are not mapped to project SI state variables.",
+        "The report scope is saturated vertical axial flow, while project scenarios also include horizontal evaporator sections.",
+        "No primary-source reference HTC values have been added as runtime tests.",
+        "The report is an HTC correlation source candidate only and does not release dryout or CHF logic."
       ],
       "required_audit_checks": [
-        "Read the full report and decide whether the correlation is applicable to saturated flow boiling in the current geometry.",
-        "Transcribe equations, constants, variables, and limitations into docs/formula_registry.md if selected.",
-        "Decide whether it is a diagnostic HTC candidate or an active released model."
+        "Digitize or otherwise obtain authoritative numeric F and S functions from Figures 7 and 8.",
+        "Visually confirm Eq. (9) and Eq. (18), and fully transcribe Eq. (17) from the scan.",
+        "Map Chen pages 4, 6, 10-19, 20-25, and 32-33 equations, variables, applicability limits, graphical functions, and validation tables into docs/formula_registry.md.",
+        "Convert original variable definitions and units to project SI state variables.",
+        "Decide the released geometry scope before using the vertical-flow correlation in project scenarios.",
+        "Keep dryout and CHF gates separate from this HTC-only audit."
       ],
       "required_tests_before_release": [
-        "Reference HTC values from the report.",
-        "Boundary-condition validation tests.",
-        "Source-status aggregation tests for any released adapter."
+        "Reference HTC values reproduced from the report or documented hand calculations.",
+        "Boundary-condition and unsupported-geometry validation tests.",
+        "Tests for missing wall/saturation inputs and unsupported quality ranges.",
+        "Source-status aggregation tests for any released adapter.",
+        "Regression test proving dryout and CHF are still not inferred from this HTC adapter."
       ]
     }
   ]
