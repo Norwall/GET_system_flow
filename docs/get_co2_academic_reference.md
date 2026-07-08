@@ -2,31 +2,54 @@
 title: "Академическая справка по программной модели естественной циркуляции CO₂/NH₃ в системе ГЕТ"
 subtitle: "Математическая постановка, расчётные режимы, допущения, численная реализация и аудит научной прослеживаемости"
 lang: ru-RU
-date: "6 июля 2026 г."
+date: "8 июля 2026 г."
 toc-title: "Содержание"
 ---
 
 # Аннотация
 
-Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по source-gated release-candidate состоянию проекта от 2026-07-06: базовый стабилизированный коммит — `974c1e3 Improve boiling onset source tracing`, а текущий документальный статус вынесен в `docs/release_candidate_status.md`.
+Настоящая справка описывает фактически реализованную программную модель естественной циркуляции хладагента в горизонтальной естественно действующей трубчатой системе (ГЕТ). Исторически код является Python-портом CO₂/R744 расчёта из `CO2.xmcd`, но после Checkpoint 8 в нём добавлена ветка NH₃/R717 через общий интерфейс свойств насыщения, после Checkpoint 9 — отдельный слой расчёта критических тепловых нагрузок `critical_loads.py`, а после Checkpoint 10 — сценарная матрица `scenario_matrix.py` для быстрой проверки статусов выбранных физических точек. Документ обновлён по source-gate/academic refresh от 2026-07-08: базовый стабилизированный коммит — `974c1e3 Improve boiling onset source tracing`, source-gate pipeline commit — `bda8cac Improve source-gate physics pipeline`, а текущий документальный статус вынесен в `docs/release_candidate_status.md`.
 
 К release-candidate состоянию относятся: явный баланс давления, раздельные гидростатические и фрикционные вклады, выбор модели коэффициента трения, передача сегментной геометрии из designer в гидравлический solver, отдельный published-слой для уже подтверждённых двухфазных замыканий, защитные source-gate функции для неподтверждённых резервных pressure-drop корреляций, отдельный вход `regime_model`, разделение режимных классификаторов на `experimental_regimes.py`, compatibility-слой `two_phase_regimes.py` и защитные source-gate заготовки `published_regimes.py`, универсальный фасад `RefrigerantLoopModel` для CO₂/NH₃, diagnostic-only слой `boiling_heat_transfer.py`, пользовательская lumped boundary condition `wall_coupled`, source-traceable отчёт `critical_loads` с отдельным пределом \(f=0\), быстрый root-scan набор сценариев с фиксированными статусами отказов, локальный inventory-процесс `sources/primary/` + `docs/primary_source_inventory.md`, opt-in ветка `boiling_onset_model="ishkov_superheat"` и поля результата для раздельной классификации hydrodynamic/property/numerical/boiling/dryout/qcrit/scenario статусов.
 
 После обновления отчётов и designer UI сценарий конструктора хранит не только геометрию, \(q_\ell\), \(t_k\), \(H\), `mode` и `closure_model`, но и `fluid`, `property_backend`, `regime_model`, `friction_model`, `heat_transfer_model`, флаг `allow_property_extrapolation`, слои грунта и эффективную линейную проводимость wall/soil boundary. REST API запускает сценарий через общий `RefrigerantLoopModel`, а web-интерфейс и демонстрационный Markdown-отчёт выводят `model_source_status`, `source_gate_reasons`, `failure_class`, boiling/dryout diagnostics, `wall_soil_*` fields и `qcrit_status`. Это является интерфейсной, граничной и отчётной доработкой: она не добавляет published HTC/dryout корреляций и не снимает source-gate с неподтверждённых published-моделей.
 
-Текущее обновление добавляет явный source-traceable слой для начала кипения:
+Документальный refresh от 2026-07-08 фиксирует явный source-traceable слой для начала кипения:
 по умолчанию сохраняется Mathcad-compatible `mathcad_baseline`, а opt-in
 режим `ishkov_superheat` использует диссертационную форму с внешним перегревом
 и итерационным учётом перепада давления конденсатора. Также добавлен
 `docs/physics_gap_matrix.md` и runtime metadata для Chen 1962 / OSTI
 `10.2172/4636495` как `source_candidate`: полный текст найден, но HTC,
-dryout и CHF по нему не рассчитываются до отдельного аудита применимости.
+dryout и CHF по нему не рассчитываются до release-grade формульного аудита,
+scope guard, runtime adapter и source/reference tests.
+Кандидатный hand-calculation ledger
+`docs/chen_1962_hand_calculation_2026-07-08.md` фиксирует арифметику direct
+Eqs. (9)/(17)/(18) и graph-to-SI composition, но не является pointwise
+reference case из отчёта Chen. Rendered graph review
+`docs/chen_1962_graph_review_2026-07-08.md` проверяет candidate Fig. 7/8
+overlay, но всё ещё не заменяет authoritative numeric table или source/reference
+HTC test.
 
-Стабилизационный проход от 2026-07-06 не снимает ни один source-gate и не
-подключает новые published-корреляции. Его академическая роль — зафиксировать,
-что текущее состояние является source-gated release candidate: активная
-runtime-физика отделена от `SOURCE_REQUIRED`/`SOURCE_CANDIDATE` записей, а
-полный `pytest -q` проходит на текущем дереве.
+Reference-value audit `docs/chen_1962_reference_value_audit_2026-07-08.md`
+records that the audited Chen report pages do not print pointwise HTC
+reference cases; the release proof must therefore come from an accepted
+hand-calculation basis or another primary-source pointwise case.
+Scope audit `docs/chen_1962_scope_audit_2026-07-08.md` fixes the
+source-based Chen release scope as vertical heated axial flow only with
+`0.01 <= x <= 0.70`; the current horizontal evaporator is unsupported unless
+a separate non-source extrapolation is explicitly selected.
+
+EPFL TH2978/TH3337 audits now provide candidate-only guidance for WUT dryout
+limits, TH3337/WUT `xdi`/`xde` dryout boundaries and Moreno Quiben TH3337
+pressure-drop branches. Эти документы помогают audit/regression work, но не
+release WUT Part I/II, MSH/Friedel, HTC, dryout or CHF runtime logic.
+
+Стабилизационный проход от 2026-07-06 и документальный refresh от 2026-07-08
+не снимают ни один source-gate и не подключают новые published-корреляции. Их
+академическая роль — зафиксировать, что текущее состояние является
+source-gated release candidate: активная runtime-физика отделена от
+`SOURCE_REQUIRED`/`SOURCE_CANDIDATE` записей, а release-status документ хранит
+результаты полного `pytest -q`.
 
 Модель является стационарной одномерной инженерной моделью замкнутого двухфазного контура. Она не является CFD-моделью и не решает нестационарные уравнения сохранения в грунте, стенке трубы и хладагенте. Главная расчётная задача состоит в нахождении такого параметра циркуляции \(f\), при котором требуемый циркуляционный напор \(H_y(f)\) равен заданному геометрическому напору \(H\).
 
@@ -48,7 +71,7 @@ runtime-физика отделена от `SOURCE_REQUIRED`/`SOURCE_CANDIDATE` 
 
 После повторной проверки source-audit от 2026-07-04 для всех записей `SOURCE_REQUIRED` действует политика primary-source-only. DOI landing page, Crossref metadata, abstract, учебник, обзор или пересказ формулы могут использоваться только как библиографический ориентир; они не снимают source-gate и не дают права подключать коэффициенты, transition equations или области применимости как расчётную `published`-модель. Снятие gate требует полного первоисточника, обновления `docs/formula_registry.md`, `docs/source_audit_checkpoint_5_6.md`, `docs/primary_source_inventory.md`, `docs/source_gate_manifest.json` и тестов.
 
-Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, контрольная endpoint-проверка от 2026-07-05 — в `docs/source_audit_open_web_2026-07-05.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен; повторная endpoint-проверка не сняла ни один gate. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
+Дополнительный open-web аудит от 2026-07-04 оформлен в `docs/source_audit_open_web_2026-07-04.md`, контрольная endpoint-проверка от 2026-07-05 — в `docs/source_audit_open_web_2026-07-05.md`, endpoint/OpenAlex refresh от 2026-07-07 — в `docs/source_endpoint_refresh_2026-07-07.md`, повторная DOI/Crossref/OpenAlex/publisher проверка от 2026-07-08 — в `docs/source_endpoint_refresh_2026-07-08.md`, а структурированные решения по каждой записи вынесены в `docs/source_gate_manifest.json`. Проверка Crossref, Unpaywall/OpenAlex, publisher PDF/API endpoints и EPFL/OSTI records уточнила академический статус: для MSH, Zuber–Findlay, Taitel–Barnea–Dukler, Wojtan/Thome, Kandlikar и Gungor–Winterton подтверждены библиографические записи или landing pages, но открытый полный текст, достаточный для переноса формул, не получен; повторные endpoint-проверки не сняли ни один gate. EPFL landing page без доступного `ORIGINAL`/full-text bitstream остаётся `metadata_only` и не снимает source-gate. Найденный официальный OSTI PDF `10.2172/4636495` является только `source_candidate` для возможной будущей heat-transfer ветки; он не подключён к расчёту и не заменяет аудит Kandlikar/Shah/Gungor–Winterton.
 
 Для следующего этапа введён локальный intake полных первоисточников:
 `sources/primary/` хранит некоммитимые PDF/сканы, а
@@ -230,7 +253,7 @@ q_\ell=G_{\rm eff}(T_{\rm soil}-t_k).
 | PLACEHOLDER | структура данных присутствует, но физически не подключена |
 | REQUIRES AUDIT | обнаружено расхождение или требуется независимая проверка |
 
-После endpoint-проверки 2026-07-05 академический статус неподключённых
+После endpoint-проверок 2026-07-05/2026-07-07/2026-07-08 академический статус неподключённых
 published-кандидатов определяется не только библиографической ссылкой, но и
 записью в `docs/source_gate_manifest.json`. Минимальная цепочка интерпретации:
 `docs/formula_registry.md` задаёт формульную запись и статус, audit-документы
@@ -2119,15 +2142,15 @@ Web-интерфейс не запускает `critical_loads` по умолч�
 | режимные градиенты | closures | источник не установлен | HEURISTIC |
 | горизонтальная опубликованная карта | source-gate, не расчётная модель | Wojtan et al. [11] | SOURCE_REQUIRED |
 | вертикальная опубликованная карта | source-gate, не расчётная модель | Taitel et al. [10] | SOURCE_REQUIRED |
-| saturated flow boiling HTC | не реализована; Chen 1962 хранится только как metadata candidate | Kandlikar/Shah/Gungor-Winterton требуют сверки; Chen OSTI [29] требует отдельного аудита применимости | SOURCE REQUIRED / SOURCE_CANDIDATE |
+| saturated flow boiling HTC | не реализована как released runtime model; Chen 1962 имеет только candidate metadata/helper, graph review, scope audit, reference-value audit and hand-calculation ledger | Kandlikar/Shah/Gungor-Winterton требуют сверки; Chen OSTI [29] требует accepted `F/S` uncertainty decision или authoritative table, vertical-only geometry guard и source/reference HTC proof; `docs/chen_1962_reference_value_audit_2026-07-08.md` found no printed pointwise HTC cases, `docs/chen_1962_scope_audit_2026-07-08.md` excludes the current horizontal evaporator from source-based release, and `docs/chen_1962_hand_calculation_2026-07-08.md` закрывает только arithmetic fixture | SOURCE REQUIRED / SOURCE_CANDIDATE |
 | dryout/CHF diagnostic | не реализован как published prediction | первоисточник не подключён | SOURCE REQUIRED |
 | MSH/Friedel pressure-drop fallback | защитный source-gate, не расчётная модель | [15], [16] | SOURCE_REQUIRED |
 | Zuber-Findlay drift-flux coefficients | не реализованы как published | [9] | SOURCE REQUIRED |
-| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
-| source-gate closure pipeline | `source_gate_pipeline.py`; `/api/source-gates`; `docs/milestone_closure_pipeline.md`; `docs/source_gate_unresolved_questions.md` | machine-readable `current_blocking_stage`, `release_criteria`, milestone groups and next priorities; planning layer only | ACADEMIC POLICY / API |
-| OSTI 1962 boiling report | source candidate, не расчётная модель | full-text PURL [29], применимость не аудирована | SOURCE_CANDIDATE |
-| Chen 1962 formula audit | `docs/chen_1962_formula_audit_2026-07-06.md` | Eq. (9)/(18) text-layer structure recorded; Eq. (17), graphical `F/S`, SI mapping and reference tests remain blockers | SOURCE_CANDIDATE AUDIT |
-| EPFL dissertation formula audit | `docs/dissertation_formula_audit_2026-07-06.md`; local TH2978/TH3337 inventory [30] | TH3337 gives candidate formulas for Friedel/MSH and WUT dryout boundaries; TH2978 text extraction needs OCR/manual audit | CANDIDATE_ONLY |
+| primary-source-only source-gate | docs/source_audit_checkpoint_5_6.md; docs/source_audit_open_web_2026-07-04.md; docs/source_audit_open_web_2026-07-05.md; docs/source_endpoint_refresh_2026-07-08.md; docs/source_gate_manifest.json; docs/primary_source_inventory.md | полный первоисточник обязателен; DOI/abstract/Crossref/landing page без full-text bitstream недостаточны; локальный release требует SHA256 и страницы/уравнения | ACADEMIC POLICY |
+| source-gate closure pipeline | `source_gate_pipeline.py`; `/api/source-gates`; `docs/milestone_closure_pipeline.md`; `docs/source_gate_unresolved_questions.md` | machine-readable `current_blocking_stage`, `release_criteria`, `release_basis`, `allowed_release_bases`, `audit_stage`, `parallel_work_orders`, milestone groups and `next_priorities`; planning layer only | ACADEMIC POLICY / API |
+| OSTI 1962 boiling report | source candidate, не released расчётная модель | full-text PURL [29], candidate helpers and formula/scope audits exist; the source-based release scope is vertical heated axial flow only, while the current horizontal evaporator is unsupported | SOURCE_CANDIDATE |
+| Chen 1962 formula audit | `docs/chen_1962_formula_audit_2026-07-06.md`; `docs/chen_1962_graph_digitization_2026-07-07.md`; `docs/chen_1962_graph_review_2026-07-08.md`; `docs/chen_1962_si_mapping_2026-07-07.md`; `docs/chen_1962_hand_calculation_2026-07-08.md`; `docs/chen_1962_validation_tables_2026-07-07.md`; `docs/chen_1962_reference_value_audit_2026-07-08.md`; `docs/chen_1962_scope_audit_2026-07-08.md` | Eqs. (9), (17), (18) scan-verified; Fig. 7/8 `F/S` candidate digitization and rendered review, source-unit SI/graph-axis helpers, direct and graph-to-SI arithmetic ledger, Table I/II validation context, no-printed-pointwise-HTC audit, and vertical-only scope decision recorded; accepted graph uncertainty or authoritative table, released vertical-only geometry/domain guard, helper-to-runtime mapping and source/reference tests remain blockers | SOURCE_CANDIDATE AUDIT |
+| EPFL dissertation formula audit | `docs/dissertation_formula_audit_2026-07-06.md`; `docs/wojtan_th2978_text_layer_audit_2026-07-08.md`; `docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md`; `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md`; `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md`; `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md`; `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md`; `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md`; `docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md`; local TH2978/TH3337 inventory [30] | TH3337 gives candidate formulas for Friedel/MSH, Moreno Quiben annular pressure-drop Eq. (7.4)/(7.5), Moreno Quiben slug/intermittent pressure-drop Eq. (7.6)/(7.12), Moreno Quiben mist pressure-drop Eq. (7.13)-(7.17), Moreno Quiben dryout pressure-drop interpolation Eq. (7.18), Moreno Quiben stratified-wavy pressure-drop Eq. (7.9)-(7.11), and WUT dryout boundaries; `moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`, `moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`, `moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`, `moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`, and `moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m` lock pressure-drop branches as candidate-only, while `wojtan_th3337_candidate_dryout_boundaries` locks `xdi`/`xde` as candidate-only; TH2978 rendered audit locks dryout-limit Eqs. (7.47)-(7.48) through `wojtan_th2978_candidate_dryout_limits`, while Eq. (7.49), WUT map transitions and Part II HTC still need OCR/manual or rendered-page audit | CANDIDATE_ONLY |
 | secondary formula candidates | `docs/secondary_formula_candidates.md`; `docs/source_gate_manifest.json`; `docs/formula_registry.md` | формулы из авторитетных вторичных источников помогают аудиту, но не снимают primary-source-only gate | SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED |
 | physics gap matrix | `docs/physics_gap_matrix.md` | сводный локальный документ по активной физике, источникам и незакрытым gap | ACADEMIC CONTEXT |
 | release-candidate status | `docs/release_candidate_status.md` | source-gated release-candidate решение и полный pytest от 2026-07-06 | ACADEMIC / RELEASE CONTEXT |
@@ -2242,10 +2265,27 @@ Checkpoint 9 добавляет отдельный алгоритм `critical_lo
 Chen 1962 / OSTI `10.2172/4636495` теперь отражён в metadata как
 `HTC-CHEN-1962-SOURCE-CANDIDATE`, потому что официальный полный текст найден.
 Однако применимость к текущей постановке ГЕТ, переменные, ограничения,
-константы, reference cases и соглашения по насыщенному кипению ещё не
-перенесены в `docs/formula_registry.md` как released runtime-модель. Поэтому
-выбор `heat_transfer_model="chen_1962_source_candidate"` должен оставаться
+константы, source/reference cases и соглашения по насыщенному кипению ещё не
+перенесены в `docs/formula_registry.md` как released runtime-модель. В коде
+есть только candidate helper
+`boiling_heat_transfer.chen_1962_candidate_heat_transfer_coefficient_si`,
+а также candidate-only axis helpers
+`boiling_heat_transfer.chen_1962_candidate_inverse_martinelli_parameter` и
+`boiling_heat_transfer.chen_1962_candidate_two_phase_reynolds`, а также
+`boiling_heat_transfer.chen_1962_candidate_flow_boiling_heat_transfer_coefficient_si`,
+которые проверяют перенос исходных единиц Chen 1962 в SI, оси графиков и ручной
+контрольный расчёт. Арифметический ledger
+`docs/chen_1962_hand_calculation_2026-07-08.md` документирует direct Eqs.
+(9)/(17)/(18) и graph-to-SI composition как candidate-only fixture, а не как
+экспериментальный pointwise HTC из отчёта. Поэтому выбор
+`heat_transfer_model="chen_1962_source_candidate"` должен оставаться
 source-gated diagnostic branch, а не расчётом HTC, dryout или CHF.
+
+`docs/chen_1962_reference_value_audit_2026-07-08.md` separately records that
+Tables I/II and Figs. 9/10 do not provide a printed pointwise HTC table.
+`docs/chen_1962_scope_audit_2026-07-08.md` separately fixes the source-based
+release scope as vertical heated axial flow only and records that the current
+horizontal evaporator is unsupported.
 
 ## 18.10. Вторичные формульные кандидаты
 
@@ -2284,12 +2324,15 @@ formula transcriptions. Они остаются bibliographic/source-gate object
 После source-audit pass добавлен машинный слой `source_gate_pipeline.py`.
 Он не является физической моделью и не даёт коэффициенты для runtime. Его роль -
 сделать научный backlog проверяемым: каждый source-gate получает
-`current_blocking_stage`, `release_criteria`, `action_pipeline`,
-`audit_documents`, acquisition hints и `next_priorities`. Тот же отчёт доступен
-как JSON через `/api/source-gates`, поэтому UI или внешний клиент могут показать
-не просто общий `source_required`, а конкретное недостающее доказательство:
-полный текст, SHA256 inventory, formula/scope audit, runtime adapter, reference
-tests или released manifest decision.
+`current_blocking_stage`, `release_criteria`, `release_basis`,
+`allowed_release_bases`, `audited_source_ref`, `audited_equations`,
+`source_scope`, `source_limitations`, `audit_stage`, `action_pipeline`,
+`audit_documents`, acquisition hints, `parallel_work_orders` и
+`next_priorities`. Тот же отчёт доступен как JSON через `/api/source-gates`,
+поэтому UI или внешний клиент могут показать не просто общий `source_required`,
+а конкретное недостающее доказательство: полный текст, SHA256 inventory,
+formula/scope audit, runtime adapter, reference tests, released manifest decision
+или выбранное академическое основание release.
 
 Текущее состояние отчёта `python -m source_gate_pipeline --pretty`:
 
@@ -2297,31 +2340,93 @@ tests или released manifest decision.
 | --- | ---: | --- |
 | `candidate_local_intake_ready` | 1 | Chen/OSTI 1962 local PDF принят, но formula/scope audit и reference tests не закрыты. |
 | `blocked_primary_source_required_secondary_available` | 3 | MSH, Friedel и Taitel-Dukler имеют secondary guidance, но primary full text отсутствует. |
-| `blocked_primary_source_required_dissertation_candidate_available` | 2 | WUT Part I/II имеют EPFL dissertation guidance, но journal gates или dissertation-specific release path не закрыты. |
+| `blocked_primary_source_required_dissertation_candidate_available` | 2 | WUT Part I/II имеют EPFL dissertation guidance, но journal gates или named dissertation `release_basis` path не закрыты. |
 | `blocked_primary_source_required` | 3 | Zuber-Findlay, Kandlikar и Gungor-Winterton требуют acquisition of authorized full text. |
+
+Текущие допустимые значения `release_basis`: `journal_article`,
+`conference_paper`, `technical_report`, `dissertation`, `monograph`, `handbook`
+и `archival_scan`. Chen/OSTI 1962 ведётся как `technical_report`, Friedel
+ориентирован на `conference_paper`, большинство остальных gates ожидают
+`journal_article`; альтернативы из диссертации, монографии, handbook или скана
+должны быть явно зафиксированы и аудированы в manifest.
 
 Локальные full-text candidates сейчас делятся на три категории:
 
 - `HTC-CHEN-1962-SOURCE-CANDIDATE`: OSTI PDF локально принят и записан в
   `docs/primary_source_inventory.md`; `docs/chen_1962_formula_audit_2026-07-06.md`
-  фиксирует структуру Eq. (9) и Eq. (18), но Eq. (17), графические функции
-  `F(X_tt)`/`S(Re_tp)`, SI mapping и reference HTC tests остаются blockers.
+  фиксирует scan-verified Eqs. (9), (17), (18), а
+  `docs/chen_1962_graph_digitization_2026-07-07.md` фиксирует candidate-only
+  оцифровку графических функций `F(X_tt)`/`S(Re_tp)`;
+  `docs/chen_1962_graph_review_2026-07-08.md` проверяет rendered-page overlay
+  and graph-fit residual as candidate evidence;
+  `docs/chen_1962_si_mapping_2026-07-07.md` фиксирует candidate-only source-unit
+  mapping/helper, включая
+  `boiling_heat_transfer.chen_1962_candidate_heat_transfer_coefficient_si`,
+  `boiling_heat_transfer.chen_1962_candidate_inverse_martinelli_parameter` and
+  `boiling_heat_transfer.chen_1962_candidate_two_phase_reynolds`, plus
+  `boiling_heat_transfer.chen_1962_candidate_flow_boiling_heat_transfer_coefficient_si`.
+  `docs/chen_1962_hand_calculation_2026-07-08.md` фиксирует direct and graph-to-SI
+  арифметику этих helpers. Эти helpers являются проверкой переноса формул, осей
+  графиков и единиц, а не released runtime HTC. `docs/chen_1962_reference_value_audit_2026-07-08.md`
+  confirms that the audited report pages do not print pointwise HTC reference
+  cases, while `docs/chen_1962_scope_audit_2026-07-08.md` limits any
+  source-based release to vertical heated axial flow and leaves the current
+  horizontal evaporator unsupported. Accepted graph uncertainty,
+  released vertical-only geometry/domain guard, helper-to-runtime mapping и
+  source/reference HTC tests остаются blockers.
 - `DISS-MORENO-QUIBEN-2005-EPFL-TH3337`: локальный dissertation candidate даёт
   page-level guidance для Friedel Eqs. (4.40)-(4.47), MSH Eqs. (4.53)-(4.56),
-  pressure-drop flow-pattern skeleton и WUT dryout boundaries `xdi`/`xde`.
+  pressure-drop flow-pattern skeleton, annular pressure-drop branch Eq. (7.4)/(7.5),
+  slug/intermittent pressure-drop branch Eq. (7.6)/(7.12),
+  mist pressure-drop branch Eq. (7.13)-(7.17), dryout pressure-drop interpolation
+  Eq. (7.18), stratified-wavy pressure-drop branch Eq. (7.9)-(7.11) и
+  WUT dryout boundaries `xdi`/`xde`.
+  Candidate helpers `published_friction.friedel_th3337_candidate_two_phase_multiplier`,
+  `published_friction.friedel_th3337_candidate_pressure_gradient_pa_per_m` и
+  `published_friction.muller_steinhagen_heck_th3337_candidate_pressure_gradient_pa_per_m`
+  фиксируют эти формулы для audit/regression use. Отдельно
+  `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md` и
+  `published_friction.moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`
+  фиксируют candidate-only annular pressure-drop branch Eq. (7.4)/(7.5);
+  `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md` и
+  `published_friction.moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`
+  фиксируют candidate-only mist pressure-drop branch Eq. (7.13)-(7.17);
+  `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md` и
+  `published_friction.moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`
+  фиксируют candidate-only slug/intermittent pressure-drop branch Eq. (7.6)/(7.12);
+  `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md` и
+  `published_friction.moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`
+  фиксируют candidate-only dryout pressure-drop interpolation Eq. (7.18);
+  `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md` и
+  `published_friction.moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m`
+  фиксируют candidate-only stratified-wavy pressure-drop branch Eq. (7.9)-(7.11). Это
+  pressure-drop guidance, а не WUT/HTC release. Отдельно
+  `docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md` и
+  `boiling_heat_transfer.wojtan_th3337_candidate_dryout_boundaries` фиксируют
+  candidate-only transcription of TH3337/WUT dryout inception/completion
+  qualities `xdi`/`xde`.
   Это `candidate_only` evidence: оно помогает сверке, но не release MSH/Friedel
-  gates без первичной статьи или отдельного dissertation-release решения.
+  gates, WUT Part I/Part II gates, dryout, CHF, or HTC runtime logic без
+  первичной статьи или отдельного `release_basis="dissertation"` решения с
+  `audited_source_ref`, `audited_equations`, scope/limitations и reference tests.
 - `DISS-WOJTAN-2004-EPFL-TH2978`: локальный dissertation candidate подтверждает
-  WUT/Thome context, но equation text layer частично custom-encoded. Для release
-  WUT Part I/II нужен target journal full text или OCR/manual audit с explicit
-  release decision и reference tests.
+  WUT/Thome context, а `docs/wojtan_th2978_text_layer_audit_2026-07-08.md`
+  фиксирует custom-encoded text-layer blocker. Rendered-page follow-up
+  `docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md` подтверждает
+  dryout-limit Eqs. (7.47)-(7.48) and the helper
+  `boiling_heat_transfer.wojtan_th2978_candidate_dryout_limits` only as
+  candidate evidence. Eq. (7.49), WUT map transitions and Part II HTC equations
+  still require target journal full text or OCR/manual audit with explicit
+  `release_basis`, `audited_source_ref`, `audited_equations`, scope/limitations,
+  release decision and reference tests.
 
 Практическое следствие для интерпретации результатов: `model_source_status` и
 `source_gate_reasons` остаются runtime diagnostic fields. Они не превращают
 source-gated branch в released published physics. Снятие любого gate по-прежнему
-требует полного первоисточника или явно принятого dissertation-specific release
-path, страницы/уравнения, SI mapping, domain limits, reference tests и обновлённый
-`docs/source_gate_manifest.json`.
+требует полного первоисточника или явно принятого dissertation/monograph/handbook
+или archival-scan `release_basis`, `audited_source_ref`, `audited_equations`,
+`source_scope`, `source_limitations`, SI mapping, domain limits, reference tests и
+обновлённый `docs/source_gate_manifest.json`.
 
 # 19. Область корректного применения
 
@@ -2391,8 +2496,8 @@ wall/soil boundary inputs при `wall_coupled`, выбранную модель
 - diagnostic-only boiling/dryout scaffold, который не смешивает численную несходимость с кризисом теплообмена;
 - opt-in `ishkov_superheat` onset model с явным источником, пользовательским
   перегревом и отчётным перепадом давления конденсатора;
-- Chen 1962 / OSTI source-candidate metadata без преждевременного выпуска HTC,
-  dryout или CHF correlation;
+- Chen 1962 / OSTI source-candidate metadata и hand-calculation ledger без
+  преждевременного выпуска HTC, dryout или CHF correlation;
 - пользовательская `wall_coupled` boundary condition для пересчёта температуры грунтового слоя и эффективной линейной проводимости в \(q_\ell\);
 - агрегированный `model_source_status` и список `source_gate_reasons`, которые не дают перепутать published fallback closure с полностью реализованной published-физикой;
 - отдельный `critical_loads.py`, который не объявляет максимальную сошедшуюся точку сетки физическим qcrit и отдельно проверяет предел \(f=0\);
@@ -2581,7 +2686,7 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 
 9. Zuber N., Findlay J. A. Average volumetric concentration in two-phase flow systems // Journal of Heat Transfer. 1965. Vol. 87, no. 4. P. 453–468. DOI: [10.1115/1.3689137](https://doi.org/10.1115/1.3689137).
 
-10. Taitel Y., Barnea D., Dukler A. E. Modeling flow pattern transitions for steady upward gas-liquid flow in vertical tubes // AIChE Journal. 1980. Vol. 26, no. 3. P. 345–354. DOI: [10.1002/aic.690260304](https://doi.org/10.1002/aic.690260304).
+10. Taitel Y., Barnea D., Dukler A. E. Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes // AIChE Journal. 1980. Vol. 26, no. 3. P. 345–354. DOI: [10.1002/aic.690260304](https://doi.org/10.1002/aic.690260304).
 
 11. Wojtan L., Ursenbacher T., Thome J. R. Investigation of flow boiling in horizontal tubes: Part I — A new diabatic two-phase flow pattern map // International Journal of Heat and Mass Transfer. 2005. Vol. 48, no. 14. P. 2955–2969. DOI: [10.1016/j.ijheatmasstransfer.2004.12.012](https://doi.org/10.1016/j.ijheatmasstransfer.2004.12.012).
 
@@ -2591,7 +2696,7 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 
 14. Lemmon E. W. Thermophysical Properties of Selected Fluids at Saturation // CRC Handbook of Chemistry and Physics. 2010. [NIST publication](https://www.nist.gov/publications/thermophysical-properties-selected-fluids-saturation); [NIST REFPROP](https://www.nist.gov/programs-projects/reference-fluid-thermodynamic-and-transport-properties-database-refprop).
 
-15. Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase pipe flow // European Two-Phase Flow Group Meeting. Ispra, Italy, 1979. Paper E2.
+15. Friedel L. Improved friction pressure drop correlations for horizontal and vertical two-phase flow // 3R Int. 1979. Vol. 18, no. 7. P. 485. Bibliographic breadcrumb from the MSH 1986 Crossref reference list; archival full text is still required.
 
 16. Müller-Steinhagen H., Heck K. A simple friction pressure drop correlation for two-phase flow in pipes // Chemical Engineering and Processing. 1986. Vol. 20, no. 6. P. 297–308. DOI: [10.1016/0255-2701(86)80008-3](https://doi.org/10.1016/0255-2701%2886%2980008-3).
 
@@ -2615,7 +2720,7 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 
 26. Gao K., Wu J., Bell I. H., Lemmon E. W. Thermodynamic Properties of Ammonia for Temperatures from the Melting Line to 725 K and Pressures to 1000 MPa // Journal of Physical and Chemical Reference Data. 2020. Указано в документации CoolProp как equation-of-state reference для Ammonia.
 
-27. Open-web аудит source-gate источников. Локальные документы проекта: [docs/source_audit_open_web_2026-07-04.md](source_audit_open_web_2026-07-04.md), [docs/source_audit_open_web_2026-07-05.md](source_audit_open_web_2026-07-05.md).
+27. Open-web аудит source-gate источников. Локальные документы проекта: [docs/source_audit_open_web_2026-07-04.md](source_audit_open_web_2026-07-04.md), [docs/source_audit_open_web_2026-07-05.md](source_audit_open_web_2026-07-05.md), [docs/source_endpoint_refresh_2026-07-07.md](source_endpoint_refresh_2026-07-07.md), [docs/source_endpoint_refresh_2026-07-08.md](source_endpoint_refresh_2026-07-08.md).
 
 28. Source-gate manifest. Локальный структурированный manifest проекта: [docs/source_gate_manifest.json](source_gate_manifest.json).
 
@@ -2629,10 +2734,25 @@ Designer, REST API, web UI и демонстрационный Markdown-отчё
 32. Source-gate closure pipeline и unresolved questions register. Локальные
 документы проекта: [docs/milestone_closure_pipeline.md](milestone_closure_pipeline.md),
 [docs/source_gate_unresolved_questions.md](source_gate_unresolved_questions.md);
-машинный отчёт: `python -m source_gate_pipeline --pretty`; API:
-`/api/source-gates`.
+машинный отчёт: `python -m source_gate_pipeline --pretty` с
+`parallel_work_orders`, `release_basis` и `audit_stage`; API: `/api/source-gates`.
 
 33. Candidate-only formula audits по локальным full-text источникам. Локальные
 документы проекта:
 [docs/chen_1962_formula_audit_2026-07-06.md](chen_1962_formula_audit_2026-07-06.md),
-[docs/dissertation_formula_audit_2026-07-06.md](dissertation_formula_audit_2026-07-06.md).
+[docs/chen_1962_graph_digitization_2026-07-07.md](chen_1962_graph_digitization_2026-07-07.md),
+[docs/chen_1962_graph_review_2026-07-08.md](chen_1962_graph_review_2026-07-08.md),
+[docs/chen_1962_si_mapping_2026-07-07.md](chen_1962_si_mapping_2026-07-07.md),
+[docs/chen_1962_hand_calculation_2026-07-08.md](chen_1962_hand_calculation_2026-07-08.md),
+[docs/chen_1962_validation_tables_2026-07-07.md](chen_1962_validation_tables_2026-07-07.md),
+[docs/chen_1962_reference_value_audit_2026-07-08.md](chen_1962_reference_value_audit_2026-07-08.md),
+[docs/chen_1962_scope_audit_2026-07-08.md](chen_1962_scope_audit_2026-07-08.md),
+[docs/dissertation_formula_audit_2026-07-06.md](dissertation_formula_audit_2026-07-06.md),
+[docs/wojtan_th2978_text_layer_audit_2026-07-08.md](wojtan_th2978_text_layer_audit_2026-07-08.md),
+[docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md](wojtan_th2978_rendered_dryout_audit_2026-07-08.md),
+[docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md](moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md),
+[docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md](moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md),
+[docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md](moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md),
+[docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md](moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md),
+[docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md](moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md),
+[docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md](wojtan_th3337_dryout_boundary_audit_2026-07-07.md).

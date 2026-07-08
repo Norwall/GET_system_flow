@@ -38,6 +38,13 @@ class SourceGatePipelineItem:
     local_file_exists: bool
     local_sha256_status: str
     release_state: str
+    release_basis: str
+    allowed_release_bases: tuple[str, ...]
+    audited_source_ref: str
+    audited_equations: tuple[str, ...]
+    source_scope: str
+    source_limitations: tuple[str, ...]
+    audit_stage: str
     next_action: str
     acquisition_hint: str
     audit_documents: tuple[str, ...]
@@ -61,6 +68,13 @@ class SourceGatePipelineItem:
             "local_file_exists": self.local_file_exists,
             "local_sha256_status": self.local_sha256_status,
             "release_state": self.release_state,
+            "release_basis": self.release_basis,
+            "allowed_release_bases": list(self.allowed_release_bases),
+            "audited_source_ref": self.audited_source_ref,
+            "audited_equations": list(self.audited_equations),
+            "source_scope": self.source_scope,
+            "source_limitations": list(self.source_limitations),
+            "audit_stage": self.audit_stage,
             "next_action": self.next_action,
             "acquisition_hint": self.acquisition_hint,
             "audit_documents": list(self.audit_documents),
@@ -107,6 +121,7 @@ def source_gate_report(project_root: Path = Path(".")) -> dict[str, Any]:
         "source_gates": [item.to_dict() for item in items],
         "milestone_groups": _milestone_groups(items),
         "action_pipeline": _action_pipeline_summary(items),
+        "parallel_work_orders": _parallel_work_orders(items),
         "next_priorities": _next_priorities(items),
     }
 
@@ -173,6 +188,13 @@ def _pipeline_item_for_entry(
         local_file_exists=local_file_exists,
         local_sha256_status=sha_status,
         release_state=release_state,
+        release_basis=str(entry.get("release_basis", "")),
+        allowed_release_bases=_allowed_release_bases(entry),
+        audited_source_ref=str(entry.get("audited_source_ref", "")),
+        audited_equations=tuple(str(item) for item in entry.get("audited_equations", ())),
+        source_scope=str(entry.get("source_scope", "")),
+        source_limitations=tuple(str(item) for item in entry.get("source_limitations", ())),
+        audit_stage=_audit_stage(action_pipeline, release_state),
         next_action=next_action,
         acquisition_hint=_acquisition_hint(entry),
         audit_documents=_audit_documents(entry),
@@ -202,12 +224,40 @@ def _release_state_and_next_action(
     if decision == "released":
         if evidence_status != "audited":
             return "blocked_released_without_audited_evidence", "Set evidence_status='audited' only after source audit."
+        if not entry.get("local_full_text_ref"):
+            return "blocked_released_without_local_source_ref", "Point local_full_text_ref to sources/primary/..."
         if not local_file:
             return "blocked_released_without_local_source_ref", "Point local_full_text_ref to sources/primary/..."
         if not local_file_exists:
             return "blocked_released_local_source_missing", "Restore the audited local source file before release."
+        if inventory_row is None:
+            return "blocked_released_without_inventory", "Record the audited source in docs/primary_source_inventory.md."
         if sha_status != "matches_inventory":
             return "blocked_released_sha256_mismatch", "Update or fix docs/primary_source_inventory.md SHA256."
+        if inventory_row.decision != "audited_release":
+            return (
+                "blocked_released_inventory_not_audited",
+                "Set inventory decision to audited_release only after page/equation audit and tests.",
+            )
+        if not str(entry.get("release_basis", "")):
+            return "blocked_released_without_release_basis", "Record the audited release_basis."
+        audited_source_ref = str(entry.get("audited_source_ref", ""))
+        if not audited_source_ref.startswith("sources/primary/"):
+            return (
+                "blocked_released_without_audited_source_ref",
+                "Record audited_source_ref under sources/primary/ before release.",
+            )
+        if not entry.get("audited_equations"):
+            return "blocked_released_without_audited_equations", "List audited page/equation references before release."
+        if not str(entry.get("source_scope", "")):
+            return "blocked_released_without_source_scope", "Record the released model scope before release."
+        if not entry.get("source_limitations"):
+            return (
+                "blocked_released_without_source_limitations",
+                "Record source limitations and unsupported cases before release.",
+            )
+        if not entry.get("required_tests_before_release"):
+            return "blocked_released_without_reference_tests", "Add source-based reference tests before release."
         return "released_source_complete", "Keep registry, manifest, inventory and reference tests in sync."
 
     if decision == "source_candidate":
@@ -299,6 +349,32 @@ def _strip_markdown_code(value: str) -> str:
     return text
 
 
+def _allowed_release_bases(entry: dict[str, Any]) -> tuple[str, ...]:
+    values = entry.get("allowed_release_bases")
+    if isinstance(values, list):
+        return tuple(str(value) for value in values if value)
+    release_basis = str(entry.get("release_basis", ""))
+    return (release_basis,) if release_basis else ()
+
+
+def _audit_stage(
+    action_pipeline: tuple[dict[str, str], ...],
+    release_state: str,
+) -> str:
+    if release_state == "released_source_complete":
+        return "released"
+    stage_map = {
+        "identify_primary_record": "identify_primary_record",
+        "obtain_full_text": "source_acquisition",
+        "local_intake": "local_intake",
+        "audit_formulas_and_limits": "formula_scope_audit",
+        "implement_runtime_adapter": "runtime_implementation",
+        "add_reference_tests": "reference_testing",
+        "release_source_gate": "manifest_release",
+    }
+    return stage_map.get(_current_blocking_stage(action_pipeline), "unknown")
+
+
 def _primary_record_urls(entry: dict[str, Any]) -> tuple[str, ...]:
     urls: list[str] = []
     primary_record = entry.get("primary_record", {})
@@ -328,6 +404,11 @@ def _audit_documents(entry: dict[str, Any]) -> tuple[str, ...]:
     candidate_audit = entry.get("source_candidate_audit_document")
     if isinstance(candidate_audit, str) and candidate_audit:
         documents.append(candidate_audit)
+    candidate_audits = entry.get("source_candidate_audit_documents", ())
+    if isinstance(candidate_audits, list):
+        for audit_document in candidate_audits:
+            if isinstance(audit_document, str) and audit_document:
+                documents.append(audit_document)
     for candidate in entry.get("dissertation_candidates", ()):
         if not isinstance(candidate, dict):
             continue
@@ -335,8 +416,9 @@ def _audit_documents(entry: dict[str, Any]) -> tuple[str, ...]:
         if not isinstance(audit_note, str):
             continue
         for part in audit_note.replace(";", " ").split():
-            if part.startswith("docs/") and part.endswith(".md"):
-                documents.append(part.rstrip(".,"))
+            candidate_document = part.rstrip(".,")
+            if candidate_document.startswith("docs/") and candidate_document.endswith(".md"):
+                documents.append(candidate_document)
     return tuple(dict.fromkeys(documents))
 
 
@@ -350,8 +432,8 @@ def _acquisition_hint(entry: dict[str, Any]) -> str:
         )
     if source_id == "HTC-CHEN-1962-SOURCE-CANDIDATE":
         return (
-            "Local OSTI PDF is present; next work is equation/table/figure audit, digitizing graphical F/S functions, "
-            "and reference HTC tests before runtime release."
+            "Local OSTI PDF is present; Eqs. (9), (17), and (18) are scan-verified. Next work is "
+            "deciding whether the rendered F/S graph review and hand calculation can become release proof after the reference-value audit found no printed pointwise HTC table, then adding reference HTC tests before runtime release."
         )
     if isinstance(primary_record, dict):
         endpoint = (
@@ -532,6 +614,26 @@ def _action_pipeline_summary(items: Iterable[SourceGatePipelineItem]) -> list[di
     ]
 
 
+def _parallel_work_orders(items: Iterable[SourceGatePipelineItem]) -> list[dict[str, Any]]:
+    return [
+        {
+            "source_id": item.source_id,
+            "release_state": item.release_state,
+            "release_basis": item.release_basis,
+            "allowed_release_bases": list(item.allowed_release_bases),
+            "current_blocking_stage": item.current_blocking_stage,
+            "audit_stage": item.audit_stage,
+            "next_action": item.next_action,
+            "acquisition_hint": item.acquisition_hint,
+            "required_audit_checks": list(item.required_audit_checks),
+            "required_tests_before_release": list(item.required_tests_before_release),
+            "blocking_reasons": list(item.blocking_reasons),
+        }
+        for item in sorted(items, key=lambda item: item.source_id)
+        if item.release_state != "released_source_complete"
+    ]
+
+
 def _policy_documents(manifest: dict[str, Any]) -> list[str]:
     policy = manifest.get("policy", {})
     documents: list[str] = []
@@ -615,6 +717,13 @@ def _milestone_groups(items: Iterable[SourceGatePipelineItem]) -> list[dict[str,
                 "title": title,
                 "count": len(group_items),
                 "source_ids": [item.source_id for item in group_items],
+                "allowed_release_bases": sorted(
+                    {
+                        release_basis
+                        for item in group_items
+                        for release_basis in item.allowed_release_bases
+                    }
+                ),
                 "next_action": next_action,
                 "required_proof": required_proof,
                 "audit_documents": sorted(
@@ -622,11 +731,28 @@ def _milestone_groups(items: Iterable[SourceGatePipelineItem]) -> list[dict[str,
                         audit_document
                         for item in group_items
                         for audit_document in item.audit_documents
-                    }
+                    },
+                    key=_audit_document_group_sort_key,
                 ),
             }
         )
     return groups
+
+
+def _audit_document_group_sort_key(audit_document: str) -> tuple[int, str]:
+    chen_order = {
+        "docs/chen_1962_formula_audit_2026-07-06.md": 0,
+        "docs/chen_1962_graph_digitization_2026-07-07.md": 1,
+        "docs/chen_1962_graph_review_2026-07-08.md": 2,
+        "docs/chen_1962_hand_calculation_2026-07-08.md": 3,
+        "docs/chen_1962_reference_value_audit_2026-07-08.md": 4,
+        "docs/chen_1962_si_mapping_2026-07-07.md": 5,
+        "docs/chen_1962_scope_audit_2026-07-08.md": 6,
+        "docs/chen_1962_validation_tables_2026-07-07.md": 7,
+    }
+    if audit_document in chen_order:
+        return (chen_order[audit_document], audit_document)
+    return (100, audit_document)
 
 
 def _next_priorities(items: Iterable[SourceGatePipelineItem]) -> list[dict[str, Any]]:
@@ -648,6 +774,9 @@ def _next_priorities(items: Iterable[SourceGatePipelineItem]) -> list[dict[str, 
         {
             "source_id": item.source_id,
             "release_state": item.release_state,
+            "release_basis": item.release_basis,
+            "allowed_release_bases": list(item.allowed_release_bases),
+            "audit_stage": item.audit_stage,
             "next_action": item.next_action,
             "acquisition_hint": item.acquisition_hint,
             "audit_documents": list(item.audit_documents),

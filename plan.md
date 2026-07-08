@@ -877,6 +877,124 @@ candidate на базе коммита `974c1e3 Improve boiling onset source tra
 `pytest tests/test_formula_registry.py tests/test_source_gate_manifest.py -q`
 прошла: 151 passed.
 
+Статус Wojtan TH2978 text-layer audit от 2026-07-08:
+`docs/wojtan_th2978_text_layer_audit_2026-07-08.md`,
+`docs/dissertation_formula_audit_2026-07-06.md`,
+`docs/primary_source_inventory.md`, `docs/source_gate_manifest.json`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют, что text layer pages 172-183 даёт только figure-level `hexp`/`xdi`/`xde`,
+HTC axes и dryout labels. WUT Part I/II formulas остаются OCR/manual blockers;
+runtime WUT/dryout/HTC gates не сняты.
+
+Статус Wojtan TH2978 rendered dryout audit от 2026-07-08:
+`docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md`,
+`docs/formula_registry.md`, `docs/source_gate_manifest.json`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют rendered-page candidate transcription для dryout-limit Eqs. (7.47)-(7.48).
+Кодовый helper `boiling_heat_transfer.wojtan_th2978_candidate_dryout_limits`
+закрывает только audit/regression fixture (`xdi = 0.5047352096`,
+`xde = 0.9791233757`); Eq. (7.49), WUT map transitions, Part II HTC,
+runtime dryout и CHF gates не сняты.
+
+Статус WUT/TH3337 dryout-boundary candidate lock от 2026-07-07:
+`docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют `xdi`/`xde` transcription как `candidate_only`. Кодовый helper
+`boiling_heat_transfer.wojtan_th3337_candidate_dryout_boundaries` нужен только
+для audit/regression use; runtime `dryout_limit` остается
+`not_evaluated_source_required`, WUT Part I/II, CHF и HTC gates не сняты.
+
+Статус Moreno Quiben TH3337 annular pressure-drop candidate lock от 2026-07-07:
+`docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют Eq. (7.4)/(7.5) как `candidate_only`. Кодовый helper
+`published_friction.moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`
+нужен только для audit/regression use; MSH/Friedel/WUT/HTC runtime gates не
+сняты.
+
+Статус Moreno Quiben TH3337 mist pressure-drop candidate lock от 2026-07-07:
+`docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют Eq. (7.13)-(7.17) как `candidate_only`. Кодовый helper
+`published_friction.moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`
+нужен только для audit/regression use; MSH/Friedel/WUT/HTC runtime gates не
+сняты.
+
+Статус Moreno Quiben TH3337 dryout pressure-drop candidate lock от 2026-07-07:
+`docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют Eq. (7.18) как `candidate_only`. Кодовый helper
+`published_friction.moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`
+нужен только для audit/regression use; MSH/Friedel/WUT/HTC runtime gates не
+сняты.
+
+Статус Moreno Quiben TH3337 slug/intermittent pressure-drop candidate lock от
+2026-07-07: `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют Eq. (7.6)/(7.12) как `candidate_only`. Кодовый helper
+`published_friction.moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`
+нужен только для audit/regression use; MSH/Friedel/WUT/HTC runtime gates не
+сняты.
+
+Статус Moreno Quiben TH3337 stratified-wavy pressure-drop candidate lock от
+2026-07-08: `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md`,
+`docs/formula_registry.md`, `docs/primary_source_inventory.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют Eq. (7.9)-(7.11) как `candidate_only`. Кодовый helper
+`published_friction.moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m`
+нужен только для audit/regression use; MSH/Friedel/WUT/HTC runtime gates не
+сняты.
+
+Статус endpoint/OA refresh от 2026-07-08:
+`docs/source_endpoint_refresh_2026-07-08.md`,
+`docs/source_gate_manifest.json`, `README.md` и академическая справка
+фиксируют повторную DOI/Crossref/OpenAlex/publisher/EPFL/OSTI проверку.
+MSH, Friedel, Zuber-Findlay, Taitel-Barnea-Dukler, WUT Part I/II,
+Kandlikar и Gungor-Winterton остались acquisition-blocked: найденная
+библиография и landing pages не являются releasable full text. Chen/OSTI
+подтверждён только как `source_candidate`, без runtime HTC release.
+
+Статус Chen 1962 hand-calculation ledger от 2026-07-08:
+`docs/chen_1962_hand_calculation_2026-07-08.md`,
+`docs/source_gate_manifest.json`, `docs/formula_registry.md`,
+`docs/primary_source_inventory.md`, `README.md` и академическая справка
+синхронизированы. Ledger фиксирует candidate-only арифметику direct
+Eqs. (9)/(17)/(18), source-unit/SI conversion и graph-to-SI composition для
+Chen helper, но не является pointwise reference HTC из первоисточника и не
+снимает `HTC-CHEN-1962-SOURCE-CANDIDATE`.
+
+Статус Chen 1962 reference-value audit от 2026-07-08:
+`docs/chen_1962_reference_value_audit_2026-07-08.md` закрывает узкий
+вопрос поиска printed pointwise HTC values в локальном OSTI отчете: audited
+pages 4, 6, 10-16, 20-25 and 32-35 give formulas, applicability, Tables I/II
+and plots, but no printed pointwise HTC reference table. Gate remains blocked
+until release-grade hand calculation is accepted or another primary-source
+pointwise case is acquired.
+
+Статус Chen 1962 scope audit от 2026-07-08:
+`docs/chen_1962_scope_audit_2026-07-08.md`,
+`docs/source_gate_manifest.json`, `docs/source_gate_unresolved_questions.md`,
+`README.md` и академическая справка фиксируют максимальную source-based
+область release как vertical heated axial flow with `0.01 <= x <= 0.70`.
+Текущий горизонтальный испаритель не поддержан этим первоисточником; runtime
+adapter всё ещё требует explicit vertical-only geometry/domain guard,
+source/reference HTC proof и separate dryout/CHF guard.
+
+Статус Chen 1962 rendered graph review от 2026-07-08:
+`docs/chen_1962_graph_review_2026-07-08.md`,
+`docs/source_gate_manifest.json`, `docs/formula_registry.md`,
+`docs/source_gate_unresolved_questions.md`, `README.md` и академическая справка
+фиксируют второй проход по rendered Fig. 7/8 overlay для `F/S`. Этот review
+закрывает вопрос "сверена ли candidate digitization с рендером первоисточника",
+но не снимает HTC gate: требуется accepted uncertainty decision или authoritative
+table, helper-to-runtime mapping, source/reference HTC proof и separate dryout/CHF
+guard.
+
 ## 18. Критерии завершения всей доработки
 
 - [x] CO₂ Mathcad-compatible ветка воспроизводит старые baseline-тесты.
@@ -888,7 +1006,12 @@ candidate на базе коммита `974c1e3 Improve boiling onset source tra
 - [x] Для будущего снятия source-gate задан локальный audit trail:
   `sources/primary/`, `docs/primary_source_inventory.md`,
   `docs/source_gate_manifest.json` и тесты требуют полный текст, SHA256,
-  страницы/уравнения и reference-тесты до runtime-release.
+  страницы/уравнения, `release_basis`, `audited_source_ref`,
+  `audited_equations`, `source_scope`, `source_limitations` и
+  reference-тесты до runtime-release.
+- [x] Source-gate pipeline/API показывают полный академический backlog:
+  `parallel_work_orders`, `audit_stage`, `allowed_release_bases`,
+  `release_basis` и `next_priorities`.
 - [x] Для вторичных формульных находок задан отдельный academic layer:
   `docs/secondary_formula_candidates.md` и статус
   `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED`; эти записи не снимают source-gate.

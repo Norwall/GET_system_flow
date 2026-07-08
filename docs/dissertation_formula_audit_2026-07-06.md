@@ -44,12 +44,39 @@ guidance. These formulas remain dissertation/secondary guidance only: Friedel
 and Muller-Steinhagen-Heck still require the target primary paper or archival
 scan before runtime release.
 
+The 2026-07-07 reproducibility check used `pypdf` against the local file
+`sources/primary/moreno_quiben_2005_epfl_th3337.pdf`. It confirmed that PDF
+text pages 64-66 expose the Friedel section, Eqs. (4.40)-(4.47), and the
+Muller-Steinhagen and Heck section, Eqs. (4.53)-(4.56). The candidate helpers
+`published_friction.friedel_th3337_candidate_two_phase_multiplier`,
+`published_friction.friedel_th3337_candidate_pressure_gradient_pa_per_m`, and
+`published_friction.muller_steinhagen_heck_th3337_candidate_pressure_gradient_pa_per_m`
+lock down these TH3337 transcriptions for regression/audit work only. The
+annular branch of the thesis flow-pattern pressure-drop model is separately
+locked by
+`published_friction.moreno_quiben_th3337_candidate_annular_interfacial_friction_factor`,
+`published_friction.moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`,
+and `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md`.
+The mist branch is separately locked by
+`published_friction.moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`
+and `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md`.
+The dryout pressure-drop interpolation branch is separately locked by
+`published_friction.moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`
+and `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md`.
+The slug/intermittent and slug+stratified-wavy interpolation branch is
+separately locked by
+`published_friction.moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`
+and `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md`.
+The stratified-wavy branch is separately locked by
+`published_friction.moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m`
+and `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md`.
+
 | Scope | Candidate formulas extracted from TH3337 | Release limit |
 | --- | --- | --- |
 | Friedel pressure drop, pp. 64-65, Eqs. (4.40)-(4.47) | `Delta p_frict = Delta p_L0 * phi_f0^2`; `phi_f0^2 = E + 3.24 * F * H / (Fr_H^0.045 * We_L^0.035)`; `Fr_H = G^2/(g*D*rho_h^2)`; `E = (1-x)^2 + x^2*rho_L*f_G0/(rho_G*f_L0)`; `F = x^0.78*(1-x)^0.224`; `H = (rho_L/rho_G)^0.91*(mu_G/mu_L)^0.19*(1 - mu_G/mu_L)^0.7`; `We_L = G^2*D/(sigma*rho_h)`; `rho_h = (x/rho_G + (1-x)/rho_L)^-1`. TH3337 states applicability to vertical upflow and horizontal flow, `0 <= x < 1`, and good behavior when `mu_L/mu_G < 1000`. | Candidate guidance only. The Friedel 1979/1980 primary source must verify the exact exponents, multiplier naming, friction-factor convention, homogeneous density convention and applicability limits. |
 | Muller-Steinhagen-Heck pressure drop, p. 66, Eqs. (4.53)-(4.56) | `(dp/dz)_frict = F*(1-x)^(1/3) + B*x^3`; `F = A + 2*(B-A)*x`; `A = (dp/dz)_L0 = f_L0*2*G^2/(D*rho_L)`; `B = (dp/dz)_G0 = f_G0*2*G^2/(D*rho_G)`. TH3337 says the friction factors come from Eqs. (4.32)-(4.33), i.e. all-liquid/all-gas Reynolds-number forms. | Candidate guidance only. The MSH 1986 article must verify the exact interpolation, all-liquid/all-gas definitions, friction-factor convention and mass-flux convention. |
-| Flow-pattern pressure-drop model, pp. 119-125, Eqs. (7.1)-(7.23) | Annular region uses `Delta p/L = 4*tau_i/D`, `tau_i = f_i*rho_G*(u_G-u_L)^2/2 approx f_i*rho_G*u_G^2/2`, `(f_i)_annular = 0.67*(delta/(2R))^1.2*(((rho_L-rho_G)*g*delta^2)/sigma)^-0.4*(mu_G/mu_L)^0.08*We_L^-0.034`, and `(Delta p)_annular = 4*(f_i)_annular*(L/D)*rho_G*u_G^2/2`. Slug/intermittent and slug/stratified-wavy use void-fraction interpolation to the annular or stratified-wavy branch. Mist uses homogeneous density/void fraction and Cicchitti viscosity. Dryout uses linear interpolation between `xdi` and `xde`. Stratified uses `theta_strat`/`theta_dry`-weighted friction factors. | This is Moreno Quiben's thesis pressure-drop model, not a WUT Part I/II release. It is useful for identifying WUT map dependencies and test cases, but runtime release requires an explicit scope decision and reference tests. |
-| Dryout boundaries cited in TH3337 pressure-drop model, p. 124, Eqs. (7.19)-(7.20) | `xdi = 0.58*exp(0.52 - 0.235*We_G^0.17*Fr_G^0.37*(rho_G/rho_L)^0.25*(q/qcrit)^0.70)`; `xde = 0.61*exp(0.57 - 5.8e-3*We_G^0.38*Fr_G^0.15*(rho_G/rho_L)^-0.09*(q/qcrit)^0.27)`. TH3337 states these are equivalent to Eqs. (3.54) and (3.55), proposed by Wojtan et al. | Candidate dryout-boundary guidance only. It does not release project dryout/CHF logic or WUT Part II heat-transfer logic without primary-source audit and tests. |
+| Flow-pattern pressure-drop model, pp. 119-125, Eqs. (7.1)-(7.23) | Annular region uses `Delta p/L = 4*tau_i/D`, `tau_i = f_i*rho_G*(u_G-u_L)^2/2 approx f_i*rho_G*u_G^2/2`, `(f_i)_annular = 0.67*(delta/(2R))^1.2*(((rho_L-rho_G)*g*delta^2)/sigma)^-0.4*(mu_G/mu_L)^0.08*We_L^-0.034`, and `(Delta p)_annular = 4*(f_i)_annular*(L/D)*rho_G*u_G^2/2`. The annular branch is separately locked in `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md` and `published_friction.moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`. Stratified-wavy uses `f_tp = epsilon_dry*f_G + (1-epsilon_dry)*(f_i)_annular`, `f_G = 0.079/Re_G^0.25` and `Delta p/L = 4*f_tp/D*rho_G*u_G^2/2`; this branch is separately locked in `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md` and `published_friction.moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m`. Slug/intermittent and slug/stratified-wavy use void-fraction interpolation to the annular or stratified-wavy branch; this branch is separately locked in `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md` and `published_friction.moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`. Mist uses `Delta p/L = 2*f_m*G^2/(D*rho_m)`, homogeneous density/void fraction and Cicchitti viscosity; this branch is separately locked in `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md` and `published_friction.moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`. Dryout uses Eq. (7.18), a linear interpolation between `xdi` and `xde`, now separately locked in `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md` and `published_friction.moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`. Stratified uses `theta_strat`/`theta_dry`-weighted friction factors. | This is Moreno Quiben's thesis pressure-drop model, not a WUT Part I/II release. It is useful for identifying WUT map dependencies and test cases, but runtime release requires an explicit scope decision and reference tests. |
+| Dryout boundaries cited in TH3337 pressure-drop model, p. 124, Eqs. (7.19)-(7.20) | `xdi = 0.58*exp(0.52 - 0.235*We_G^0.17*Fr_G^0.37*(rho_G/rho_L)^0.25*(q/qcrit)^0.70)`; `xde = 0.61*exp(0.57 - 5.8e-3*We_G^0.38*Fr_G^0.15*(rho_G/rho_L)^-0.09*(q/qcrit)^0.27)`. TH3337 states these are equivalent to Eqs. (3.54) and (3.55), proposed by Wojtan et al. | Candidate dryout-boundary guidance only. The code-level transcription helpers `wojtan_th3337_candidate_dryout_inception_quality`, `wojtan_th3337_candidate_dryout_completion_quality`, and `wojtan_th3337_candidate_dryout_boundaries` are documented in `docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md`. They do not release project dryout/CHF logic or WUT Part II heat-transfer logic without primary-source audit and tests. |
 
 ## Wojtan TH2978 page map
 
@@ -62,7 +89,7 @@ Openaccess bitstream:
 | --- | --- |
 | 1 | Title page confirms EPFL thesis no. 2978, author Leszek Wojtan, advisor J. Thome, title, and 2004 date. |
 | 9-13 | The table of contents indicates chapters for main terms, two-phase flow pattern maps, experimental void fraction, dynamic void fraction measurements, heat transfer in stratified-wavy flow, and dryout-zone heat transfer. The PDF text layer is partly custom-encoded, so extracted text is not reliable enough for formula release. |
-| 172-183 | The text layer exposes dryout markers `xdi` and `xde` in figure captions, but surrounding formulas are not reliably extractable. These pages require OCR/manual audit before any WUT/HTC release decision. |
+| 172-184 | `docs/wojtan_th2978_text_layer_audit_2026-07-08.md` confirms that the text layer exposes figure-level labels such as `hexp`, `xdi`, `xde`, vapor quality, heat-transfer coefficient, mass velocity, R-22/R-410A conditions, diameters and heat fluxes. `docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md` now renders pages 172-184 and locks dryout-limit Eqs. (7.47)-(7.48) as candidate-only. WUT Part I map transitions, Section 7.4.3 map update Eq. (7.49), and Part II HTC equations still require explicit rendered-page/OCR audit before release. |
 
 ## Release decision
 
@@ -71,10 +98,24 @@ Openaccess bitstream:
   flow-pattern pressure-drop model. The text layer provides candidate formulas
   for Friedel Eqs. (4.40)-(4.47), Muller-Steinhagen-Heck Eqs. (4.53)-(4.56),
   and the thesis flow-pattern pressure-drop model Eqs. (7.1)-(7.23), but it
-  does not release the Friedel, MSH, WUT, dryout or HTC gates.
+  does not release the Friedel, MSH, WUT, dryout or HTC gates. Candidate helper
+  functions in `published_friction.py`, including the annular branch documented
+  in `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md`
+  and the mist branch documented in
+  `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md`,
+  plus the dryout pressure-drop interpolation documented in
+  `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md`,
+  and the slug interpolation documented in
+  `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md`,
+  plus the stratified-wavy branch documented in
+  `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md`,
+  are intentionally separate from the guarded published MSH/Friedel entry
+  points.
 - `DISS-WOJTAN-2004-EPFL-TH2978` is useful local context for WUT map/HTC/dryout
-  work, but its current text extraction is not enough for page/equation release
-  evidence and requires OCR/manual audit.
+  work. Rendered dryout-limit Eqs. (7.47)-(7.48) are candidate-locked in
+  `docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md`, while broader map
+  and HTC release evidence still requires OCR/manual audit. The text-layer
+  blocker is recorded in `docs/wojtan_th2978_text_layer_audit_2026-07-08.md`.
 - Runtime release still requires either the full target primary article or an
   explicit dissertation-based release decision, exact page/equation references,
   SI convention mapping, applicability limits, and numerical reference tests.

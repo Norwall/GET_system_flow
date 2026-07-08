@@ -10,6 +10,7 @@ pytest-cache-files-*/
 .venv/
 venv/
 env/
+.deps/
 
 # Build and packaging outputs
 build/

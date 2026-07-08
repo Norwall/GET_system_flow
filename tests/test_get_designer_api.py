@@ -133,6 +133,7 @@ def test_api_reports_source_gate_pipeline(tmp_path) -> None:
     assert "policy_documents" in payload
     assert "source_gates" in payload
     assert "milestone_groups" in payload
+    assert "parallel_work_orders" in payload
     assert "next_priorities" in payload
     assert "docs/source_gate_unresolved_questions.md" in payload["policy_documents"]
     assert payload["next_priorities"][0]["source_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
@@ -142,6 +143,9 @@ def test_api_reports_source_gate_pipeline(tmp_path) -> None:
         if gate["source_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
     )
     assert chen_gate["current_blocking_stage"] == "audit_formulas_and_limits"
+    assert chen_gate["audit_stage"] == "formula_scope_audit"
+    assert chen_gate["release_basis"] == "technical_report"
+    assert chen_gate["allowed_release_bases"] == ["technical_report"]
     assert any(
         criterion["criterion_id"] == "reference_tests"
         and criterion["status"] == "blocked"
@@ -151,6 +155,8 @@ def test_api_reports_source_gate_pipeline(tmp_path) -> None:
     assert groups["local_candidate_audit"]["source_ids"] == [
         "HTC-CHEN-1962-SOURCE-CANDIDATE"
     ]
+    work_orders = {item["source_id"]: item for item in payload["parallel_work_orders"]}
+    assert work_orders["HTC-CHEN-1962-SOURCE-CANDIDATE"]["audit_stage"] == "formula_scope_audit"
 
 
 def test_api_run_returns_source_and_limit_diagnostics(tmp_path) -> None:

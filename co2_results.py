@@ -282,6 +282,13 @@ class SteadyLoopResult:
     boiling_heat_transfer_audit_local_full_text: str = ""
     boiling_heat_transfer_audit_sha256: str = ""
     boiling_heat_transfer_formula_audit_document: str = ""
+    boiling_heat_transfer_graph_digitization_document: str = ""
+    boiling_heat_transfer_graph_review_document: str = ""
+    boiling_heat_transfer_si_mapping_document: str = ""
+    boiling_heat_transfer_validation_tables_document: str = ""
+    boiling_heat_transfer_reference_value_audit_document: str = ""
+    boiling_heat_transfer_scope_audit_document: str = ""
+    boiling_heat_transfer_hand_calculation_document: str = ""
     boiling_heat_transfer_audited_pages: tuple[str, ...] | list[str] = ()
     boiling_heat_transfer_equation_page_map: tuple[str, ...] | list[str] = ()
     boiling_heat_transfer_applicability: tuple[str, ...] | list[str] = ()
@@ -352,6 +359,23 @@ class SteadyLoopResult:
             "boiling_heat_transfer_audit_local_full_text": self.boiling_heat_transfer_audit_local_full_text,
             "boiling_heat_transfer_audit_sha256": self.boiling_heat_transfer_audit_sha256,
             "boiling_heat_transfer_formula_audit_document": self.boiling_heat_transfer_formula_audit_document,
+            "boiling_heat_transfer_graph_digitization_document": (
+                self.boiling_heat_transfer_graph_digitization_document
+            ),
+            "boiling_heat_transfer_graph_review_document": (
+                self.boiling_heat_transfer_graph_review_document
+            ),
+            "boiling_heat_transfer_si_mapping_document": self.boiling_heat_transfer_si_mapping_document,
+            "boiling_heat_transfer_validation_tables_document": (
+                self.boiling_heat_transfer_validation_tables_document
+            ),
+            "boiling_heat_transfer_reference_value_audit_document": (
+                self.boiling_heat_transfer_reference_value_audit_document
+            ),
+            "boiling_heat_transfer_scope_audit_document": self.boiling_heat_transfer_scope_audit_document,
+            "boiling_heat_transfer_hand_calculation_document": (
+                self.boiling_heat_transfer_hand_calculation_document
+            ),
             "boiling_heat_transfer_audited_pages": list(self.boiling_heat_transfer_audited_pages),
             "boiling_heat_transfer_equation_page_map": list(self.boiling_heat_transfer_equation_page_map),
             "boiling_heat_transfer_applicability": list(self.boiling_heat_transfer_applicability),

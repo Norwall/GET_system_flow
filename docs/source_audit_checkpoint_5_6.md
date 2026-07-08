@@ -7,12 +7,23 @@
 Open-web проверка доступности: `docs/source_audit_open_web_2026-07-05.md`
 (предыдущий проход: `docs/source_audit_open_web_2026-07-04.md`).
 Структурированный manifest: `docs/source_gate_manifest.json`.
+Source-gate manifest/pipeline refresh: 2026-07-07.
 
 Цель проверки - отделить библиографически подтвержденные published-модели от
 формул, которые можно переносить в расчет только после сверки полного
 первоисточника. Этот документ является академическим ограничителем: наличие DOI
 или landing page не считается достаточным основанием для переноса коэффициентов,
 transition equations или областей применимости в код.
+
+Обновление 2026-07-07 закрепляет явный release-basis слой:
+`docs/source_gate_manifest.json`, `source_gate_pipeline.py` и `/api/source-gates`
+показывают `release_basis`, `allowed_release_bases`, `audited_source_ref`,
+`audited_equations`, `source_scope`, `source_limitations`, `audit_stage` и
+`parallel_work_orders`. Диссертация, монография, справочник, technical report или
+архивный скан могут быть основанием release только как явно выбранный
+`release_basis` с локальным полным текстом, page/equation-level audit,
+ограничениями применимости и reference tests; это не автоматическая замена
+целевой journal/conference статьи.
 
 ## Политика проверки 2026-07-04
 
@@ -52,9 +63,11 @@ evidence-базы и не коммитится, кроме `sources/primary/READ
 Каждый локальный источник, используемый для release, должен быть занесён в
 `docs/primary_source_inventory.md` с именем файла, SHA256, библиографической
 записью, страницами/уравнениями, аудированными convention details и решением
-аудита. Только после этого допустимы обновления `docs/formula_registry.md`,
-`docs/source_gate_manifest.json`, численные reference-тесты и снятие guard в
-runtime-коде.
+аудита. Перед снятием gate manifest также должен заполнить `release_basis`,
+`audited_source_ref`, `audited_equations`, `source_scope` и
+`source_limitations`. Только после этого допустимы обновления
+`docs/formula_registry.md`, `docs/source_gate_manifest.json`, численные
+reference-тесты и снятие guard в runtime-коде.
 
 ## Вторичные формульные кандидаты 2026-07-06
 
@@ -93,7 +106,7 @@ Taitel-Dukler 1976 horizontal map. При этом:
 | `VOID-ZUBER-FINDLAY-1965-SOURCE-GATE` | будущий drift-flux adapter | Не подключать published drift-flux ветку. `C0`, `Vgj` и соглашения по средним величинам остаются source-gated. |
 | `REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE` | `published_regimes.classify_horizontal_evaporator_regime_result` | Оставить `unknown_or_out_of_range/source_required`. Не переносить transition criteria и dryout boundaries без полного первоисточника. |
 | `REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE` | `published_regimes.classify_vertical_riser_regime_result` | Оставить `unknown_or_out_of_range/source_required`. Не переносить transition equations без полного первоисточника. |
-| `HTC-CHEN-1962-SOURCE-CANDIDATE` | `boiling_heat_transfer.chen_1962_source_candidate` | Оставить `SOURCE_CANDIDATE / NOT_RELEASED`. OSTI полный текст найден, но уравнения, переменные, ограничения применимости и reference tests не аудированы для runtime HTC/dryout/CHF. |
+| `HTC-CHEN-1962-SOURCE-CANDIDATE` | `boiling_heat_transfer.chen_1962_source_candidate` | Оставить `SOURCE_CANDIDATE / NOT_RELEASED`. OSTI полный текст найден; Eqs. (9), (17), (18) scan-verified, Fig. 7/8 `F/S` имеют candidate-only digitization and rendered graph review in `docs/chen_1962_graph_review_2026-07-08.md`, source-unit SI mapping, graph-axis, graph-to-SI helpers and hand-calculation ledger in `docs/chen_1962_hand_calculation_2026-07-08.md`, но accepted release interpolation/authoritative table, reviewed helper-to-runtime mapping, ограничения применимости и source/reference tests не аудированы для runtime HTC/dryout/CHF. |
 
 ## Решение для кода
 
@@ -113,8 +126,41 @@ Taitel-Dukler 1976 horizontal map. При этом:
   Zuber-Findlay drift-flux, boiling HTC и dryout/CHF ещё требуют полного
   первоисточника.
 - Chen 1962 / OSTI `10.2172/4636495` учитывается как отдельный
-  `source_candidate`: metadata доступны для диагностики, но расчётные HTC,
-  dryout и CHF correlation остаются не выпущенными.
+  `source_candidate`: metadata и candidate helper
+  `boiling_heat_transfer.chen_1962_candidate_heat_transfer_coefficient_si`
+  доступны для аудита переноса формул; `docs/chen_1962_hand_calculation_2026-07-08.md`
+  фиксирует candidate-only арифметику прямого и graph-to-SI расчёта, но расчётные
+  runtime HTC, dryout и CHF correlation остаются не выпущенными.
+- Moreno Quiben TH3337 annular pressure-drop Eq. (7.4)/(7.5) теперь
+  зафиксирован только как candidate-only helper
+  `published_friction.moreno_quiben_th3337_candidate_annular_pressure_gradient_pa_per_m`
+  и audit-документ
+  `docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md`; это не
+  снимает MSH/Friedel/WUT/HTC gates.
+- Moreno Quiben TH3337 mist pressure-drop Eq. (7.13)-(7.17) теперь
+  зафиксирован только как candidate-only helper
+  `published_friction.moreno_quiben_th3337_candidate_mist_pressure_gradient_pa_per_m`
+  и audit-документ
+  `docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md`; это не
+  снимает MSH/Friedel/WUT/HTC gates.
+- Moreno Quiben TH3337 dryout pressure-drop interpolation Eq. (7.18) теперь
+  зафиксирована только как candidate-only helper
+  `published_friction.moreno_quiben_th3337_candidate_dryout_interpolated_pressure_gradient_pa_per_m`
+  и audit-документ
+  `docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md`; это не
+  снимает MSH/Friedel/WUT/HTC gates.
+- Moreno Quiben TH3337 slug/intermittent pressure-drop interpolation
+  Eq. (7.6)/(7.12) теперь зафиксирована только как candidate-only helper
+  `published_friction.moreno_quiben_th3337_candidate_slug_interpolated_pressure_gradient_pa_per_m`
+  и audit-документ
+  `docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md`; это не
+  снимает MSH/Friedel/WUT/HTC gates.
+- Moreno Quiben TH3337 stratified-wavy pressure-drop Eq. (7.9)-(7.11) теперь
+  зафиксирована только как candidate-only helper
+  `published_friction.moreno_quiben_th3337_candidate_stratified_wavy_pressure_gradient_pa_per_m`
+  и audit-документ
+  `docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md`; это не
+  снимает MSH/Friedel/WUT/HTC gates.
 - `docs/secondary_formula_candidates.md` добавляет только context для будущего
   аудита. Записи `SECONDARY_FORMULA_CANDIDATE / NOT_RELEASED` не считаются
   достаточным основанием для снятия guard.

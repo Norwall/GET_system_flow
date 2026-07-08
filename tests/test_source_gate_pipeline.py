@@ -18,6 +18,19 @@ def test_pipeline_reports_current_source_gate_states() -> None:
     assert msh.primary_record_urls
     assert msh.required_audit_checks
     assert msh.required_tests_before_release
+    assert msh.release_basis == "journal_article"
+    assert "dissertation" in msh.allowed_release_bases
+    assert msh.audit_stage == "source_acquisition"
+    assert msh.source_scope
+    assert msh.source_limitations
+    assert msh.audit_documents == (
+        "docs/dissertation_formula_audit_2026-07-06.md",
+        "docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md",
+    )
     assert msh.action_pipeline[0]["stage"] == "identify_primary_record"
     assert msh.action_pipeline[1]["stage"] == "obtain_full_text"
     assert msh.action_pipeline[1]["status"] == "blocked"
@@ -28,11 +41,23 @@ def test_pipeline_reports_current_source_gate_states() -> None:
     assert msh_criteria["primary_text_intake"]["status"] == "blocked"
     assert msh_criteria["manifest_release"]["status"] == "blocked"
 
+    friedel = items["TP-FRIEDEL-1979-SOURCE-GATE"]
+    assert friedel.audit_documents == (
+        "docs/dissertation_formula_audit_2026-07-06.md",
+        "docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md",
+    )
+
     wojtan = items["REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE"]
     assert wojtan.release_state == "blocked_primary_source_required_dissertation_candidate_available"
     assert "dissertation pages" in wojtan.next_action
     assert wojtan.inventory_decision == ""
     assert "docs/dissertation_formula_audit_2026-07-06.md" in wojtan.audit_documents
+    assert "docs/wojtan_th2978_text_layer_audit_2026-07-08.md" in wojtan.audit_documents
+    assert "docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md" in wojtan.audit_documents
     assert any("285f44f3-559e-4d9d-ada4-233895ecd47e" in url for url in wojtan.primary_record_urls)
 
     chen = items["HTC-CHEN-1962-SOURCE-CANDIDATE"]
@@ -40,8 +65,21 @@ def test_pipeline_reports_current_source_gate_states() -> None:
     assert chen.inventory_decision == "candidate_only"
     assert chen.release_state.startswith("candidate_")
     assert chen.local_sha256_status in {"matches_inventory", "local_file_missing"}
-    assert chen.audit_documents == ("docs/chen_1962_formula_audit_2026-07-06.md",)
-    assert "digitizing graphical F/S" in chen.acquisition_hint
+    assert chen.audit_documents == (
+        "docs/chen_1962_formula_audit_2026-07-06.md",
+        "docs/chen_1962_graph_digitization_2026-07-07.md",
+        "docs/chen_1962_graph_review_2026-07-08.md",
+        "docs/chen_1962_si_mapping_2026-07-07.md",
+        "docs/chen_1962_validation_tables_2026-07-07.md",
+        "docs/chen_1962_reference_value_audit_2026-07-08.md",
+        "docs/chen_1962_scope_audit_2026-07-08.md",
+        "docs/chen_1962_hand_calculation_2026-07-08.md",
+    )
+    assert "rendered F/S graph review and hand calculation" in chen.acquisition_hint
+    assert "reference-value audit found no printed pointwise HTC table" in chen.acquisition_hint
+    assert chen.release_basis == "technical_report"
+    assert chen.allowed_release_bases == ("technical_report",)
+    assert chen.audit_stage == "formula_scope_audit"
     chen_actions = {action["stage"]: action for action in chen.action_pipeline}
     assert chen_actions["obtain_full_text"]["status"] == "done"
     assert chen_actions["local_intake"]["status"] == "done"
@@ -63,9 +101,25 @@ def test_pipeline_report_prioritizes_local_candidate_before_closed_gates() -> No
     assert report["summary"]["candidate_local_intake_ready"] == 1
     assert "docs/source_gate_unresolved_questions.md" in report["policy_documents"]
     assert report["action_pipeline"]
+    assert report["parallel_work_orders"]
+    assert {work_order["source_id"] for work_order in report["parallel_work_orders"]} == {
+        item["source_id"] for item in report["source_gates"]
+    }
+    assert all("audit_stage" in work_order for work_order in report["parallel_work_orders"])
     assert priorities[0]["source_id"] == "HTC-CHEN-1962-SOURCE-CANDIDATE"
     assert priorities[0]["release_state"] == "candidate_local_intake_ready"
-    assert priorities[0]["audit_documents"] == ["docs/chen_1962_formula_audit_2026-07-06.md"]
+    assert priorities[0]["release_basis"] == "technical_report"
+    assert priorities[0]["audit_stage"] == "formula_scope_audit"
+    assert priorities[0]["audit_documents"] == [
+        "docs/chen_1962_formula_audit_2026-07-06.md",
+        "docs/chen_1962_graph_digitization_2026-07-07.md",
+        "docs/chen_1962_graph_review_2026-07-08.md",
+        "docs/chen_1962_si_mapping_2026-07-07.md",
+        "docs/chen_1962_validation_tables_2026-07-07.md",
+        "docs/chen_1962_reference_value_audit_2026-07-08.md",
+        "docs/chen_1962_scope_audit_2026-07-08.md",
+        "docs/chen_1962_hand_calculation_2026-07-08.md",
+    ]
     first_pipeline = report["action_pipeline"][0]
     assert {"source_id", "release_state", "actions"} <= set(first_pipeline)
     assert {action["stage"] for action in first_pipeline["actions"]} == {
@@ -86,20 +140,39 @@ def test_pipeline_report_groups_open_milestones_by_release_path() -> None:
     assert groups["local_candidate_audit"]["source_ids"] == [
         "HTC-CHEN-1962-SOURCE-CANDIDATE"
     ]
+    assert groups["local_candidate_audit"]["allowed_release_bases"] == ["technical_report"]
     assert groups["local_candidate_audit"]["audit_documents"] == [
-        "docs/chen_1962_formula_audit_2026-07-06.md"
+        "docs/chen_1962_formula_audit_2026-07-06.md",
+        "docs/chen_1962_graph_digitization_2026-07-07.md",
+        "docs/chen_1962_graph_review_2026-07-08.md",
+        "docs/chen_1962_hand_calculation_2026-07-08.md",
+        "docs/chen_1962_reference_value_audit_2026-07-08.md",
+        "docs/chen_1962_si_mapping_2026-07-07.md",
+        "docs/chen_1962_scope_audit_2026-07-08.md",
+        "docs/chen_1962_validation_tables_2026-07-07.md",
     ]
     assert set(groups["secondary_guided_primary_required"]["source_ids"]) == {
         "TP-MULLER-STEINHAGEN-HECK-1986-SOURCE-GATE",
         "TP-FRIEDEL-1979-SOURCE-GATE",
         "REGIME-TAITEL-BARNEA-DUKLER-1980-SOURCE-GATE",
     }
+    assert groups["secondary_guided_primary_required"]["audit_documents"] == [
+        "docs/dissertation_formula_audit_2026-07-06.md",
+        "docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md",
+        "docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md",
+    ]
     assert set(groups["dissertation_guided_primary_required"]["source_ids"]) == {
         "REGIME-WOJTAN-URSENBACHER-THOME-2005-SOURCE-GATE",
         "HTC-WOJTAN-THOME-2005-PART-II-SOURCE-CANDIDATE",
     }
+    assert "dissertation" in groups["dissertation_guided_primary_required"]["allowed_release_bases"]
     assert groups["dissertation_guided_primary_required"]["audit_documents"] == [
-        "docs/dissertation_formula_audit_2026-07-06.md"
+        "docs/dissertation_formula_audit_2026-07-06.md",
+        "docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md",
+        "docs/wojtan_th2978_text_layer_audit_2026-07-08.md",
     ]
     assert set(groups["primary_acquisition_required"]["source_ids"]) == {
         "VOID-ZUBER-FINDLAY-1965-SOURCE-GATE",
@@ -139,6 +212,12 @@ def test_released_pipeline_requires_audited_local_source_with_matching_sha(tmp_p
                 "evidence_status": "audited",
                 "access_evidence": {},
                 "local_full_text_ref": "sources/primary/audited.pdf",
+                "release_basis": "journal_article",
+                "allowed_release_bases": ["journal_article"],
+                "audited_source_ref": "sources/primary/audited.pdf",
+                "audited_equations": ["p. 1 eq. 1"],
+                "source_scope": "Synthetic tested release scope.",
+                "source_limitations": ["Synthetic unsupported cases are out of scope."],
                 "decision": "released",
                 "blocking_reasons": ["none"],
                 "required_audit_checks": ["docs/formula_registry.md updated"],
@@ -168,3 +247,62 @@ def test_released_pipeline_requires_audited_local_source_with_matching_sha(tmp_p
     assert item.local_file_exists is True
     assert item.local_sha256_status == "matches_inventory"
     assert {action["status"] for action in item.action_pipeline} == {"done"}
+
+
+def test_released_pipeline_blocks_missing_manifest_release_metadata(tmp_path: Path) -> None:
+    docs = tmp_path / "docs"
+    primary = tmp_path / "sources" / "primary"
+    docs.mkdir()
+    primary.mkdir(parents=True)
+    source_file = primary / "audited.pdf"
+    source_file.write_bytes(b"audited source")
+    source_hash = sha256_file(source_file)
+
+    manifest = {
+        "entries": [
+            {
+                "registry_id": "TEST-INCOMPLETE-RELEASED-SOURCE",
+                "candidate_id": None,
+                "model": "Synthetic incomplete released source",
+                "target_code": "synthetic.model",
+                "primary_citation": "Synthetic citation",
+                "primary_record": {},
+                "evidence_status": "audited",
+                "access_evidence": {},
+                "local_full_text_ref": "sources/primary/audited.pdf",
+                "release_basis": "journal_article",
+                "allowed_release_bases": ["journal_article"],
+                "audited_source_ref": "",
+                "audited_equations": [],
+                "source_scope": "Synthetic tested release scope.",
+                "source_limitations": ["Synthetic unsupported cases are out of scope."],
+                "decision": "released",
+                "blocking_reasons": ["none"],
+                "required_audit_checks": ["docs/formula_registry.md updated"],
+                "required_tests_before_release": ["reference test"],
+            }
+        ]
+    }
+    (docs / "source_gate_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (docs / "primary_source_inventory.md").write_text(
+        "\n".join(
+            [
+                "| Local file | SHA256 | Citation / model | Audited pages/equations | Decision | Notes |",
+                "| --- | --- | --- | --- | --- | --- |",
+                (
+                    "| `sources/primary/audited.pdf` | "
+                    f"`{source_hash}` | `TEST-INCOMPLETE-RELEASED-SOURCE` | p. 1 eq. 1 | "
+                    "`audited_release` | released |"
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    (item,) = build_source_gate_pipeline(tmp_path)
+
+    assert item.release_state == "blocked_released_without_audited_source_ref"
+    assert item.current_blocking_stage == "audit_formulas_and_limits"
+    assert item.action_pipeline[1]["status"] == "done"
+    assert item.action_pipeline[2]["status"] == "done"
+    assert item.action_pipeline[-1]["status"] == "blocked"

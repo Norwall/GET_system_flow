@@ -6,6 +6,23 @@
     "previous_audit_documents": [
       "docs/source_audit_open_web_2026-07-04.md",
       "docs/source_audit_followup_2026-07-06.md",
+      "docs/source_endpoint_refresh_2026-07-07.md",
+      "docs/source_endpoint_refresh_2026-07-08.md",
+      "docs/chen_1962_graph_digitization_2026-07-07.md",
+      "docs/chen_1962_graph_review_2026-07-08.md",
+      "docs/chen_1962_si_mapping_2026-07-07.md",
+      "docs/chen_1962_validation_tables_2026-07-07.md",
+      "docs/chen_1962_reference_value_audit_2026-07-08.md",
+      "docs/chen_1962_scope_audit_2026-07-08.md",
+      "docs/chen_1962_hand_calculation_2026-07-08.md",
+      "docs/wojtan_th2978_text_layer_audit_2026-07-08.md",
+      "docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md",
+      "docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md",
+      "docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md",
+      "docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md",
+      "docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md",
+      "docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md",
+      "docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md",
       "docs/dissertation_formula_audit_2026-07-06.md",
       "docs/chen_1962_formula_audit_2026-07-06.md"
     ],
@@ -16,10 +33,23 @@
     "source_drop_directory": "sources/primary",
     "secondary_formula_candidate_document": "docs/secondary_formula_candidates.md",
     "source_gate_rule": "DOI landing pages, Crossref metadata, abstracts, review articles, textbooks, and repository landing pages without an accessible full-text bitstream do not release SOURCE_REQUIRED gates.",
+    "accepted_full_text_source_types": [
+      "journal_article",
+      "conference_paper",
+      "technical_report",
+      "dissertation",
+      "monograph",
+      "handbook",
+      "archival_scan"
+    ],
+    "release_basis_rule": "A dissertation, monograph, handbook, technical report, or archival scan may release a gate only when it is locally available, SHA256-inventoried, page/equation audited, mapped to runtime variables, and backed by reference tests. If it is not the originally targeted journal article, runtime and docs must name that release basis explicitly.",
     "secondary_formula_candidate_rule": "Secondary formula transcriptions from reputable libraries, reviews, or engineering documentation are audit guidance only; they do not release SOURCE_REQUIRED gates and cannot be selected as published runtime physics.",
     "local_source_file_policy": "Primary-source PDFs, scans, and extracted full text are local working evidence under sources/primary and are not committed. Released gates require SHA256, page/equation references, and an audit decision in docs/primary_source_inventory.md.",
     "released_requirements": [
       "evidence_status must be audited",
+      "release_basis must name the audited source type",
+      "audited_source_ref must identify the released full text",
+      "audited_equations must list the released page/equation references",
       "local_full_text_ref must identify the verified local full text under sources/primary",
       "docs/primary_source_inventory.md must record the local file, SHA256, citation, audited pages/equations, and release decision",
       "required_audit_checks must be completed in docs/formula_registry.md",
@@ -43,8 +73,8 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "closed; no repository copy",
-        "openalex": "closed",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context"
+        "openalex": "closed; 2026-07-07 and 2026-07-08 rechecks found no OA full-text route",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context; 2026-07-07 unauthenticated probe returned HTTP 400 text/xml from Elsevier API and HTTP 200 publisher landing HTML only; 2026-07-08 DOI redirected to Elsevier landing HTTP 200, OpenAlex stayed closed, and Elsevier TDM endpoint returned HTTP 400 text/xml without authorized API context"
       },
       "secondary_formula_candidate": {
         "registry_id": "TP-MULLER-STEINHAGEN-HECK-1986-SECONDARY-CANDIDATE",
@@ -68,20 +98,36 @@
           "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/005ec5e9-6a5a-49e9-812b-e31d942503b2/content",
           "sha256": "B3FD9477D189C7720836C222BFD927BED34AD9E99CB4D1C188102423E26D1A77",
           "scope": "EPFL doctoral thesis on two-phase pressure drops during evaporation in horizontal tubes; audit guidance for pressure-drop definitions and correlation comparison.",
-          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; decision remains candidate_only.",
+          "audit_note": "Page-level candidate map and candidate helpers are recorded in docs/dissertation_formula_audit_2026-07-06.md, docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md, and docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md; decision remains candidate_only.",
           "release_rule": "Does not release MSH runtime gate without page/equation audit and reference tests."
         }
       ],
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Two-phase frictional pressure-gradient correlation for pipes.",
+      "source_limitations": [
+        "Darcy/Fanning convention is not audited.",
+        "Total/phase mass-flux convention is not audited.",
+        "TH3337 candidate helpers exist, including annular, mist, dryout, slug and stratified-wavy pressure-drop branches in docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md and docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md, but runtime guard remains active until primary/dissertation release decision and reference tests are complete."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Full primary article text was not available from open web checks.",
-        "Darcy/Fanning convention, total/phase mass flux convention, and reference pressure-gradient definitions are not source-audited."
+        "Darcy/Fanning convention, total/phase mass flux convention, and reference pressure-gradient definitions are not source-audited from the target article."
       ],
       "required_audit_checks": [
         "Transcribe the exact MSH formula and all coefficients from the full article.",
         "Record friction-factor convention, mass-flux convention, phase property definitions, and applicability range.",
-        "Map the formula to SI units and current solver variables before any implementation."
+        "Map the formula to SI units and current solver variables before any released implementation; keep TH3337 candidate helpers separate."
       ],
       "required_tests_before_release": [
         "Numerical reference-point test from the article or independently reproduced examples.",
@@ -106,7 +152,7 @@
         "crossref": "no matching primary DOI record found by title search",
         "unpaywall": "not applicable without DOI",
         "openalex": "not checked as a releasable full-text source",
-        "endpoint_check": "no publisher full-text endpoint identified; 2026-07-05 audit did not identify a releasable primary endpoint"
+        "endpoint_check": "no publisher full-text endpoint identified; 2026-07-05 audit did not identify a releasable primary endpoint; 2026-07-07 refresh still found no DOI, publisher endpoint, or archival scan for the Friedel 1979/3R International route; 2026-07-08 Crossref bibliographic searches still returned no reliable Friedel 1979/Ispra/3R International primary DOI or publisher endpoint, while the MSH Crossref reference list identified Friedel, 3R Int. 18(7), page 485, 1979, article title Improved friction pressure drop correlations for horizontal and vertical two-phase flow"
       },
       "secondary_formula_candidate": {
         "registry_id": "TP-FRIEDEL-1979-SECONDARY-CANDIDATE",
@@ -130,15 +176,32 @@
           "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/005ec5e9-6a5a-49e9-812b-e31d942503b2/content",
           "sha256": "B3FD9477D189C7720836C222BFD927BED34AD9E99CB4D1C188102423E26D1A77",
           "scope": "EPFL doctoral thesis includes two-phase pressure-drop model review and Friedel context for audit guidance.",
-          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; decision remains candidate_only.",
+          "audit_note": "Page-level candidate map and candidate helpers are recorded in docs/dissertation_formula_audit_2026-07-06.md, docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md, and docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md; decision remains candidate_only.",
           "release_rule": "Does not release Friedel runtime gate without archival Friedel primary paper or a separate audited dissertation-based release decision and tests."
         }
       ],
       "local_full_text_ref": "",
+      "release_basis": "conference_paper",
+      "allowed_release_bases": [
+        "conference_paper",
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Two-phase frictional pressure-drop multiplier for horizontal and vertical flow.",
+      "source_limitations": [
+        "Archival primary paper or accepted dissertation/monograph release basis is missing.",
+        "Dimensionless-group definitions and applicability limits are not audited.",
+        "TH3337 candidate helpers exist, including annular, mist, dryout, slug and stratified-wavy pressure-drop branches in docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md, docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md and docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md, but runtime guard remains active until primary/dissertation release decision and reference tests are complete."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Primary conference paper or scan was not found.",
-        "Formula, coefficients, and dimensionless groups cannot be audited from a primary source."
+        "Formula, coefficients, and dimensionless groups are only TH3337 candidate-audited; the archival primary or a dissertation release path is not complete."
       ],
       "required_audit_checks": [
         "Obtain the full Friedel 1979 paper or an archival scan.",
@@ -167,10 +230,26 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
         "unpaywall": "closed; no repository copy",
-        "openalex": "closed",
-        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck followed 301 to HTTPS and returned HTTP 403 Cloudflare challenge"
+        "openalex": "closed; 2026-07-07 and 2026-07-08 rechecks found no OA full-text route",
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck followed 301 to HTTPS and returned HTTP 403 Cloudflare challenge; 2026-07-07 ASME article/PDF endpoints returned HTTP 403 without authorized context; 2026-07-08 DOI route reached ASME landing with HTTP 403, OpenAlex stayed closed, and ASME PDF endpoint returned HTTP 403 text/html"
       },
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Drift-flux void-fraction model and supported vertical-riser closures.",
+      "source_limitations": [
+        "General drift-flux equation is not separated from regime-specific closures.",
+        "C0, weighted drift velocity, and averaging definitions are not audited.",
+        "No published runtime adapter is released."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Full primary article text was not available from open web checks.",
@@ -204,8 +283,8 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
-        "openalex": "green landing page at EPFL, no PDF URL",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream"
+        "openalex": "green landing page at EPFL, no PDF URL; 2026-07-07 endpoint refresh found only landing metadata plus license/JPEG bitstreams; 2026-07-08 OpenAlex still reported a green EPFL landing with no PDF URL",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream; 2026-07-07 OpenAlex green landing route still had no pdf_url, and EPFL bitstreams were license.txt/JPEG only with no ORIGINAL/full-text bitstream; 2026-07-08 OpenAlex remained green with EPFL landing but no OA PDF URL, Elsevier TDM endpoint returned HTTP 400 text/xml, and direct EPFL legacy landing probe was rate-limited HTTP 429"
       },
       "dissertation_candidates": [
         {
@@ -215,19 +294,41 @@
           "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/285f44f3-559e-4d9d-ada4-233895ecd47e/content",
           "sha256": "0F17826CA107DD8744E8AFA914E11FB422D5BC551589ACE5492B04F5669075D5",
           "scope": "EPFL doctoral thesis by Leszek Wojtan on void fraction and heat transfer during evaporation in horizontal tubes; audit guidance for WUT map/HTC context.",
-          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; text extraction is incomplete and requires OCR/manual audit before release.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; docs/wojtan_th2978_text_layer_audit_2026-07-08.md confirms figure-level heat-transfer/dryout labels, and docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md locks rendered-page dryout-limit Eqs. (7.47)-(7.48) as candidate-only. This still does not release Part I without map-transition audit and tests.",
           "release_rule": "Does not release WUT Part I journal gate until transition criteria are audited with page/equation references and tests."
         }
       ],
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Horizontal diabatic flow-boiling regime map and dryout-boundary transitions.",
+      "source_limitations": [
+        "Journal full text is missing.",
+        "TH2978 text-layer audit in docs/wojtan_th2978_text_layer_audit_2026-07-08.md exposes heat-transfer/dryout figure labels; rendered-page audit in docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md locks dryout-limit Eqs. (7.47)-(7.48) as candidate-only, but release still requires map-transition audit and tests.",
+        "TH3337 dryout-boundary formulas xdi/xde are locked only as candidate audit helpers in docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md and corroborated from TH2978 rendered pages.",
+        "TH3337 annular pressure-drop Eq. (7.4)/(7.5) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 mist pressure-drop Eq. (7.13)-(7.17) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 dryout pressure-drop interpolation Eq. (7.18) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 slug/intermittent pressure-drop interpolation Eq. (7.6)/(7.12) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 stratified-wavy pressure-drop Eq. (7.9)-(7.11) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md.",
+        "Current published_regime_map placeholder remains source_required."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "EPFL repository landing page did not expose an ORIGINAL/full-text bitstream.",
-        "Transition criteria, dryout boundaries, dimensionless groups, and applicability limits are not source-audited."
+        "Transition criteria, map-update equations, dimensionless groups, and applicability limits are not source-audited; TH2978 dryout-limit Eqs. (7.47)-(7.48) are only candidate-audited."
       ],
       "required_audit_checks": [
-        "Obtain the full Part I article text.",
-        "Transcribe all transition criteria and dryout boundaries with variables and units.",
+        "Obtain the full Part I article text or approve a dissertation-specific release path.",
+        "Transcribe all transition criteria and dryout boundaries with variables and units; keep TH2978 Eqs. (7.47)-(7.48) candidate-only until reference tests exist.",
         "Record the map applicability range and refrigerants used in validation."
       ],
       "required_tests_before_release": [
@@ -250,10 +351,10 @@
       },
       "evidence_status": "metadata_only",
       "access_evidence": {
-        "crossref": "confirmed DOI, title, journal, pages, Wiley PDF/TDM URLs, and 41 references; 2026-07-06 Crossref record was indexed 2026-07-04 and deposited 2025-10-07",
+        "crossref": "confirmed DOI, exact title 'Modelling flow pattern transitions for steady upward gas-liquid flow in vertical tubes', AIChE Journal 26(3), 345-354, Wiley PDF/TDM URLs, and 41 references; 2026-07-06 Crossref record was indexed 2026-07-04 and deposited 2025-10-07",
         "unpaywall": "closed; no repository copy",
-        "openalex": "closed",
-        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck returned HTTP 403 Cloudflare challenge"
+        "openalex": "closed; 2026-07-07 and 2026-07-08 rechecks found no OA full-text route",
+        "endpoint_check": "Wiley PDF endpoints returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-06 HEAD recheck returned HTTP 403 Cloudflare challenge; 2026-07-07 Wiley article/PDF endpoints returned HTTP 403 without authorized context; 2026-07-08 DOI route and Wiley PDF endpoint returned HTTP 403 text/html while the Wiley TDM API returned HTTP 400 because no TDM Client Token was found; OpenAlex stayed closed"
       },
       "secondary_formula_candidate": {
         "registry_id": "REGIME-TAITEL-DUKLER-1976-HORIZONTAL-SECONDARY-CANDIDATE",
@@ -269,6 +370,22 @@
         ]
       },
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Vertical upward gas-liquid flow regime transition map.",
+      "source_limitations": [
+        "Vertical transition equations and coefficients are not audited.",
+        "The horizontal Taitel-Dukler secondary candidate cannot release this vertical gate.",
+        "Current published_regime_map placeholder remains source_required."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Full primary article text was not available from open web checks.",
@@ -301,10 +418,26 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and ASME PDF URL",
         "unpaywall": "closed; no repository copy",
-        "openalex": "not used as a release source",
-        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403"
+        "openalex": "closed; 2026-07-07 and 2026-07-08 rechecks found no OA full-text route",
+        "endpoint_check": "ASME PDF endpoint returned 403 Forbidden without authorized context; 2026-07-05 HEAD recheck returned HTTP 403; 2026-07-07 ASME article/PDF endpoints returned HTTP 403 without authorized context; 2026-07-08 DOI route reached ASME landing with HTTP 403, OpenAlex stayed closed, and ASME PDF endpoint returned HTTP 403 text/html"
       },
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Saturated flow-boiling HTC correlation for horizontal and vertical tubes.",
+      "source_limitations": [
+        "ASME full text is missing.",
+        "Boiling-number definitions, fluid factors, and wall/input requirements are not audited.",
+        "No HTC runtime adapter is released."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Full primary article text was not available from open web checks.",
@@ -337,10 +470,26 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "closed; no repository copy",
-        "openalex": "not used as a release source",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text during open-web audit; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context"
+        "openalex": "closed; 2026-07-07 and 2026-07-08 rechecks found no OA full-text route",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text during open-web audit; 2026-07-05 HEAD recheck returned HTTP 400 without authorized API context; 2026-07-07 unauthenticated probe returned HTTP 400 text/xml from Elsevier API and HTTP 200 publisher landing HTML only; 2026-07-08 DOI redirected to Elsevier landing HTTP 200, OpenAlex stayed closed, one Elsevier TDM probe returned HTTP 429 application/json, and a follow-up Python HEAD returned HTTP 400 text/xml without a full-text payload"
       },
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Flow-boiling HTC correlation for tubes and annuli.",
+      "source_limitations": [
+        "Elsevier full text is missing.",
+        "Enhancement/suppression factors and nucleate-boiling base equation are not audited.",
+        "No HTC runtime adapter is released."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "Full primary article text was not available from open web checks.",
@@ -374,8 +523,8 @@
       "access_evidence": {
         "crossref": "confirmed DOI, title, journal, pages, and Elsevier TDM/API endpoints",
         "unpaywall": "green landing page at EPFL, no PDF URL",
-        "openalex": "not used as a release source",
-        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream"
+        "openalex": "green landing page at EPFL, no PDF URL; 2026-07-07 endpoint refresh found only landing metadata plus license/JPEG bitstreams; 2026-07-08 OpenAlex still reported a green EPFL landing with no PDF URL",
+        "endpoint_check": "Elsevier API endpoint did not provide unauthenticated full text; 2026-07-05 HEAD recheck returned HTTP 400; 2026-07-06 EPFL DSpace API for the journal item showed datacite.rights=metadata-only and only LICENSE bundle, no ORIGINAL/full-text bitstream; 2026-07-07 OpenAlex green landing route still had no pdf_url, and EPFL bitstreams were license.txt/JPEG only with no ORIGINAL/full-text bitstream; 2026-07-08 OpenAlex remained green with EPFL landing but no OA PDF URL, Elsevier TDM endpoint returned HTTP 400 text/xml, and direct EPFL legacy landing probe was rate-limited HTTP 429"
       },
       "dissertation_candidates": [
         {
@@ -385,19 +534,41 @@
           "bitstream_content": "https://infoscience.epfl.ch/server/api/core/bitstreams/285f44f3-559e-4d9d-ada4-233895ecd47e/content",
           "sha256": "0F17826CA107DD8744E8AFA914E11FB422D5BC551589ACE5492B04F5669075D5",
           "scope": "EPFL doctoral thesis by Leszek Wojtan on void fraction and heat transfer during evaporation in horizontal tubes; audit guidance for WUT Part II heat-transfer context.",
-          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; text extraction is incomplete and requires OCR/manual audit before release.",
+          "audit_note": "Page-level candidate map is recorded in docs/dissertation_formula_audit_2026-07-06.md; docs/wojtan_th2978_text_layer_audit_2026-07-08.md confirms figure-level heat-transfer/dryout labels, and docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md locks rendered-page dryout-limit Eqs. (7.47)-(7.48) as candidate-only. Heat-transfer equations still require OCR/manual audit before release.",
           "release_rule": "Does not release WUT Part II journal gate until heat-transfer/dryout equations are audited with page/equation references and tests."
         }
       ],
       "local_full_text_ref": "",
+      "release_basis": "journal_article",
+      "allowed_release_bases": [
+        "journal_article",
+        "dissertation",
+        "monograph",
+        "handbook",
+        "archival_scan"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Horizontal flow-boiling HTC/dryout model for stratified-wavy, dryout, and mist regimes.",
+      "source_limitations": [
+        "Journal full text is missing.",
+        "TH2978 text-layer audit in docs/wojtan_th2978_text_layer_audit_2026-07-08.md exposes heat-transfer/dryout figure labels; rendered-page audit in docs/wojtan_th2978_rendered_dryout_audit_2026-07-08.md locks dryout-limit Eqs. (7.47)-(7.48) as candidate-only, but release still requires heat-transfer equation audit and tests.",
+        "TH3337 dryout-boundary formulas xdi/xde are locked only as candidate audit helpers in docs/wojtan_th3337_dryout_boundary_audit_2026-07-07.md and corroborated from TH2978 rendered pages.",
+        "TH3337 annular pressure-drop Eq. (7.4)/(7.5) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_annular_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 mist pressure-drop Eq. (7.13)-(7.17) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_mist_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 dryout pressure-drop interpolation Eq. (7.18) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_dryout_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 slug/intermittent pressure-drop interpolation Eq. (7.6)/(7.12) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_slug_pressure_drop_audit_2026-07-07.md.",
+        "TH3337 stratified-wavy pressure-drop Eq. (7.9)-(7.11) is locked only as candidate audit guidance in docs/moreno_quiben_th3337_stratified_wavy_pressure_drop_audit_2026-07-08.md.",
+        "Part II must refuse runtime evaluation without required Part I map inputs."
+      ],
       "decision": "source_required",
       "blocking_reasons": [
         "EPFL repository landing page did not expose an ORIGINAL/full-text bitstream.",
-        "Heat-transfer and dryout equations are not source-audited from full text."
+        "Heat-transfer equations are not source-audited from full text; TH2978 dryout-limit Eqs. (7.47)-(7.48) are only candidate-audited and not released."
       ],
       "required_audit_checks": [
         "Obtain the full Part II article text.",
-        "Audit each heat-transfer regime equation, dryout boundary, and coupling to Part I map.",
+        "Audit each heat-transfer regime equation, dryout boundary, and coupling to Part I map; keep TH2978 Eqs. (7.47)-(7.48) candidate-only until release scope and tests exist.",
         "Define whether implementation requires Part I published regime map release first."
       ],
       "required_tests_before_release": [
@@ -423,31 +594,57 @@
         "crossref": "confirmed DOI and title via search result",
         "unpaywall": "green repository full-text PDF",
         "openalex": "not used as a release source",
-        "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908; 2026-07-05 HEAD recheck returned HTTP 200 application/pdf with Content-Length 1533908"
+        "endpoint_check": "OSTI PURL returned application/pdf with Content-Length 1533908; 2026-07-05 HEAD recheck returned HTTP 200 application/pdf with Content-Length 1533908; 2026-07-07 OSTI PURL still returned HTTP 200 application/pdf; 2026-07-08 OSTI record returned HTTP 200 HTML and PURL returned HTTP 200 application/pdf"
       },
       "local_full_text_ref": "sources/primary/chen_1962_osti_4636495.pdf",
+      "release_basis": "technical_report",
+      "allowed_release_bases": [
+        "technical_report"
+      ],
+      "audited_source_ref": "",
+      "audited_equations": [],
+      "source_scope": "Saturated convective-boiling HTC correlation for vertical axial stable flow.",
+      "source_limitations": [
+        "F and S graphical functions have candidate digitization and a rendered graph review; plotted-domain guards now reject extrapolation outside Fig. 7/Fig. 8 rendered ranges, but the reviewed graph fit is not yet accepted as release-grade interpolation or replaced by an authoritative table.",
+        "Source-unit to SI mapping, dimensionless graph-axis mappings, graph-to-SI composition, documented hand-calculation arithmetic, and the approximate source vapor-quality guard 0.01 <= x <= 0.70 have candidate code helpers only; selectable runtime adapter and source/reference HTC tests are incomplete.",
+        "The scope audit in docs/chen_1962_scope_audit_2026-07-08.md fixes the source-based release scope as vertical heated axial flow only; the current horizontal evaporator is unsupported without a separate engineering extrapolation.",
+        "Tables I and II are manually transcribed as validation context only; the reference-value audit found no printed pointwise HTC cases in the audited Chen report pages.",
+        "This source cannot release dryout or CHF logic."
+      ],
       "source_candidate_audit_document": "docs/chen_1962_formula_audit_2026-07-06.md",
+      "source_candidate_audit_documents": [
+        "docs/chen_1962_formula_audit_2026-07-06.md",
+        "docs/chen_1962_graph_digitization_2026-07-07.md",
+        "docs/chen_1962_graph_review_2026-07-08.md",
+        "docs/chen_1962_si_mapping_2026-07-07.md",
+        "docs/chen_1962_validation_tables_2026-07-07.md",
+        "docs/chen_1962_reference_value_audit_2026-07-08.md",
+        "docs/chen_1962_scope_audit_2026-07-08.md",
+        "docs/chen_1962_hand_calculation_2026-07-08.md"
+      ],
       "decision": "source_candidate",
       "blocking_reasons": [
-        "F and S functions are graphical in Figures 7 and 8 and have not been digitized or authoritatively tabulated.",
-        "Eq. (17) micro-convective expression remains OCR-degraded and requires visual transcription from the scan.",
-        "Original variables, imperial units, pressure/superheat definitions, and property-evaluation conventions are not mapped to project SI state variables.",
-        "The report scope is saturated vertical axial flow, while project scenarios also include horizontal evaporator sections.",
-        "No primary-source reference HTC values have been added as runtime tests.",
+        "F and S functions are graphical in Figures 7 and 8; candidate digitization and rendered review are recorded and helper extrapolation is blocked outside the plotted ranges, but the graph fit is not accepted as release-grade or source/reference-tested.",
+        "Eqs. (9), (17), and (18) are scan-verified and have candidate source-unit to SI mapping plus direct axis/HTC, graph-to-SI composition helpers, and documented hand-calculation arithmetic in docs/chen_1962_hand_calculation_2026-07-08.md, but no selectable runtime adapter or source/reference test has released that mapping.",
+        "Original variables, g_c, pressure/superheat definitions, and property-evaluation conventions need implementation decisions before runtime use.",
+        "Table I condition ranges and Table II average deviations are now transcribed, and docs/chen_1962_reference_value_audit_2026-07-08.md found no printed pointwise Chen-report HTC cases in the audited pages.",
+        "docs/chen_1962_scope_audit_2026-07-08.md fixes release eligibility as vertical heated axial flow only; the current horizontal evaporator must remain unsupported unless a separate non-source extrapolation is explicitly accepted.",
+        "No primary-source pointwise HTC values or accepted release-grade hand calculation have been added as runtime tests.",
         "The report is an HTC correlation source candidate only and does not release dryout or CHF logic."
       ],
       "required_audit_checks": [
-        "Digitize or otherwise obtain authoritative numeric F and S functions from Figures 7 and 8.",
-        "Visually confirm Eq. (9) and Eq. (18), and fully transcribe Eq. (17) from the scan.",
-        "Map Chen pages 4, 6, 10-19, 20-25, and 32-33 equations, variables, applicability limits, graphical functions, and validation tables into docs/formula_registry.md.",
+        "Decide whether the candidate graph digitization in docs/chen_1962_graph_digitization_2026-07-07.md and rendered graph review in docs/chen_1962_graph_review_2026-07-08.md are acceptable as release-grade interpolation proof, or obtain an authoritative numeric table.",
+        "Review the candidate source-unit to SI, graph-axis, and graph-to-SI composition helpers documented in docs/chen_1962_si_mapping_2026-07-07.md and convert them into selectable runtime code only after release decision.",
+        "Review the reference-value audit in docs/chen_1962_reference_value_audit_2026-07-08.md together with the candidate hand-calculation ledger in docs/chen_1962_hand_calculation_2026-07-08.md and decide whether hand calculation can become release-grade proof or only an arithmetic regression fixture.",
+        "Map Chen pages 4, 6, 10-19, 20-25, and 32-35 equations, variables, applicability limits, graphical functions, validation tables, no-printed-pointwise-HTC finding, and vertical-only geometry scope into docs/formula_registry.md.",
         "Convert original variable definitions and units to project SI state variables.",
-        "Decide the released geometry scope before using the vertical-flow correlation in project scenarios.",
+        "Implement released geometry guards so Chen 1962 refuses horizontal evaporator or mixed-loop HTC use unless a separate non-source extrapolation is explicitly selected.",
         "Keep dryout and CHF gates separate from this HTC-only audit."
       ],
       "required_tests_before_release": [
-        "Reference HTC values reproduced from the report or documented hand calculations.",
+        "Reference HTC values reproduced from another primary source or documented hand calculations explicitly accepted as release proof.",
         "Boundary-condition and unsupported-geometry validation tests.",
-        "Tests for missing wall/saturation inputs and unsupported quality ranges.",
+        "Tests for missing wall/saturation inputs and unsupported quality ranges, including Chen's approximate 0.01 <= x <= 0.70 source scope.",
         "Source-status aggregation tests for any released adapter.",
         "Regression test proving dryout and CHF are still not inferred from this HTC adapter."
       ]
